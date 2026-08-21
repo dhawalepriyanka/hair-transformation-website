@@ -63,11 +63,11 @@ const HomePage = () => {
                 Transform Your Look With Confidence
               </h1>
               
-              <p style={{ fontSize: '1.05rem', color: '#CCC', marginBottom: '2rem', lineHeight: '1.7' }}>
+              <p style={{ fontSize: '1rem', color: '#CCC', marginBottom: '1.75rem', lineHeight: '1.7' }}>
                 Professional Hair Transformations, Hair Extensions, Haircuts and Styling by Dipali Wakale. Select your favorite hairstyles from our catalogue and generate an A4 sheet for your consultation.
               </p>
 
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <div className="hero-buttons">
                 <Link
                   to="/hair-styles"
                   style={{
@@ -104,20 +104,11 @@ const HomePage = () => {
               </div>
             </div>
 
-            <div style={{ textAlign: 'center' }}>
-              <div
-                style={{
-                  borderRadius: '20px',
-                  overflow: 'hidden',
-                  boxShadow: '0 15px 35px rgba(0,0,0,0.4)',
-                  border: '2px solid rgba(200, 138, 117, 0.4)',
-                  maxHeight: '400px'
-                }}
-              >
+            <div>
+              <div className="hero-image-wrapper">
                 <img
                   src="https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80&w=800"
                   alt="Dipali Wakale Hair Artist"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>
             </div>
