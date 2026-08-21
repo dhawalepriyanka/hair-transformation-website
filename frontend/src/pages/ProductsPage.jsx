@@ -73,14 +73,14 @@ const ProductsPage = () => {
   };
 
   return (
-    <div className="products-page" style={{ padding: '3rem 0 5rem 0' }}>
+    <div className="products-page section-padding">
       <div className="container">
-        {/* Header & Subheading requested explicitly */}
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h1 className="serif" style={{ fontSize: '2.8rem', color: '#1E1E1E', marginBottom: '0.5rem' }}>
+        {/* Header & Subheading */}
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <h1 className="serif section-title">
             Hair Styles Catalogue
           </h1>
-          <p style={{ color: '#C88A75', fontSize: '1.15rem', fontWeight: '600', maxWidth: '650px', margin: '0 auto' }}>
+          <p style={{ color: '#C88A75', fontSize: '1.05rem', fontWeight: '600', maxWidth: '650px', margin: '0.25rem auto 0 auto' }}>
             Select multiple styles to create your printable A4 sheet
           </p>
         </div>
@@ -121,16 +121,16 @@ const ProductsPage = () => {
         {loading ? (
           <SkeletonLoader count={8} />
         ) : error ? (
-          <div style={{ textAlign: 'center', padding: '4rem 1rem', background: '#FFF', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
-            <AlertCircle size={48} color="#E57373" style={{ marginBottom: '1rem' }} />
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{error}</h3>
+          <div style={{ textAlign: 'center', padding: '3rem 1rem', background: '#FFF', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
+            <AlertCircle size={44} color="#E57373" style={{ marginBottom: '0.85rem' }} />
+            <h3 style={{ fontSize: '1.15rem', marginBottom: '0.5rem' }}>{error}</h3>
             <button
               onClick={loadCatalogue}
               style={{
-                marginTop: '1rem',
+                marginTop: '0.85rem',
                 backgroundColor: '#C88A75',
                 color: '#FFF',
-                padding: '0.6rem 1.5rem',
+                padding: '0.6rem 1.4rem',
                 borderRadius: '20px',
                 fontWeight: '600',
                 display: 'inline-flex',
@@ -142,11 +142,11 @@ const ProductsPage = () => {
             </button>
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '5rem 1rem', background: '#FFF', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
-            <h3 className="serif" style={{ fontSize: '1.5rem', color: '#1E1E1E', marginBottom: '0.5rem' }}>
+          <div style={{ textAlign: 'center', padding: '4rem 1rem', background: '#FFF', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
+            <h3 className="serif" style={{ fontSize: '1.4rem', color: '#1E1E1E', marginBottom: '0.5rem' }}>
               No hair styles found matching your search.
             </h3>
-            <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+            <p style={{ color: '#666', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
               Try searching with another keyword or select a different category.
             </p>
             <button
@@ -157,9 +157,10 @@ const ProductsPage = () => {
               style={{
                 backgroundColor: '#C88A75',
                 color: '#FFF',
-                padding: '0.6rem 1.5rem',
+                padding: '0.6rem 1.4rem',
                 borderRadius: '20px',
-                fontWeight: '600'
+                fontWeight: '600',
+                fontSize: '0.9rem'
               }}
             >
               Reset Filters

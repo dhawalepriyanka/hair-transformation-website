@@ -18,7 +18,7 @@ const SelectedProductsPage = () => {
   });
 
   return (
-    <div className="selected-products-page" style={{ padding: '3rem 0 5rem 0' }}>
+    <div className="selected-products-page section-padding">
       <div className="container">
         {/* PRINT ONLY HEADER - Strictly visible when window.print() is called */}
         <div className="print-only-header">
@@ -39,34 +39,34 @@ const SelectedProductsPage = () => {
         </div>
 
         {/* SCREEN ONLY HEADER */}
-        <div className="no-print" style={{ marginBottom: '2.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="no-print" style={{ marginBottom: '2rem' }}>
+          <div className="section-header">
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
                 <Link to="/hair-styles" style={{ color: '#C88A75', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem', fontWeight: '600' }}>
                   <ArrowLeft size={16} /> Back to Hair Styles
                 </Link>
               </div>
-              <h1 className="serif" style={{ fontSize: '2.5rem', color: '#1E1E1E', margin: 0 }}>
+              <h1 className="serif section-title" style={{ margin: 0 }}>
                 Selected Hair Styles
               </h1>
-              <p style={{ color: '#666', marginTop: '0.25rem', fontWeight: '600' }}>
+              <p style={{ color: '#666', marginTop: '0.2rem', fontWeight: '600', fontSize: '0.95rem' }}>
                 {selectedCount} {selectedCount === 1 ? 'Style Selected' : 'Styles Selected'}
               </p>
             </div>
 
             {selectedCount > 0 && (
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={clearSelection}
                   style={{
                     color: '#888',
-                    fontSize: '0.9rem',
+                    fontSize: '0.85rem',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
-                    padding: '0.6rem 1rem'
+                    padding: '0.6rem 0.8rem'
                   }}
                 >
                   <Trash2 size={16} /> Clear Selection
@@ -79,9 +79,9 @@ const SelectedProductsPage = () => {
                     backgroundColor: '#C88A75',
                     color: '#FFFFFF',
                     fontWeight: '600',
-                    padding: '0.75rem 1.8rem',
+                    padding: '0.7rem 1.5rem',
                     borderRadius: '30px',
-                    fontSize: '1rem',
+                    fontSize: '0.95rem',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem',
@@ -101,7 +101,7 @@ const SelectedProductsPage = () => {
             className="no-print"
             style={{
               textAlign: 'center',
-              padding: '6rem 1rem',
+              padding: '4.5rem 1rem',
               backgroundColor: '#FFFFFF',
               borderRadius: '16px',
               border: '1px solid #EBE5E0'
@@ -109,23 +109,23 @@ const SelectedProductsPage = () => {
           >
             <div
               style={{
-                width: '70px',
-                height: '70px',
+                width: '60px',
+                height: '60px',
                 borderRadius: '50%',
                 backgroundColor: '#F7EFEA',
                 color: '#C88A75',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                margin: '0 auto 1.5rem auto'
+                margin: '0 auto 1.25rem auto'
               }}
             >
-              <Scissors size={32} />
+              <Scissors size={28} />
             </div>
-            <h2 className="serif" style={{ fontSize: '2rem', color: '#1E1E1E', marginBottom: '0.5rem' }}>
+            <h2 className="serif" style={{ fontSize: '1.8rem', color: '#1E1E1E', marginBottom: '0.4rem' }}>
               No hair styles selected yet.
             </h2>
-            <p style={{ color: '#666', marginBottom: '2rem', maxWidth: '450px', margin: '0 auto 2rem auto' }}>
+            <p style={{ color: '#666', marginBottom: '1.75rem', maxWidth: '420px', margin: '0 auto 1.75rem auto', fontSize: '0.9rem' }}>
               Select your favourite hair styles and they will appear here.
             </p>
             <Link
@@ -133,10 +133,10 @@ const SelectedProductsPage = () => {
               style={{
                 backgroundColor: '#C88A75',
                 color: '#FFFFFF',
-                padding: '0.85rem 2rem',
+                padding: '0.8rem 1.8rem',
                 borderRadius: '30px',
                 fontWeight: '600',
-                fontSize: '1rem',
+                fontSize: '0.95rem',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px'

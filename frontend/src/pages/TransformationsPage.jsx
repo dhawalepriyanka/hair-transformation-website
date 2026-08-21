@@ -49,10 +49,10 @@ const TransformationsPage = () => {
   ];
 
   return (
-    <div style={{ padding: '3rem 0 5rem 0' }}>
+    <div className="transformations-page section-padding">
       <div className="container">
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <span
             style={{
               display: 'inline-flex',
@@ -69,16 +69,16 @@ const TransformationsPage = () => {
           >
             <Sparkles size={16} /> Dipali Wakale Transformations Gallery
           </span>
-          <h1 className="serif" style={{ fontSize: '2.8rem', color: '#1E1E1E', marginBottom: '0.5rem' }}>
+          <h1 className="serif section-title">
             Hair Transformations Showcase
           </h1>
-          <p style={{ color: '#666', fontSize: '1.05rem', maxWidth: '650px', margin: '0 auto' }}>
+          <p style={{ color: '#666', fontSize: '1rem', maxWidth: '650px', margin: '0 auto' }}>
             Real client transformations, hair extensions makeovers, and haircut style shifts by Dipali Wakale.
           </p>
         </div>
 
         {/* Gallery Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem', marginBottom: '4rem' }}>
+        <div className="transformations-grid" style={{ marginBottom: '3.5rem' }}>
           {transformations.map((item) => (
             <div
               key={item.id}
@@ -90,14 +90,14 @@ const TransformationsPage = () => {
                 boxShadow: '0 4px 16px rgba(0,0,0,0.04)'
               }}
             >
-              <div style={{ height: '280px', overflow: 'hidden' }}>
+              <div style={{ height: '260px', overflow: 'hidden' }}>
                 <img
                   src={item.image}
                   alt={item.title}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>
-              <div style={{ padding: '1.5rem' }}>
+              <div style={{ padding: '1.25rem' }}>
                 <span
                   style={{
                     fontSize: '0.75rem',
@@ -109,10 +109,10 @@ const TransformationsPage = () => {
                 >
                   {item.category}
                 </span>
-                <h3 className="serif" style={{ fontSize: '1.25rem', color: '#1E1E1E', margin: '0.3rem 0 0.5rem 0' }}>
+                <h3 className="serif" style={{ fontSize: '1.2rem', color: '#1E1E1E', margin: '0.3rem 0 0.5rem 0' }}>
                   {item.title}
                 </h3>
-                <p style={{ fontSize: '0.88rem', color: '#666', lineHeight: '1.6' }}>{item.description}</p>
+                <p style={{ fontSize: '0.85rem', color: '#666', lineHeight: '1.6' }}>{item.description}</p>
               </div>
             </div>
           ))}
@@ -123,16 +123,16 @@ const TransformationsPage = () => {
           style={{
             backgroundColor: '#FAF8F6',
             borderRadius: '20px',
-            padding: '3rem',
+            padding: '2.5rem 1.5rem',
             textAlign: 'center',
             border: '1px solid #EBE5E0'
           }}
         >
-          <Scissors size={36} color="#C88A75" style={{ marginBottom: '1rem' }} />
-          <h2 className="serif" style={{ fontSize: '2.2rem', color: '#1E1E1E', marginBottom: '0.5rem' }}>
+          <Scissors size={32} color="#C88A75" style={{ marginBottom: '0.85rem' }} />
+          <h2 className="serif section-title" style={{ marginBottom: '0.5rem' }}>
             Want Your Own Hair Transformation?
           </h2>
-          <p style={{ color: '#666', marginBottom: '2rem', maxWidth: '550px', margin: '0 auto 2rem auto' }}>
+          <p style={{ color: '#666', marginBottom: '1.75rem', maxWidth: '520px', margin: '0 auto 1.75rem auto', fontSize: '0.95rem' }}>
             Browse our full catalogue of hair styles, select your favorites, and print a custom style sheet for your consultation.
           </p>
 
@@ -142,10 +142,10 @@ const TransformationsPage = () => {
               style={{
                 backgroundColor: '#C88A75',
                 color: '#FFF',
-                padding: '0.85rem 2rem',
+                padding: '0.8rem 1.8rem',
                 borderRadius: '30px',
                 fontWeight: '600',
-                fontSize: '1rem',
+                fontSize: '0.95rem',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px'
@@ -158,7 +158,7 @@ const TransformationsPage = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="btn-social btn-instagram"
-              style={{ padding: '0.85rem 1.8rem' }}
+              style={{ padding: '0.8rem 1.6rem' }}
             >
               <Instagram size={18} /> Watch Transformation Reels on Instagram
             </a>
