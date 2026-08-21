@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSelection } from '../context/SelectionContext';
-import { Scissors, Menu, X, ShieldCheck } from 'lucide-react';
+import { Scissors, Menu, X } from 'lucide-react';
 
 const Navbar = () => {
   const { selectedCount } = useSelection();
@@ -62,17 +62,6 @@ const Navbar = () => {
                 {selectedCount > 0 && (
                   <span className="selected-badge">{selectedCount}</span>
                 )}
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/admin/login"
-                className={`nav-link ${isActive('/admin/login') || isActive('/admin/dashboard') ? 'active' : ''}`}
-                title="Hair Style Management Panel"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <ShieldCheck size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
-                Admin
               </Link>
             </li>
           </ul>
