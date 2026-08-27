@@ -179,13 +179,6 @@ export const loginAdmin = async (credentials) => {
     const response = await apiClient.post('/auth/login', credentials);
     return response.data;
   } catch (error) {
-    if (credentials.username === 'admin' && credentials.password === 'admin123') {
-      return {
-        success: true,
-        token: 'mock-admin-jwt-token',
-        user: { username: 'admin', role: 'admin' }
-      };
-    }
     throw new Error(error.response?.data?.message || 'Invalid admin credentials');
   }
 };

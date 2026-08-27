@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { SelectionProvider } from './context/SelectionContext';
 
 import Navbar from './components/Navbar';
@@ -30,7 +30,9 @@ function App() {
               <Route path="/transformations" element={<TransformationsPage />} />
 
               {/* Admin Routes */}
+              <Route path="/admin" element={<AdminLogin />} />
               <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/hair-styles/admin" element={<Navigate to="/admin" replace />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/products/add" element={<AdminProductForm />} />
               <Route path="/admin/styles/add" element={<AdminProductForm />} />

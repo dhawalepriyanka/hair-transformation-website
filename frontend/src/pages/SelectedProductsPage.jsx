@@ -17,27 +17,14 @@ const SelectedProductsPage = () => {
     year: 'numeric'
   });
 
+  const printPages = [];
+  for (let index = 0; index < selectedStyles.length; index += 6) {
+    printPages.push(selectedStyles.slice(index, index + 6));
+  }
+
   return (
     <div className="selected-products-page section-padding">
       <div className="container">
-        {/* PRINT ONLY HEADER - Strictly visible when window.print() is called */}
-        <div className="print-only-header">
-          <div className="print-header-top">
-            <div>
-              <h1 className="print-brand-title">Dipali Wakale</h1>
-              <p className="print-brand-subtitle">Hair Artist</p>
-              <p style={{ fontSize: '0.85rem', color: '#555', marginTop: '4px' }}>
-                Instagram: @wakale_dipali_ | Location: Ghargaon, Sangamner – Pune Nashik Highway
-              </p>
-            </div>
-            <div className="print-meta-info">
-              <p style={{ fontWeight: 'bold', fontSize: '1rem' }}>Selected Hair Styles</p>
-              <p>Date: {currentDate}</p>
-              <p>Total Items: {selectedCount}</p>
-            </div>
-          </div>
-        </div>
-
         {/* SCREEN ONLY HEADER */}
         <div className="no-print" style={{ marginBottom: '2rem' }}>
           <div className="section-header">
@@ -155,29 +142,48 @@ const SelectedProductsPage = () => {
             </div>
 
             {/* Printable Grid Layout (Visible strictly during @media print) */}
-            <div className="print-grid">
-              {selectedStyles.map((product) => (
-                <div key={product.id} className="print-card">
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="print-image"
-                  />
-                  <div className="print-title">{product.name}</div>
-                  <div className="print-code-category">
-                    <span>Code: {product.product_code}</span>
-                    <span>{product.category}</span>
-                  </div>
-                  {product.price && (
-                    <div className="print-price">
-                      {new Intl.NumberFormat('en-IN', {
-                        style: 'currency',
-                        currency: 'INR',
-                        maximumFractionDigits: 0
-                      }).format(product.price)}
+            <div className="print-pages">
+              {printPages.map((products, pageIndex) => (
+                <section className="print-page" key={pageIndex}>
+                  <div className="print-only-header">
+                    <div className="print-header-top">
+                      <div>
+                        <h1 className="print-brand-title">Dipali Wakale</h1>
+                        <p className="print-brand-subtitle">Hair Artist</p>
+                        <p className="print-contact">
+                          Instagram: @wakale_dipali_ | Location: Ghargaon, Sangamner – Pune Nashik Highway
+                        </p>
+                      </div>
+                      <div className="print-meta-info">
+                        <p className="print-list-title">Selected Hair Styles</p>
+                        <p>Date: {currentDate}</p>
+                        <p>Total Items: {selectedCount}</p>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+
+                  <div className="print-grid">
+                    {products.map((product) => (
+                      <div key={product.id} className="print-card">
+                        <img src={product.image_url} alt={product.name} className="print-image" />
+                        <div className="print-title">{product.name}</div>
+                        <div className="print-code-category">
+                          <span>Code: {product.product_code}</span>
+                          <span>{product.category}</span>
+                        </div>
+                        {product.price && (
+                          <div className="print-price">
+                            {new Intl.NumberFormat('en-IN', {
+                              style: 'currency',
+                              currency: 'INR',
+                              maximumFractionDigits: 0
+                            }).format(product.price)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           </>

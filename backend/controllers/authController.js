@@ -7,8 +7,8 @@ const loginAdmin = async (req, res, next) => {
   try {
     const { username, password } = req.body;
 
-    const envUsername = process.env.ADMIN_USERNAME || 'admin';
-    const envPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const envUsername = process.env.ADMIN_USERNAME;
+    const envPassword = process.env.ADMIN_PASSWORD;
 
     if (username === envUsername && password === envPassword) {
       const token = jwt.sign(
