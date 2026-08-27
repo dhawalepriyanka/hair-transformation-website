@@ -6,7 +6,7 @@ import {
 } from '../../services/api';
 import {
   Plus, Edit, Trash2, Search, LogOut, Eye, EyeOff,
-  Sparkles, RefreshCw, Package, Star, X, Check, Image
+  Sparkles, RefreshCw, Package, Star, X, Check, Image, Upload, FolderOpen
 } from 'lucide-react';
 
 const TRANSFORMATION_CATEGORIES = [
@@ -49,6 +49,21 @@ const AdminDashboard = () => {
   });
 
   const navigate = useNavigate();
+
+  const handleFileUpload = (e, field) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      if (file.size > 8 * 1024 * 1024) {
+        alert('Please choose an image file smaller than 8MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData((prev) => ({ ...prev, [field]: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const loadAllProducts = async () => {
     setLoadingProducts(true);
@@ -661,41 +676,135 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.35rem' }}>
-                      Before Image URL *
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                  {/* Before Image Input */}
+                  <div style={{ background: '#FAF8F6', padding: '1rem', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
+                    <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', color: '#1E1E1E', marginBottom: '0.4rem' }}>
+                      Before Image *
                     </label>
+
+                    {/* Local File Picker Button */}
+                    <div style={{ marginBottom: '0.6rem' }}>
+                      <label
+                        htmlFor="before-file-upload"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          backgroundColor: '#FFF',
+                          border: '1.5px dashed #C88A75',
+                          color: '#C88A75',
+                          padding: '0.65rem',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          textAlign: 'center'
+                        }}
+                      >
+                        <FolderOpen size={16} /> Choose from PC / Gallery
+                      </label>
+                      <input
+                        id="before-file-upload"
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileUpload(e, 'before')}
+                      />
+                    </div>
+
+                    <div style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '0.4rem' }}>— or paste image URL —</div>
+
                     <input
-                      type="url"
-                      required
-                      placeholder="https://images.unsplash.com/..."
-                      value={formData.before}
+                      type="text"
+                      placeholder="https://..."
+                      value={formData.before.startsWith('data:') ? '[Local PC Image Selected]' : formData.before}
                       onChange={(e) => setFormData({ ...formData, before: e.target.value })}
-                      style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #CCC' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.82rem' }}
                     />
+
                     {formData.before && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <img src={formData.before} alt="Before Preview" style={{ width: '70px', height: '70px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #DDD' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                      <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img
+                          src={formData.before}
+                          alt="Before Preview"
+                          style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #DDD' }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, before: '' })}
+                          style={{ background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
+                        >
+                          Remove
+                        </button>
                       </div>
                     )}
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.35rem' }}>
-                      After Image URL *
+                  {/* After Image Input */}
+                  <div style={{ background: '#FAF8F6', padding: '1rem', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
+                    <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', color: '#1E1E1E', marginBottom: '0.4rem' }}>
+                      After Image *
                     </label>
+
+                    {/* Local File Picker Button */}
+                    <div style={{ marginBottom: '0.6rem' }}>
+                      <label
+                        htmlFor="after-file-upload"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          backgroundColor: '#FFF',
+                          border: '1.5px dashed #C88A75',
+                          color: '#C88A75',
+                          padding: '0.65rem',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          textAlign: 'center'
+                        }}
+                      >
+                        <FolderOpen size={16} /> Choose from PC / Gallery
+                      </label>
+                      <input
+                        id="after-file-upload"
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileUpload(e, 'after')}
+                      />
+                    </div>
+
+                    <div style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '0.4rem' }}>— or paste image URL —</div>
+
                     <input
-                      type="url"
-                      required
-                      placeholder="https://images.unsplash.com/..."
-                      value={formData.after}
+                      type="text"
+                      placeholder="https://..."
+                      value={formData.after.startsWith('data:') ? '[Local PC Image Selected]' : formData.after}
                       onChange={(e) => setFormData({ ...formData, after: e.target.value })}
-                      style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #CCC' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.82rem' }}
                     />
+
                     {formData.after && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <img src={formData.after} alt="After Preview" style={{ width: '70px', height: '70px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #C88A75' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                      <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img
+                          src={formData.after}
+                          alt="After Preview"
+                          style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #C88A75' }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, after: '' })}
+                          style={{ background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
+                        >
+                          Remove
+                        </button>
                       </div>
                     )}
                   </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { createProduct, fetchProductById, updateProduct } from '../../services/api';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, FolderOpen } from 'lucide-react';
 
 const CATEGORIES = ['Hair Serum', 'Hair Treatment', 'Hair Growth', 'Hair Care', 'Hair Oil', 'Skin Care', 'Supplement', 'Other'];
 
@@ -22,6 +22,21 @@ const AdminProductForm = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      if (file.size > 8 * 1024 * 1024) {
+        alert('Please choose an image file smaller than 8MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData((prev) => ({ ...prev, image_url: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
@@ -171,28 +186,71 @@ const AdminProductForm = () => {
               </div>
             </div>
 
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem' }}>
-                Product Image URL *
+            <div style={{ marginBottom: '1.25rem', background: '#FAF8F6', padding: '1.2rem', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
+              <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', color: '#1E1E1E', marginBottom: '0.5rem' }}>
+                Product Image *
               </label>
+
+              {/* Local File Picker Button */}
+              <div style={{ marginBottom: '0.75rem' }}>
+                <label
+                  htmlFor="product-file-upload"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    backgroundColor: '#FFF',
+                    border: '1.5px dashed #C88A75',
+                    color: '#C88A75',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    fontSize: '0.9rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    textAlign: 'center'
+                  }}
+                >
+                  <FolderOpen size={18} /> Choose Image from PC / Gallery
+                </label>
+                <input
+                  id="product-file-upload"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleFileUpload}
+                />
+              </div>
+
+              <div style={{ fontSize: '0.78rem', color: '#888', textAlign: 'center', marginBottom: '0.5rem' }}>— or paste image URL —</div>
+
               <input
-                type="url"
+                type="text"
                 name="image_url"
-                required
                 placeholder="https://images.unsplash.com/..."
-                value={formData.image_url}
+                value={formData.image_url.startsWith('data:') ? '[Local PC Image Selected]' : formData.image_url}
                 onChange={handleChange}
-                style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #CCC' }}
+                style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #CCC', fontSize: '0.85rem' }}
               />
+
               {formData.image_url && (
-                <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ marginTop: '0.85rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <img
                     src={formData.image_url}
                     alt="Preview"
-                    style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #DDD' }}
+                    style={{ width: '70px', height: '70px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #DDD' }}
                     onError={(e) => { e.target.style.display = 'none'; }}
                   />
-                  <span style={{ fontSize: '0.8rem', color: '#666' }}>Live Image Preview</span>
+                  <div>
+                    <span style={{ fontSize: '0.82rem', color: '#2E7D32', fontWeight: '600', display: 'block' }}>✓ Image Ready</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, image_url: '' }))}
+                      style={{ background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', marginTop: '4px', cursor: 'pointer' }}
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
