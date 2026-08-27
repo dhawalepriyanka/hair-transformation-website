@@ -60,10 +60,10 @@ const AdminLogin = () => {
             <Scissors size={28} />
           </div>
           <h2 className="serif" style={{ fontSize: '1.8rem', color: '#1E1E1E' }}>
-            Hair Style Admin Portal
+            Admin Portal
           </h2>
           <p style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-            Dipali Wakale Hair Style Management Login
+            Dipali Wakale Product & Content Management Login
           </p>
         </div>
 

@@ -40,7 +40,7 @@ const Navbar = () => {
                 className={`nav-link ${isActive('/hair-styles') || isActive('/products') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Hair Styles
+                Products
               </Link>
             </li>
             <li>
@@ -58,7 +58,7 @@ const Navbar = () => {
                 className={`nav-link ${isActive('/selected-styles') || isActive('/selected-products') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Selected Styles
+                Selected Products
                 {selectedCount > 0 && (
                   <span className="selected-badge">{selectedCount}</span>
                 )}

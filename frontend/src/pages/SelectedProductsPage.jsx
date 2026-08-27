@@ -31,14 +31,14 @@ const SelectedProductsPage = () => {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
                 <Link to="/hair-styles" style={{ color: '#C88A75', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem', fontWeight: '600' }}>
-                  <ArrowLeft size={16} /> Back to Hair Styles
+                  <ArrowLeft size={16} /> Back to Products
                 </Link>
               </div>
               <h1 className="serif section-title" style={{ margin: 0 }}>
-                Selected Hair Styles
+                Selected Products
               </h1>
               <p style={{ color: '#666', marginTop: '0.2rem', fontWeight: '600', fontSize: '0.95rem' }}>
-                {selectedCount} {selectedCount === 1 ? 'Style Selected' : 'Styles Selected'}
+                {selectedCount} {selectedCount === 1 ? 'Product Selected' : 'Products Selected'}
               </p>
             </div>
 
@@ -75,7 +75,7 @@ const SelectedProductsPage = () => {
                     boxShadow: '0 4px 15px rgba(200, 138, 117, 0.3)'
                   }}
                 >
-                  <Printer size={18} /> Print Selected Styles
+                  <Printer size={18} /> Print Selected Products
                 </button>
               </div>
             )}
@@ -110,10 +110,10 @@ const SelectedProductsPage = () => {
               <Scissors size={28} />
             </div>
             <h2 className="serif" style={{ fontSize: '1.8rem', color: '#1E1E1E', marginBottom: '0.4rem' }}>
-              No hair styles selected yet.
+              No products selected yet.
             </h2>
             <p style={{ color: '#666', marginBottom: '1.75rem', maxWidth: '420px', margin: '0 auto 1.75rem auto', fontSize: '0.9rem' }}>
-              Select your favourite hair styles and they will appear here.
+              Select your favourite products and they will appear here.
             </p>
             <Link
               to="/hair-styles"
@@ -129,7 +129,7 @@ const SelectedProductsPage = () => {
                 gap: '8px'
               }}
             >
-              <Sparkles size={18} /> Browse Hair Styles
+              <Sparkles size={18} /> Browse Products
             </Link>
           </div>
         ) : (
@@ -149,13 +149,13 @@ const SelectedProductsPage = () => {
                     <div className="print-header-top">
                       <div>
                         <h1 className="print-brand-title">Dipali Wakale</h1>
-                        <p className="print-brand-subtitle">Hair Artist</p>
+                        <p className="print-brand-subtitle">Hair Artist & Skin Care Specialist</p>
                         <p className="print-contact">
-                          Instagram: @wakale_dipali_ | Location: Ghargaon, Sangamner – Pune Nashik Highway
+                          Tel: +91 8805291910 / 8237108495 | Instagram: @wakale_dipali_ | Ghargaon, Sangamner (Pune-Nashik Hwy)
                         </p>
                       </div>
                       <div className="print-meta-info">
-                        <p className="print-list-title">Selected Hair Styles</p>
+                        <p className="print-list-title">Selected Products</p>
                         <p>Date: {currentDate}</p>
                         <p>Total Items: {selectedCount}</p>
                       </div>

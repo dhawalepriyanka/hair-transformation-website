@@ -6,7 +6,7 @@ import SkeletonLoader from '../components/SkeletonLoader';
 import { fetchProducts } from '../services/api';
 import { Search, AlertCircle, RefreshCw } from 'lucide-react';
 
-const CATEGORIES = ['All', 'Haircut', 'Hair Transformation', 'Hair Extension', 'Hair Styling', 'Hair Color', 'Bridal Style', 'Long Hair', 'Short Hair', 'Other'];
+const CATEGORIES = ['All', 'Hair Serum', 'Hair Treatment', 'Hair Growth', 'Hair Care', 'Hair Oil', 'Skin Care', 'Supplement'];
 
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -78,10 +78,10 @@ const ProductsPage = () => {
         {/* Header & Subheading */}
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <h1 className="serif section-title">
-            Hair Styles Catalogue
+            Our Products Catalogue
           </h1>
           <p style={{ color: '#C88A75', fontSize: '1.05rem', fontWeight: '600', maxWidth: '650px', margin: '0.25rem auto 0 auto' }}>
-            Select multiple styles to create your printable A4 sheet
+            Browse our complete range of hair & skin care products
           </p>
         </div>
 
@@ -93,7 +93,7 @@ const ProductsPage = () => {
               <Search className="search-icon" size={18} />
               <input
                 type="text"
-                placeholder="Search hair styles by name or code (e.g. H001, Layer)..."
+                placeholder="Search products by name or code (e.g. 10014, HAIRIVA)..."
                 className="search-input"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -144,7 +144,7 @@ const ProductsPage = () => {
         ) : filteredProducts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '4rem 1rem', background: '#FFF', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
             <h3 className="serif" style={{ fontSize: '1.4rem', color: '#1E1E1E', marginBottom: '0.5rem' }}>
-              No hair styles found matching your search.
+              No products found matching your search.
             </h3>
             <p style={{ color: '#666', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
               Try searching with another keyword or select a different category.

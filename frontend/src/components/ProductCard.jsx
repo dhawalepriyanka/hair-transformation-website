@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useSelection } from '../context/SelectionContext';
-import { Check, Plus, Trash2 } from 'lucide-react';
+import { Check, Plus, Trash2, ArrowRight } from 'lucide-react';
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80&w=800';
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?auto=format&fit=crop&q=80&w=800';
 
 const ProductCard = ({ product, mode = 'select' }) => {
   const { isStyleSelected, toggleStyleSelection, removeStyle } = useSelection();
-  const selected = isStyleSelected(product.id);
+  const selected = mode === 'select' && isStyleSelected(product.id);
   const [imgSrc, setImgSrc] = useState(product.image_url || FALLBACK_IMAGE);
 
   const formattedPrice = product.price
@@ -18,7 +19,7 @@ const ProductCard = ({ product, mode = 'select' }) => {
     : null;
 
   return (
-    <div className={`product-card ${selected && mode === 'select' ? 'selected' : ''}`}>
+    <div className={`product-card ${selected ? 'selected' : ''}`}>
       <div className="product-image-wrapper">
         <img
           src={imgSrc}
@@ -27,7 +28,7 @@ const ProductCard = ({ product, mode = 'select' }) => {
           onError={() => setImgSrc(FALLBACK_IMAGE)}
           loading="lazy"
         />
-        {selected && mode === 'select' && (
+        {selected && (
           <div className="selected-badge-overlay">
             <Check size={14} /> Selected
           </div>
@@ -35,7 +36,7 @@ const ProductCard = ({ product, mode = 'select' }) => {
       </div>
 
       <div className="product-details">
-        <span className="product-category">{product.category || 'Hair Service'}</span>
+        <span className="product-category">{product.category || 'Hair Product'}</span>
         <h3 className="product-title">{product.name}</h3>
 
         <div className="product-code-price">
@@ -55,11 +56,11 @@ const ProductCard = ({ product, mode = 'select' }) => {
               </>
             ) : (
               <>
-                <Plus size={16} /> Select Style
+                <Plus size={16} /> Select Product
               </>
             )}
           </button>
-        ) : (
+        ) : mode === 'remove' ? (
           <button
             className="btn-remove"
             onClick={() => removeStyle(product.id)}
@@ -67,6 +68,14 @@ const ProductCard = ({ product, mode = 'select' }) => {
           >
             <Trash2 size={16} /> Remove
           </button>
+        ) : (
+          <Link
+            to="/hair-styles"
+            className="btn-select"
+            style={{ textDecoration: 'none', textAlign: 'center', justifyContent: 'center' }}
+          >
+            View in Catalogue <ArrowRight size={15} />
+          </Link>
         )}
       </div>
     </div>
@@ -74,3 +83,4 @@ const ProductCard = ({ product, mode = 'select' }) => {
 };
 
 export default ProductCard;
+

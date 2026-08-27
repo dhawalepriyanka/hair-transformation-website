@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { fetchProducts } from '../services/api';
-import { Scissors, ArrowRight, Instagram, Sparkles, MapPin, HeartHandshake } from 'lucide-react';
+import {
+  Scissors, ArrowRight, Instagram, Sparkles, MapPin,
+  HeartHandshake, Phone, Youtube, MessageCircle, Navigation, Car, Clock
+} from 'lucide-react';
 
 const HomePage = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -64,7 +67,7 @@ const HomePage = () => {
               </h1>
               
               <p style={{ fontSize: '1rem', color: '#CCC', marginBottom: '1.75rem', lineHeight: '1.7' }}>
-                Professional Hair Transformations, Hair Extensions, Haircuts and Styling by Dipali Wakale. Select your favorite hairstyles from our catalogue and generate an A4 sheet for your consultation.
+                Professional Hair Transformations, Hair Regrowth Treatments, Skin Care & Wellness products by Dipali Wakale. Browse our products and select items for your printable consultation sheet.
               </p>
 
               <div className="hero-buttons">
@@ -83,7 +86,7 @@ const HomePage = () => {
                     boxShadow: '0 4px 15px rgba(200, 138, 117, 0.4)'
                   }}
                 >
-                  Explore Hair Styles <ArrowRight size={18} />
+                  Explore Products <ArrowRight size={18} />
                 </Link>
                 <Link
                   to="/transformations"
@@ -127,13 +130,13 @@ const HomePage = () => {
             </div>
             <div style={{ padding: '1rem' }}>
               <Sparkles size={32} color="#C88A75" style={{ marginBottom: '0.85rem' }} />
-              <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Premium Hair Extensions</h3>
-              <p style={{ fontSize: '0.9rem', color: '#666' }}>Natural human hair extensions for instant length, thickness, and confidence.</p>
+              <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Hair & Skin Care Products</h3>
+              <p style={{ fontSize: '0.9rem', color: '#666' }}>Trusted serums, shampoos, oils, and supplements for healthy hair growth.</p>
             </div>
             <div style={{ padding: '1rem' }}>
               <HeartHandshake size={32} color="#C88A75" style={{ marginBottom: '0.85rem' }} />
-              <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Printable Style Catalogue</h3>
-              <p style={{ fontSize: '0.9rem', color: '#666' }}>Select multiple hair styles online and generate a clean A4 sheet instantly.</p>
+              <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Printable Product Catalogue</h3>
+              <p style={{ fontSize: '0.9rem', color: '#666' }}>Select multiple products online and generate a clean A4 sheet instantly.</p>
             </div>
           </div>
         </div>
@@ -153,14 +156,15 @@ const HomePage = () => {
             {services.map((service) => (
               <Link
                 key={service.title}
-                to={`/hair-styles?category=${encodeURIComponent(service.title)}`}
+                to="/transformations"
                 style={{
                   borderRadius: '16px',
                   overflow: 'hidden',
                   position: 'relative',
                   height: '250px',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                  display: 'block'
+                  display: 'block',
+                  textDecoration: 'none'
                 }}
               >
                 <img
@@ -172,7 +176,7 @@ const HomePage = () => {
                   style={{
                     position: 'absolute',
                     inset: 0,
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%)',
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'flex-end',
@@ -182,7 +186,10 @@ const HomePage = () => {
                   <h3 className="serif" style={{ color: '#FFF', fontSize: '1.3rem', marginBottom: '0.2rem' }}>
                     {service.title}
                   </h3>
-                  <p style={{ color: '#DDD', fontSize: '0.8rem' }}>{service.desc}</p>
+                  <p style={{ color: '#DDD', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{service.desc}</p>
+                  <span style={{ color: '#E0B69F', fontSize: '0.78rem', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    See Transformations <ArrowRight size={13} />
+                  </span>
                 </div>
               </Link>
             ))}
@@ -190,16 +197,16 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Featured Hair Transformations */}
+      {/* Featured Products Section */}
       <section className="section-padding" style={{ backgroundColor: '#FFFFFF' }}>
         <div className="container">
           {/* Section Header rearranges cleanly into a column on mobile */}
           <div className="section-header">
             <div>
               <h2 className="serif section-title">
-                Featured Hair Styles
+                Featured Products
               </h2>
-              <p style={{ color: '#666', fontSize: '0.95rem' }}>Trending hair transformations and cuts by Dipali Wakale</p>
+              <p style={{ color: '#666', fontSize: '0.95rem' }}>Trusted hair regrowth, skin care & wellness products by Dipali Wakale</p>
             </div>
             <Link
               to="/hair-styles"
@@ -213,7 +220,7 @@ const HomePage = () => {
                 flexShrink: 0
               }}
             >
-              View All Hair Styles ({featuredProducts.length}+ Options) <ArrowRight size={16} />
+              View All Products ({featuredProducts.length}+ Options) <ArrowRight size={16} />
             </Link>
           </div>
 
@@ -222,7 +229,7 @@ const HomePage = () => {
           ) : (
             <div className="product-grid">
               {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} mode="select" />
+                <ProductCard key={product.id} product={product} mode="view" />
               ))}
             </div>
           )}
@@ -243,21 +250,9 @@ const HomePage = () => {
               <p style={{ color: '#555', lineHeight: '1.75', marginBottom: '1rem', fontSize: '0.95rem' }}>
                 Dipali Wakale is a hair artist specializing in hair transformations, hair extensions, haircuts and modern styling. Her work focuses on helping clients discover styles that complement their personality and appearance.
               </p>
-              <p style={{ color: '#555', lineHeight: '1.75', marginBottom: '1.75rem', fontSize: '0.95rem' }}>
-                Follow <strong>@wakale_dipali_</strong> on Instagram to watch live hair transformation reels, extensions makeovers, and trending styling tutorials.
+              <p style={{ color: '#555', lineHeight: '1.75', marginBottom: '0', fontSize: '0.95rem' }}>
+                Follow on social channels to watch live hair transformation reels, hair regrowth treatment results, extensions makeovers, and trending styling tutorials.
               </p>
-
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                <a
-                  href="https://instagram.com/wakale_dipali_"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-social btn-instagram"
-                  style={{ display: 'inline-flex', padding: '0.75rem 1.6rem' }}
-                >
-                  <Instagram size={18} /> Follow @wakale_dipali_
-                </a>
-              </div>
             </div>
 
             <div style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', maxHeight: '380px' }}>
@@ -271,43 +266,97 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Instagram & Location Banner */}
-      <section className="section-padding" style={{ backgroundColor: '#FFFFFF', borderTop: '1px solid #EBE5E0' }}>
+      {/* Instagram, YouTube & Location Banner */}
+      <section className="section-padding" style={{ backgroundColor: '#FAF8F6', borderTop: '1px solid #EBE5E0' }}>
         <div className="container" style={{ textAlign: 'center' }}>
-          <Instagram size={36} color="#C88A75" style={{ marginBottom: '0.85rem' }} />
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '0.85rem' }}>
+            <Instagram size={36} color="#C88A75" />
+            <Youtube size={36} color="#FF0000" />
+            <Phone size={36} color="#25D366" />
+          </div>
           <h2 className="serif section-title">
-            Follow @wakale_dipali_ on Instagram
+            Connect With Dipali Wakale
           </h2>
           <p style={{ color: '#666', fontSize: '0.95rem', maxWidth: '580px', margin: '0 auto 1.25rem auto' }}>
-            Join 132K+ followers for daily hair transformation reels, curtain layer haircut inspiration, and extension makeovers.
+            Follow for daily hair transformation reels, hair regrowth results, treatments & client reviews.
           </p>
 
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', color: '#555', fontSize: '0.9rem', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
-            <MapPin size={16} color="#C88A75" />
-            <span>Ghargaon, Sangamner – Pune Nashik Highway</span>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', color: '#555', fontSize: '0.9rem', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MapPin size={16} color="#C88A75" />
+              <span>Ghargaon, Sangamner – Pune Nashik Highway</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Phone size={16} color="#C88A75" />
+              <a href="tel:+918805291910" style={{ color: '#555', textDecoration: 'none', fontWeight: '600' }}>+91 8805291910</a> / <a href="tel:+918237108495" style={{ color: '#555', textDecoration: 'none', fontWeight: '600' }}>8237108495</a>
+            </div>
           </div>
 
-          <a
-            href="https://instagram.com/wakale_dipali_"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              backgroundColor: '#C88A75',
-              color: '#FFF',
-              padding: '0.8rem 2rem',
-              borderRadius: '30px',
-              fontWeight: '600',
-              fontSize: '0.95rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 15px rgba(200, 138, 117, 0.3)'
-            }}
-          >
-            <Instagram size={18} /> View Instagram Profile
-          </a>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <a
+              href="https://instagram.com/wakale_dipali_"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                backgroundColor: '#C88A75',
+                color: '#FFF',
+                padding: '0.8rem 1.8rem',
+                borderRadius: '30px',
+                fontWeight: '600',
+                fontSize: '0.95rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 15px rgba(200, 138, 117, 0.3)',
+                textDecoration: 'none'
+              }}
+            >
+              <Instagram size={18} /> Instagram Profile
+            </a>
+            <a
+              href="https://youtube.com/@dipali_wakale"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                backgroundColor: '#FF0000',
+                color: '#FFF',
+                padding: '0.8rem 1.8rem',
+                borderRadius: '30px',
+                fontWeight: '600',
+                fontSize: '0.95rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 15px rgba(255, 0, 0, 0.3)',
+                textDecoration: 'none'
+              }}
+            >
+              <Youtube size={18} /> YouTube Channel
+            </a>
+            <a
+              href="https://wa.me/918805291910?text=Hi%20Dipali%20didi,%20I%20would%20like%20to%20consult%20for%20hair%20treatment."
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                backgroundColor: '#25D366',
+                color: '#FFF',
+                padding: '0.8rem 1.8rem',
+                borderRadius: '30px',
+                fontWeight: '600',
+                fontSize: '0.95rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 15px rgba(37, 211, 102, 0.3)',
+                textDecoration: 'none'
+              }}
+            >
+              <MessageCircle size={18} /> WhatsApp Chat
+            </a>
+          </div>
         </div>
       </section>
+
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { createProduct, fetchProductById, updateProduct } from '../../services/api';
 import { ArrowLeft, Save } from 'lucide-react';
 
-const CATEGORIES = ['Haircut', 'Hair Transformation', 'Hair Extension', 'Hair Styling', 'Hair Color', 'Bridal Style', 'Long Hair', 'Short Hair', 'Other'];
+const CATEGORIES = ['Hair Serum', 'Hair Treatment', 'Hair Growth', 'Hair Care', 'Hair Oil', 'Skin Care', 'Supplement', 'Other'];
 
 const AdminProductForm = () => {
   const { id } = useParams();
@@ -13,7 +13,7 @@ const AdminProductForm = () => {
   const [formData, setFormData] = useState({
     name: '',
     product_code: '',
-    category: 'Haircut',
+    category: 'Hair Serum',
     image_url: '',
     price: '',
     description: '',
@@ -38,7 +38,7 @@ const AdminProductForm = () => {
             setFormData({
               name: product.name || '',
               product_code: product.product_code || '',
-              category: product.category || 'Haircut',
+              category: product.category || 'Hair Serum',
               image_url: product.image_url || '',
               price: product.price || '',
               description: product.description || '',
@@ -46,7 +46,7 @@ const AdminProductForm = () => {
             });
           }
         } catch (err) {
-          setError('Failed to fetch hair style details.');
+          setError('Failed to fetch product details.');
         }
       };
       loadProduct();
@@ -87,15 +87,15 @@ const AdminProductForm = () => {
           to="/admin/dashboard"
           style={{ color: '#C88A75', display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '1.5rem', fontWeight: '600' }}
         >
-          <ArrowLeft size={16} /> Back to Hair Style Management
+          <ArrowLeft size={16} /> Back to Product Management
         </Link>
 
         <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EBE5E0', padding: '2.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
           <h1 className="serif" style={{ fontSize: '2rem', color: '#1E1E1E', marginBottom: '0.25rem' }}>
-            {isEdit ? 'Edit Hair Style' : 'Add New Hair Style'}
+            {isEdit ? 'Edit Product' : 'Add New Product'}
           </h1>
           <p style={{ color: '#666', marginBottom: '2rem', fontSize: '0.9rem' }}>
-            Fill in the details below to publish or update catalogue hair style
+            Fill in the details below to publish or update catalogue product
           </p>
 
           {error && (
@@ -108,13 +108,13 @@ const AdminProductForm = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem' }}>
-                  Style Name *
+                  Product Name *
                 </label>
                 <input
                   type="text"
                   name="name"
                   required
-                  placeholder="e.g. Long Layered Cut"
+                  placeholder="e.g. HAIRIVA SERUM"
                   value={formData.name}
                   onChange={handleChange}
                   style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #CCC' }}
@@ -123,13 +123,13 @@ const AdminProductForm = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem' }}>
-                  Style Code *
+                  Product Code (Barcode) *
                 </label>
                 <input
                   type="text"
                   name="product_code"
                   required
-                  placeholder="e.g. H001"
+                  placeholder="e.g. 10014"
                   value={formData.product_code}
                   onChange={handleChange}
                   style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #CCC' }}
@@ -158,12 +158,12 @@ const AdminProductForm = () => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem' }}>
-                  Price (₹) (Optional)
+                  Price (₹ MRP) (Optional)
                 </label>
                 <input
                   type="number"
                   name="price"
-                  placeholder="e.g. 1500"
+                  placeholder="e.g. 1345"
                   value={formData.price}
                   onChange={handleChange}
                   style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #CCC' }}
@@ -173,7 +173,7 @@ const AdminProductForm = () => {
 
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem' }}>
-                Image URL *
+                Product Image URL *
               </label>
               <input
                 type="url"
@@ -204,7 +204,7 @@ const AdminProductForm = () => {
               <textarea
                 name="description"
                 rows="3"
-                placeholder="Enter hair cut texture, length, styling technique details..."
+                placeholder="Enter product benefits, ingredients, usage directions..."
                 value={formData.description}
                 onChange={handleChange}
                 style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #CCC', fontFamily: 'inherit' }}
@@ -221,7 +221,7 @@ const AdminProductForm = () => {
                 style={{ width: '18px', height: '18px', accentColor: '#C88A75' }}
               />
               <label htmlFor="is_active" style={{ fontSize: '0.9rem', fontWeight: '500' }}>
-                Active (Visible in hair styles catalogue)
+                Active (Visible in products catalogue)
               </label>
             </div>
 
@@ -243,7 +243,7 @@ const AdminProductForm = () => {
                 opacity: loading ? 0.7 : 1
               }}
             >
-              <Save size={18} /> {loading ? 'Saving...' : isEdit ? 'Update Hair Style' : 'Create Hair Style'}
+              <Save size={18} /> {loading ? 'Saving...' : isEdit ? 'Update Product' : 'Create Product'}
             </button>
           </form>
         </div>

@@ -4,10 +4,20 @@ const SelectionContext = createContext();
 
 const LOCAL_STORAGE_KEY = 'selectedHairStyles';
 const LEGACY_STORAGE_KEY = 'selectedProducts';
+const VERSION_KEY = 'selectionDataVersion';
+const CURRENT_VERSION = 'v2-real-products'; // bump this whenever products change
 
 export const SelectionProvider = ({ children }) => {
   const [selectedStyles, setSelectedStyles] = useState(() => {
     try {
+      // Clear old selections if product data version changed
+      const savedVersion = localStorage.getItem(VERSION_KEY);
+      if (savedVersion !== CURRENT_VERSION) {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+        localStorage.setItem(VERSION_KEY, CURRENT_VERSION);
+        return [];
+      }
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
