@@ -874,6 +874,100 @@ h1, h2, h3, h4, .serif {
   display: none;
 }
 
+/* TV transformation slideshow */
+.tv-showcase {
+  position: relative;
+  min-height: 620px;
+  overflow: hidden;
+  border-radius: 28px;
+  color: #fff;
+  background: #160f0d;
+  box-shadow: 0 24px 70px rgba(54, 31, 24, 0.28);
+  isolation: isolate;
+}
+
+.tv-showcase-glow {
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  background: radial-gradient(circle at 75% 30%, rgba(200, 138, 117, .38), transparent 33%),
+    radial-gradient(circle at 25% 75%, rgba(245, 210, 193, .15), transparent 30%);
+  animation: tvGlow 8s ease-in-out infinite alternate;
+}
+
+.tv-slide {
+  display: grid;
+  grid-template-columns: 58% 42%;
+  min-height: 620px;
+  animation: tvSlideIn .8s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.tv-visual { position: relative; min-height: 620px; overflow: hidden; }
+.tv-visual > img, .tv-before-layer img { width: 100%; height: 100%; object-fit: cover; }
+.tv-after-image { position: absolute; inset: 0; filter: saturate(1.18) contrast(1.04); }
+.tv-before-layer {
+  position: absolute;
+  inset: 0;
+  width: 50%;
+  overflow: hidden;
+  animation: tvReveal 7s ease-in-out infinite;
+}
+.tv-before-layer img { position: absolute; inset: 0; width: 58vw; max-width: none; filter: grayscale(82%) brightness(.7); }
+.tv-reveal-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 3px;
+  background: rgba(255,255,255,.95);
+  box-shadow: 0 0 20px rgba(255,255,255,.8);
+  animation: tvRevealLine 7s ease-in-out infinite;
+}
+.tv-reveal-line span {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%;
+  color: #c88a75; background: #fff; border: 3px solid #c88a75; font-size: 1.3rem;
+}
+.tv-label { position: absolute; top: 28px; padding: 8px 16px; border-radius: 50px; font-weight: 800; letter-spacing: 1.5px; font-size: .78rem; }
+.tv-label-before { left: 28px; background: rgba(20,20,20,.72); }
+.tv-label-after { right: 28px; background: #c88a75; }
+.tv-story { display: flex; flex-direction: column; justify-content: center; padding: 4.5rem 3.5rem 6rem; position: relative; }
+.tv-category { align-self: flex-start; padding: 7px 14px; border: 1px solid rgba(255,255,255,.25); border-radius: 30px; color: #f1b7a2; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.tv-kicker { margin: 2rem 0 .3rem; color: #d8aa99; text-transform: uppercase; letter-spacing: 3px; font-size: .72rem; }
+.tv-story h2 { margin: 0; font-family: var(--font-serif); color: #fff; font-size: clamp(2.7rem, 4vw, 4.8rem); line-height: .95; }
+.tv-story h3 { margin: 1.1rem 0 1.4rem; color: #efc3b3; font-size: clamp(1.05rem, 1.5vw, 1.4rem); font-weight: 500; }
+.tv-meta { display: flex; flex-wrap: wrap; gap: 1.2rem; color: #d2c8c4; font-size: .9rem; }
+.tv-meta span { display: flex; align-items: center; gap: 6px; }
+.tv-stars { margin-top: 1.2rem; }
+.tv-stars svg { width: 20px; height: 20px; }
+.tv-story blockquote { margin: 1.4rem 0 0; padding-left: 1.2rem; border-left: 3px solid #c88a75; color: #eee3df; font-family: var(--font-serif); font-size: clamp(1.05rem, 1.5vw, 1.35rem); line-height: 1.5; }
+.tv-signature { margin-top: 1.5rem; color: #c88a75; font-size: .8rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.tv-controls { position: absolute; z-index: 10; right: 28px; bottom: 24px; display: flex; align-items: center; gap: 10px; }
+.tv-controls > button { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); backdrop-filter: blur(10px); }
+.tv-controls > button:hover { background: #c88a75; }
+.tv-dots { display: flex; gap: 6px; padding: 0 8px; }
+.tv-dots button { width: 8px; height: 8px; padding: 0; border-radius: 10px; background: rgba(255,255,255,.35); transition: .3s ease; }
+.tv-dots button.active { width: 28px; background: #c88a75; }
+.tv-showcase:fullscreen { border-radius: 0; width: 100vw; height: 100vh; }
+.tv-showcase:fullscreen .tv-slide, .tv-showcase:fullscreen .tv-visual { min-height: 100vh; }
+
+@keyframes tvSlideIn { from { opacity: 0; transform: scale(1.025); } to { opacity: 1; transform: scale(1); } }
+@keyframes tvGlow { to { transform: translate3d(-4%, 3%, 0) scale(1.08); } }
+@keyframes tvReveal { 0%, 12% { width: 88%; } 45%, 58% { width: 16%; } 88%, 100% { width: 88%; } }
+@keyframes tvRevealLine { 0%, 12% { left: 88%; } 45%, 58% { left: 16%; } 88%, 100% { left: 88%; } }
+
+@media (max-width: 850px) {
+  .tv-slide { grid-template-columns: 1fr; }
+  .tv-visual { min-height: 470px; }
+  .tv-story { padding: 2.5rem 1.5rem 6rem; }
+  .tv-before-layer img { width: 100vw; }
+  .tv-controls { left: 18px; right: 18px; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-slide, .tv-showcase-glow, .tv-before-layer, .tv-reveal-line { animation: none !important; }
+}
+
 /* PRINT MEDIA STYLES - A4 Print Layout for Hair Catalogue */
 @media print {
   @page {

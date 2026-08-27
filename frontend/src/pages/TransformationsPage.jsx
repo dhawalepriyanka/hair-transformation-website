@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Instagram, Scissors, Sparkles, ArrowRight,
-  MapPin, Clock, Star, User
+  MapPin, Clock, Star, User, ChevronLeft, ChevronRight,
+  Play, Pause, Maximize2
 } from 'lucide-react';
 import { fetchTransformations } from '../services/api';
 
@@ -369,6 +370,9 @@ const ProductItem = ({ product }) => (
 const TransformationsPage = () => {
   const [transformationsList, setTransformationsList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const showcaseRef = useRef(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -383,6 +387,33 @@ const TransformationsPage = () => {
     };
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!isPlaying || transformationsList.length < 2) return undefined;
+    const timer = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % transformationsList.length);
+    }, 7000);
+    return () => window.clearInterval(timer);
+  }, [isPlaying, transformationsList.length]);
+
+  useEffect(() => {
+    if (activeSlide >= transformationsList.length && transformationsList.length) {
+      setActiveSlide(0);
+    }
+  }, [activeSlide, transformationsList.length]);
+
+  const changeSlide = (direction) => {
+    if (!transformationsList.length) return;
+    setActiveSlide((current) =>
+      (current + direction + transformationsList.length) % transformationsList.length
+    );
+  };
+
+  const openFullscreen = () => {
+    showcaseRef.current?.requestFullscreen?.();
+  };
+
+  const activeItem = transformationsList[activeSlide];
 
   return (
     <div className="transformations-page section-padding">
@@ -399,21 +430,63 @@ const TransformationsPage = () => {
           </span>
           <h1 className="serif section-title">Real Hair Transformations</h1>
           <p style={{ color: '#666', fontSize: '1rem', maxWidth: '650px', margin: '0.75rem auto 0' }}>
-            🖱️ <strong>Drag the slider</strong> on each card left or right to reveal the stunning Before & After.
-            Real clients, real villages, real results by Dipali Wakale.
+            Sit back and watch real client transformations come to life in our automatic Before & After showcase.
           </p>
         </div>
 
-        {/* ── BEFORE / AFTER GRID ── */}
+        {/* ── TV-FRIENDLY AUTOMATIC SHOWCASE ── */}
         {loading ? (
           <p style={{ textAlign: 'center', padding: '3rem', color: '#888' }}>Loading transformations...</p>
-        ) : (
-          <div className="transformations-grid" style={{ marginBottom: '4rem' }}>
-            {transformationsList.map((item) => (
-              <BeforeAfterCard key={item.id} item={item} />
-            ))}
+        ) : activeItem ? (
+          <div className="tv-showcase" ref={showcaseRef} style={{ marginBottom: '4rem' }}>
+            <div className="tv-showcase-glow" />
+            <div className="tv-slide" key={activeItem.id}>
+              <div className="tv-visual">
+                <img className="tv-after-image" src={activeItem.after} alt={`After - ${activeItem.clientName}`} />
+                <div className="tv-before-layer">
+                  <img src={activeItem.before} alt={`Before - ${activeItem.clientName}`} />
+                </div>
+                <div className="tv-reveal-line"><span>✦</span></div>
+                <span className="tv-label tv-label-before">BEFORE</span>
+                <span className="tv-label tv-label-after">AFTER ✨</span>
+              </div>
+
+              <div className="tv-story">
+                <span className="tv-category">{activeItem.category}</span>
+                <p className="tv-kicker">A beautiful new chapter</p>
+                <h2>{activeItem.clientName}</h2>
+                <h3>{activeItem.treatment}</h3>
+                <div className="tv-meta">
+                  <span><MapPin size={18} /> {activeItem.village}</span>
+                  <span><Clock size={18} /> {activeItem.period}</span>
+                </div>
+                <div className="tv-stars"><StarRating count={activeItem.rating} /></div>
+                <blockquote>{activeItem.testimonial}</blockquote>
+                <p className="tv-signature">Transformation by Dipali Wakale</p>
+              </div>
+            </div>
+
+            <div className="tv-controls">
+              <button type="button" onClick={() => changeSlide(-1)} aria-label="Previous transformation"><ChevronLeft /></button>
+              <div className="tv-dots">
+                {transformationsList.map((item, index) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    className={index === activeSlide ? 'active' : ''}
+                    onClick={() => setActiveSlide(index)}
+                    aria-label={`Show transformation ${index + 1}`}
+                  />
+                ))}
+              </div>
+              <button type="button" onClick={() => setIsPlaying((playing) => !playing)} aria-label={isPlaying ? 'Pause slideshow' : 'Play slideshow'}>
+                {isPlaying ? <Pause /> : <Play />}
+              </button>
+              <button type="button" onClick={() => changeSlide(1)} aria-label="Next transformation"><ChevronRight /></button>
+              <button type="button" onClick={openFullscreen} aria-label="Open fullscreen"><Maximize2 /></button>
+            </div>
           </div>
-        )}
+        ) : <p style={{ textAlign: 'center' }}>No transformations available.</p>}
 
 
 
@@ -457,4 +530,3 @@ const TransformationsPage = () => {
 };
 
 export default TransformationsPage;
-
