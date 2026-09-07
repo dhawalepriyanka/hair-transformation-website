@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { validateMediaFile, validateVideoSource } from '../../services/transformationMedia.js';
+import { setAdminSession } from '../../services/adminSession';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   fetchProducts, deleteProduct, updateProduct,
@@ -6,7 +8,7 @@ import {
 } from '../../services/api';
 import {
   Plus, Edit, Trash2, Search, LogOut, Eye, EyeOff,
-  Sparkles, RefreshCw, Package, Star, X, Check, Image, Upload, FolderOpen
+  Sparkles, RefreshCw, Package, Star, X, Check, Image, Upload, FolderOpen, Video
 } from 'lucide-react';
 
 const TRANSFORMATION_CATEGORIES = [
@@ -36,6 +38,12 @@ const AdminDashboard = () => {
   // Transformation Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [mediaType, setMediaType] = useState('images');
+  const [readingMedia, setReadingMedia] = useState(false);
+  const [savingTransformation, setSavingTransformation] = useState(false);
+  const [videoError, setVideoError] = useState('');
+  const [pairErrors, setPairErrors] = useState({});
+  const mediaReader = useRef(null);
   const [formData, setFormData] = useState({
     clientName: '',
     village: '',
@@ -45,6 +53,7 @@ const AdminDashboard = () => {
     testimonial: '',
     before: '',
     after: '',
+    video: '', beforeVideo: '', afterVideo: '',
     category: 'Hair Extensions'
   });
 
@@ -52,18 +61,41 @@ const AdminDashboard = () => {
 
   const handleFileUpload = (e, field) => {
     const file = e.target.files && e.target.files[0];
-    if (file) {
-      if (file.size > 8 * 1024 * 1024) {
-        alert('Please choose an image file smaller than 8MB');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, [field]: reader.result }));
-      };
-      reader.readAsDataURL(file);
+    e.target.value = '';
+    if (!file) return;
+    try {
+      validateMediaFile(file, field);
+    } catch (error) {
+      alert(error.message);
+      return;
     }
+    mediaReader.current?.abort();
+    const reader = new FileReader();
+    mediaReader.current = reader;
+    setReadingMedia(true);
+    reader.onload = () => {
+      setFormData((prev) => ({ ...prev, [field]: reader.result }));
+      if (field === 'video') setVideoError('');
+      setPairErrors(prev => ({ ...prev, [field]: '' }));
+    };
+    reader.onerror = () => alert('Could not read this file. Please choose it again.');
+    reader.onloadend = () => {
+      if (mediaReader.current === reader) {
+        mediaReader.current = null;
+        setReadingMedia(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
+
+  useEffect(() => () => mediaReader.current?.abort(), []);
+
+  useEffect(() => {
+    mediaReader.current?.abort();
+    setReadingMedia(false);
+    setVideoError('');
+    setPairErrors({});
+  }, [modalOpen, mediaType]);
 
   const loadAllProducts = async () => {
     setLoadingProducts(true);
@@ -90,7 +122,7 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
+    const token = sessionStorage.getItem('adminToken');
     if (!token) {
       navigate('/admin/login');
       return;
@@ -100,7 +132,7 @@ const AdminDashboard = () => {
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem('adminToken');
+    setAdminSession(null);
     navigate('/admin/login');
   };
 
@@ -128,6 +160,7 @@ const AdminDashboard = () => {
   // Transformation actions
   const openAddModal = () => {
     setEditingItem(null);
+    setMediaType('images');
     setFormData({
       clientName: '',
       village: '',
@@ -137,6 +170,7 @@ const AdminDashboard = () => {
       testimonial: '',
       before: '',
       after: '',
+      video: '', beforeVideo: '', afterVideo: '',
       category: 'Hair Extensions'
     });
     setModalOpen(true);
@@ -144,6 +178,7 @@ const AdminDashboard = () => {
 
   const openEditModal = (item) => {
     setEditingItem(item);
+    setMediaType(item.beforeVideo || item.afterVideo ? 'videos' : item.video ? 'video' : 'images');
     setFormData({
       clientName: item.clientName || '',
       village: item.village || '',
@@ -153,6 +188,9 @@ const AdminDashboard = () => {
       testimonial: item.testimonial || '',
       before: item.before || '',
       after: item.after || '',
+      video: item.video || '',
+      beforeVideo: item.beforeVideo || '',
+      afterVideo: item.afterVideo || '',
       category: item.category || 'Hair Extensions'
     });
     setModalOpen(true);
@@ -160,16 +198,43 @@ const AdminDashboard = () => {
 
   const handleSaveTransformation = async (e) => {
     e.preventDefault();
+    if (readingMedia || savingTransformation) return;
+    if (mediaType === 'images' && (!formData.before || !formData.after)) {
+      alert('Please add both Before and After images, or choose Video instead.');
+      return;
+    }
+    if (mediaType === 'video' && !formData.video) {
+      alert('Please choose a video file or paste a direct video URL.');
+      return;
+    }
+    const mediaData = mediaType === 'videos'
+      ? { ...formData, before: '', after: '', video: '' }
+      : mediaType === 'video'
+        ? { ...formData, before: '', after: '', beforeVideo: '', afterVideo: '' }
+        : { ...formData, video: '', beforeVideo: '', afterVideo: '' };
     try {
+      if (mediaType === 'video') {
+        mediaData.video = validateVideoSource(mediaData.video);
+        if (videoError) throw new Error(videoError);
+      }
+      if (mediaType === 'videos') {
+        if (!mediaData.beforeVideo || !mediaData.afterVideo) throw new Error('Please add both Before and After videos.');
+        mediaData.beforeVideo = validateVideoSource(mediaData.beforeVideo);
+        mediaData.afterVideo = validateVideoSource(mediaData.afterVideo);
+        if (pairErrors.beforeVideo || pairErrors.afterVideo) throw new Error('Please replace the video that could not be played.');
+      }
+      setSavingTransformation(true);
       if (editingItem) {
-        await updateTransformation(editingItem.id, formData);
+        await updateTransformation(editingItem.id, mediaData);
       } else {
-        await createTransformation(formData);
+        await createTransformation(mediaData);
       }
       setModalOpen(false);
       loadAllTransformations();
     } catch (err) {
       alert('Failed to save transformation: ' + err.message);
+    } finally {
+      setSavingTransformation(false);
     }
   };
 
@@ -298,6 +363,17 @@ const AdminDashboard = () => {
           >
             <Package size={17} /> Products Catalogue ({products.length})
           </button>
+
+          <Link
+            to="/admin/product-selection"
+            style={{
+              padding: '0.65rem 1.4rem', borderRadius: '25px', fontWeight: '700',
+              fontSize: '0.92rem', display: 'inline-flex', alignItems: 'center', gap: '8px',
+              backgroundColor: '#F7EFEA', color: '#555', textDecoration: 'none'
+            }}
+          >
+            <Check size={17} /> Select & Print Products
+          </Link>
 
           <button
             onClick={() => setActiveTab('transformations')}
@@ -486,6 +562,11 @@ const AdminDashboard = () => {
                       <tr key={item.id} style={{ borderBottom: '1px solid #F4EFEA' }}>
                         <td style={{ padding: '0.75rem' }}>
                           <div style={{ display: 'flex', gap: '4px' }}>
+                            {(item.video || item.beforeVideo) && !item.before && !item.after ? (
+                              <span title="Video transformation" style={{ width: '80px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', borderRadius: '4px', color: '#FFF', background: '#C88A75', fontSize: '0.72rem', fontWeight: '700' }}>
+                                <Video size={17} /> {item.beforeVideo ? 'BEFORE / AFTER' : 'VIDEO'}
+                              </span>
+                            ) : <>
                             <img
                               src={item.before}
                               alt="Before"
@@ -500,6 +581,12 @@ const AdminDashboard = () => {
                               style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #C88A75' }}
                               onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=200'; }}
                             />
+                            {item.video && (
+                              <span title="Video included" style={{ width: '38px', height: '38px', display: 'grid', placeItems: 'center', borderRadius: '4px', color: '#FFF', background: '#C88A75' }}>
+                                <Video size={17} />
+                              </span>
+                            )}
+                            </>}
                           </div>
                         </td>
                         <td style={{ padding: '0.75rem', fontWeight: 'bold' }}>{item.clientName}</td>
@@ -676,7 +763,23 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', marginBottom: '0.5rem' }}>Choose Transformation Media *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
+                    <button type="button" onClick={() => setMediaType('images')} style={{ padding: '0.7rem', borderRadius: '8px', border: `1.5px solid ${mediaType === 'images' ? '#C88A75' : '#DDD'}`, background: mediaType === 'images' ? '#F7EFEA' : '#FFF', color: mediaType === 'images' ? '#9A5F4D' : '#666', fontWeight: '700', cursor: 'pointer' }}>
+                      <Image size={16} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Before & After Images
+                    </button>
+                    <button type="button" aria-pressed={mediaType === 'videos'} onClick={() => setMediaType('videos')} style={{ padding: '0.7rem', borderRadius: '8px', border: mediaType === 'videos' ? '1.5px solid #C88A75' : '1.5px solid #DDD', background: mediaType === 'videos' ? '#F7EFEA' : '#FFF', color: mediaType === 'videos' ? '#9A5F4D' : '#666', fontWeight: '700', cursor: 'pointer' }}>
+                      <Video size={16} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Before & After Videos
+                    </button>
+                    <button type="button" onClick={() => setMediaType('video')} style={{ padding: '0.7rem', borderRadius: '8px', border: `1.5px solid ${mediaType === 'video' ? '#C88A75' : '#DDD'}`, background: mediaType === 'video' ? '#F7EFEA' : '#FFF', color: mediaType === 'video' ? '#9A5F4D' : '#666', fontWeight: '700', cursor: 'pointer' }}>
+                      <Video size={16} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Video Only
+                    </button>
+                  </div>
+                  <p style={{ margin: '0.45rem 0 0', color: '#777', fontSize: '0.78rem' }}>Choose a Before & After image or video pair, or a single transformation video.</p>
+                </div>
+
+                {mediaType === 'images' && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
                   {/* Before Image Input */}
                   <div style={{ background: '#FAF8F6', padding: '1rem', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
                     <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', color: '#1E1E1E', marginBottom: '0.4rem' }}>
@@ -808,7 +911,52 @@ const AdminDashboard = () => {
                       </div>
                     )}
                   </div>
-                </div>
+                </div>}
+
+                {mediaType === 'videos' && <div className="transformation-video-pair-inputs">
+                  {[['beforeVideo', 'Before Video'], ['afterVideo', 'After Video']].map(([field, label]) => (
+                    <div key={field} style={{ background: '#FAF8F6', padding: '1rem', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
+                      <label htmlFor={field + '-file'} style={{ display: 'block', fontWeight: '700', marginBottom: '0.6rem' }}>{label} *</label>
+                      <label htmlFor={field + '-file'} style={{ display: 'block', textAlign: 'center', padding: '0.8rem', border: '1.5px dashed #C88A75', borderRadius: '8px', color: '#9A5F4D', background: '#FFF', cursor: 'pointer' }}>
+                        <Video size={16} /> Choose {label} (max 3MB)
+                      </label>
+                      <input id={field + '-file'} type="file" accept="video/mp4,video/webm,video/ogg" disabled={readingMedia} style={{ display: 'none' }} onChange={e => handleFileUpload(e, field)} />
+                      <p style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center' }}>— or paste direct video URL —</p>
+                      <input type="url" aria-label={label + ' URL'} placeholder="https://example.com/video.mp4" disabled={readingMedia} value={formData[field].startsWith('data:') ? '' : formData[field]} onChange={e => { setPairErrors(prev => ({ ...prev, [field]: '' })); setFormData(prev => ({ ...prev, [field]: e.target.value })); }} style={{ width: '100%', padding: '0.55rem', border: '1px solid #CCC', borderRadius: '6px' }} />
+                      {formData[field].startsWith('data:') && <p role="status">Local video selected</p>}
+                      {pairErrors[field] && <p role="alert" style={{ color: '#C62828' }}>{pairErrors[field]}</p>}
+                      {formData[field] && <>
+                        <video key={formData[field]} src={formData[field]} controls muted playsInline preload="metadata" onLoadedMetadata={() => setPairErrors(prev => ({ ...prev, [field]: '' }))} onError={() => setPairErrors(prev => ({ ...prev, [field]: 'This video could not be played. Choose another file or check the URL.' }))} style={{ width: '100%', maxHeight: '220px', marginTop: '0.75rem', borderRadius: '8px', background: '#111' }} />
+                        <button type="button" onClick={() => { setFormData(prev => ({ ...prev, [field]: '' })); setPairErrors(prev => ({ ...prev, [field]: '' })); }} style={{ background: '#FFEBEE', color: '#C62828', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer' }}>Remove {label}</button>
+                      </>}
+                    </div>
+                  ))}
+                  <p role="status" style={{ gridColumn: '1 / -1', fontSize: '0.8rem', color: '#777' }}>{readingMedia ? 'Reading media…' : 'MP4, WebM or Ogg · Up to 3MB per video. Both videos are required.'}</p>
+                </div>}
+
+                {mediaType === 'video' && <div style={{ background: '#FAF8F6', padding: '1rem', borderRadius: '12px', border: '1px solid #EBE5E0', marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', color: '#1E1E1E', marginBottom: '0.4rem' }}>
+                    Transformation Video *
+                  </label>
+                  <div style={{ marginBottom: '0.6rem' }}>
+                    <label htmlFor="video-file-upload" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: '#FFF', border: '1.5px dashed #C88A75', color: '#C88A75', padding: '0.65rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' }}>
+                      <Video size={16} /> Choose Video from PC / Gallery (max 3MB)
+                    </label>
+                    <input id="video-file-upload" type="file" accept="video/mp4,video/webm,video/ogg" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'video')} />
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '0.4rem' }}>— or paste direct video URL —</div>
+                  <input type="url" aria-label="Direct video URL" placeholder="https://example.com/video.mp4" disabled={readingMedia} value={formData.video.startsWith('data:') ? '' : formData.video} onChange={(e) => { setVideoError(''); setFormData({ ...formData, video: e.target.value }); }} style={{ width: '100%', padding: '0.55rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.82rem' }} />
+                  <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.4rem' }}>MP4, WebM or Ogg · Files up to 3MB. Links must point directly to a playable video.</p>
+                  {readingMedia && <p role="status">Reading media…</p>}
+                  {formData.video.startsWith('data:') && <p role="status">Local video selected</p>}
+                  {videoError && <p role="alert" style={{ color: '#C62828' }}>{videoError}</p>}
+                  {formData.video && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <video key={formData.video} src={formData.video} controls muted playsInline preload="metadata" onLoadedMetadata={() => setVideoError('')} onError={() => setVideoError('This video could not be played. Choose a supported file or check the direct video URL.')} style={{ width: '100%', maxHeight: '220px', borderRadius: '8px', background: '#111' }} />
+                      <button type="button" onClick={() => { mediaReader.current?.abort(); setVideoError(''); setFormData({ ...formData, video: '' }); }} style={{ marginTop: '0.5rem', background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>Remove Video</button>
+                    </div>
+                  )}
+                </div>}
 
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.35rem' }}>
@@ -834,9 +982,10 @@ const AdminDashboard = () => {
 
                   <button
                     type="submit"
+                    disabled={readingMedia || savingTransformation || (mediaType === 'video' && !!videoError) || (mediaType === 'videos' && !!(pairErrors.beforeVideo || pairErrors.afterVideo))}
                     style={{ padding: '0.7rem 1.6rem', borderRadius: '25px', border: 'none', backgroundColor: '#C88A75', color: '#FFF', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <Check size={16} /> {editingItem ? 'Update Transformation' : 'Save Transformation'}
+                    <Check size={16} /> {readingMedia ? 'Reading Media…' : savingTransformation ? 'Saving…' : editingItem ? 'Update Transformation' : 'Save Transformation'}
                   </button>
                 </div>
               </form>
@@ -850,4 +999,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

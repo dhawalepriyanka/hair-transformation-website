@@ -1,15 +1,19 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { hasAdminSession, useAdminSession } from '../services/adminSession';
 import { useSelection } from '../context/SelectionContext';
 import ProductCard from '../components/ProductCard';
 import { Printer, ArrowLeft, Scissors, Sparkles, Trash2 } from 'lucide-react';
 
 const SelectedProductsPage = () => {
+  const isAdmin = useAdminSession();
   const { selectedStyles, selectedCount, clearSelection } = useSelection();
 
   const handlePrint = () => {
-    window.print();
+    if (hasAdminSession()) window.print();
   };
+
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
   const currentDate = new Date().toLocaleDateString('en-IN', {
     day: 'numeric',

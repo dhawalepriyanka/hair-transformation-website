@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelection } from '../context/SelectionContext';
+import { useAdminSession } from '../services/adminSession';
 import { Check, Plus, Trash2, ArrowRight } from 'lucide-react';
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?auto=format&fit=crop&q=80&w=800';
 
 const ProductCard = ({ product, mode = 'select' }) => {
+  const isAdmin = useAdminSession();
   const { isStyleSelected, toggleStyleSelection, removeStyle } = useSelection();
-  const selected = mode === 'select' && isStyleSelected(product.id);
+  const selected = isAdmin && mode === 'select' && isStyleSelected(product.id);
   const [imgSrc, setImgSrc] = useState(product.image_url || FALLBACK_IMAGE);
 
   const formattedPrice = product.price
@@ -44,7 +46,7 @@ const ProductCard = ({ product, mode = 'select' }) => {
           {formattedPrice && <span className="product-price">{formattedPrice}</span>}
         </div>
 
-        {mode === 'select' ? (
+        {mode === 'display' || (!isAdmin && (mode === 'select' || mode === 'remove')) ? null : mode === 'select' ? (
           <button
             className={`btn-select ${selected ? 'selected' : ''}`}
             onClick={() => toggleStyleSelection(product)}
@@ -83,4 +85,3 @@ const ProductCard = ({ product, mode = 'select' }) => {
 };
 
 export default ProductCard;
-

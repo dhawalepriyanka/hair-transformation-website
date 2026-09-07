@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import SelectionBar from '../components/SelectionBar';
 import SkeletonLoader from '../components/SkeletonLoader';
 import { fetchProducts } from '../services/api';
 import { Search, AlertCircle, RefreshCw } from 'lucide-react';
+import { useAdminSession } from '../services/adminSession';
 
 const CATEGORIES = ['All', 'Hair Serum', 'Hair Treatment', 'Hair Growth', 'Hair Care', 'Hair Oil', 'Skin Care', 'Supplement'];
 
-const ProductsPage = () => {
+const ProductsPage = ({ selectionEnabled = false }) => {
+  const isAdmin = useAdminSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'All';
 
@@ -72,6 +74,8 @@ const ProductsPage = () => {
     setSearchParams(searchParams);
   };
 
+  if (selectionEnabled && !isAdmin) return <Navigate to="/admin/login" replace />;
+
   return (
     <div className="products-page section-padding">
       <div className="container">
@@ -81,7 +85,9 @@ const ProductsPage = () => {
             Our Products Catalogue
           </h1>
           <p style={{ color: '#C88A75', fontSize: '1.05rem', fontWeight: '600', maxWidth: '650px', margin: '0.25rem auto 0 auto' }}>
-            Browse our complete range of hair & skin care products
+            {selectionEnabled
+              ? 'Select products to prepare and print an admin product sheet'
+              : 'Browse our complete range of hair & skin care products'}
           </p>
         </div>
 
@@ -169,14 +175,13 @@ const ProductsPage = () => {
         ) : (
           <div className="product-grid">
             {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} mode="select" />
+              <ProductCard key={product.id} product={product} mode={selectionEnabled ? 'select' : 'display'} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Sticky Selection Bar */}
-      <SelectionBar />
+      {selectionEnabled && <SelectionBar />}
     </div>
   );
 };

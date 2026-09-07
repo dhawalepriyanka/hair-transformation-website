@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { normalizeTransformation } from './transformationMedia.js';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5000/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -12,7 +13,7 @@ const apiClient = axios.create({
 
 // Add Authorization header if token exists
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('adminToken');
+  const token = sessionStorage.getItem('adminToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -169,6 +170,34 @@ const mockProducts = [
 // Initial default transformations list
 const defaultTransformations = [
   {
+    id: 9000002,
+    clientName: 'Before & After Video Demo',
+    village: 'Sample only',
+    treatment: 'Before & After Video Preview',
+    period: 'Two sample excerpts',
+    rating: 5,
+    testimonial: 'Two excerpts from a sample flower clip to demonstrate the Before and After players. This is not a client transformation.',
+    before: '',
+    after: '',
+    video: '',
+    beforeVideo: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4#t=0,2',
+    afterVideo: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4#t=2,5',
+    category: 'Other',
+  },
+  {
+    id: 9000001,
+    clientName: 'Video Demo',
+    village: 'Sample only',
+    treatment: 'Sample Video Playback',
+    period: 'Demo clip',
+    rating: 5,
+    testimonial: 'Sample flower video for testing playback. This is not a client transformation.',
+    before: '',
+    after: '',
+    video: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+    category: 'Other',
+  },
+  {
     id: 1,
     clientName: 'Priya Deshmukh',
     village: 'Nashik, Maharashtra',
@@ -245,7 +274,10 @@ const defaultTransformations = [
 const getStoredProducts = () => {
   try {
     const saved = localStorage.getItem('admin_custom_products');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const list = JSON.parse(saved);
+      return list;
+    }
   } catch (e) {}
   return mockProducts;
 };
@@ -356,22 +388,49 @@ export const deleteProduct = async (id) => {
 const getStoredTransformations = () => {
   try {
     const saved = localStorage.getItem('admin_transformations');
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
+    if (saved) {
+      const list = JSON.parse(saved);
+      if (!Array.isArray(list)) throw new Error('Invalid saved transformations');
+      return list;
+    }
+  } catch (e) {
+    throw new Error('Could not read saved transformations. Check browser storage access and try again.');
+  }
   return defaultTransformations;
 };
 
 const saveStoredTransformations = (list) => {
   try {
     localStorage.setItem('admin_transformations', JSON.stringify(list));
-  } catch (e) {}
+  } catch (e) {
+    throw new Error('Could not save transformations. Browser storage may be full or unavailable. Remove unused media or use a direct video URL, then try again.');
+  }
 };
 
 export const fetchTransformations = async () => {
-  return getStoredTransformations();
+  let list = getStoredTransformations();
+  // Add the requested demo once for existing galleries, respecting later deletion.
+  const demoKey = 'transformation_video_demo_added_v1';
+  if (!localStorage.getItem(demoKey)) {
+    const demo = defaultTransformations.find(item => item.id === 9000001);
+    const updated = list.some(item => item.id === demo.id) ? list : [demo, ...list];
+    saveStoredTransformations(updated);
+    localStorage.setItem(demoKey, 'true');
+    list = updated;
+  }
+  const pairDemoKey = 'transformation_video_pair_demo_added_v1';
+  if (!localStorage.getItem(pairDemoKey)) {
+    const demo = defaultTransformations.find(item => item.id === 9000002);
+    const updated = list.some(item => item.id === demo.id) ? list : [demo, ...list];
+    saveStoredTransformations(updated);
+    localStorage.setItem(pairDemoKey, 'true');
+    list = updated;
+  }
+  return list;
 };
 
 export const createTransformation = async (itemData) => {
+  itemData = normalizeTransformation(itemData);
   const list = getStoredTransformations();
   const newItem = {
     id: Date.now(),
@@ -381,8 +440,11 @@ export const createTransformation = async (itemData) => {
     period: itemData.period || 'Recent',
     rating: parseInt(itemData.rating) || 5,
     testimonial: itemData.testimonial || '',
-    before: itemData.before || 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800',
-    after: itemData.after || 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800',
+    before: itemData.before || '',
+    after: itemData.after || '',
+    video: itemData.video || '',
+    beforeVideo: itemData.beforeVideo || '',
+    afterVideo: itemData.afterVideo || '',
     category: itemData.category || 'Hair Transformation',
   };
   const updated = [newItem, ...list];
@@ -391,7 +453,11 @@ export const createTransformation = async (itemData) => {
 };
 
 export const updateTransformation = async (id, itemData) => {
+  itemData = normalizeTransformation(itemData);
   const list = getStoredTransformations();
+  if (!list.some(item => item.id === Number(id))) {
+    throw new Error('Transformation not found. Refresh the list and try again.');
+  }
   const updated = list.map(item => item.id === parseInt(id) ? { ...item, ...itemData } : item);
   saveStoredTransformations(updated);
   return { success: true };
@@ -403,4 +469,3 @@ export const deleteTransformation = async (id) => {
   saveStoredTransformations(updated);
   return { success: true };
 };
-

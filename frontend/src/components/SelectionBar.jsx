@@ -1,13 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelection } from '../context/SelectionContext';
+import { useAdminSession } from '../services/adminSession';
 import { Scissors, ArrowRight } from 'lucide-react';
 
 const SelectionBar = () => {
+  const isAdmin = useAdminSession();
   const { selectedCount, clearSelection } = useSelection();
   const navigate = useNavigate();
 
-  if (selectedCount === 0) return null;
+  if (!isAdmin || selectedCount === 0) return null;
 
   return (
     <div className="selection-bar">

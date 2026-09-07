@@ -34,6 +34,7 @@ function App() {
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/hair-styles/admin" element={<Navigate to="/admin" replace />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/product-selection" element={<ProductsPage selectionEnabled />} />
               <Route path="/admin/products/add" element={<AdminProductForm />} />
               <Route path="/admin/styles/add" element={<AdminProductForm />} />
               <Route path="/admin/products/edit/:id" element={<AdminProductForm />} />

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { hasAdminSession, useAdminSession } from '../services/adminSession';
 
 const SelectionContext = createContext();
 
@@ -8,6 +9,7 @@ const VERSION_KEY = 'selectionDataVersion';
 const CURRENT_VERSION = 'v2-real-products'; // bump this whenever products change
 
 export const SelectionProvider = ({ children }) => {
+  const isAdmin = useAdminSession();
   const [selectedStyles, setSelectedStyles] = useState(() => {
     try {
       // Clear old selections if product data version changed
@@ -37,11 +39,12 @@ export const SelectionProvider = ({ children }) => {
 
   // Check if style is selected
   const isStyleSelected = (styleId) => {
-    return selectedStyles.some((s) => s.id === styleId);
+    return hasAdminSession() && selectedStyles.some((s) => s.id === styleId);
   };
 
   // Toggle selection state safely (avoids duplicate selections)
   const toggleStyleSelection = (style) => {
+    if (!hasAdminSession()) return;
     setSelectedStyles((prev) => {
       const exists = prev.some((s) => s.id === style.id);
       if (exists) {
@@ -54,11 +57,13 @@ export const SelectionProvider = ({ children }) => {
 
   // Explicitly remove style by ID
   const removeStyle = (styleId) => {
+    if (!hasAdminSession()) return;
     setSelectedStyles((prev) => prev.filter((s) => s.id !== styleId));
   };
 
   // Clear all selections
   const clearSelection = () => {
+    if (!hasAdminSession()) return;
     setSelectedStyles([]);
     try {
       localStorage.removeItem(LOCAL_STORAGE_KEY);
@@ -71,9 +76,9 @@ export const SelectionProvider = ({ children }) => {
   return (
     <SelectionContext.Provider
       value={{
-        selectedStyles,
-        selectedProducts: selectedStyles, // Compatibility alias
-        selectedCount: selectedStyles.length,
+        selectedStyles: isAdmin ? selectedStyles : [],
+        selectedProducts: isAdmin ? selectedStyles : [], // Compatibility alias
+        selectedCount: isAdmin ? selectedStyles.length : 0,
         isStyleSelected,
         isSelected: isStyleSelected, // Compatibility alias
         toggleStyleSelection,

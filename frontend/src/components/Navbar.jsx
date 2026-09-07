@@ -1,14 +1,24 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSelection } from '../context/SelectionContext';
-import { Scissors, Menu, X } from 'lucide-react';
+import { setAdminSession, useAdminSession } from '../services/adminSession';
+import { Scissors, Menu, X, LogOut } from 'lucide-react';
 
 const Navbar = () => {
-  const { selectedCount } = useSelection();
+  const isAdmin = useAdminSession();
+  const { selectedCount, clearSelection } = useSelection();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (path) => location.pathname === path;
+
+  const handleAdminLogout = () => {
+    clearSelection();
+    setAdminSession(null);
+    setMobileMenuOpen(false);
+    navigate('/admin/login');
+  };
 
   return (
     <header className="navbar">
@@ -52,7 +62,16 @@ const Navbar = () => {
                 Transformations
               </Link>
             </li>
-            <li>
+            {isAdmin && <li>
+              <Link
+                to="/admin/product-selection"
+                className={`nav-link ${isActive('/admin/product-selection') ? 'active' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Product Selection
+              </Link>
+            </li>}
+            {isAdmin && <li>
               <Link
                 to="/selected-styles"
                 className={`nav-link ${isActive('/selected-styles') || isActive('/selected-products') ? 'active' : ''}`}
@@ -63,7 +82,12 @@ const Navbar = () => {
                   <span className="selected-badge">{selectedCount}</span>
                 )}
               </Link>
-            </li>
+            </li>}
+            {isAdmin && <li>
+              <button type="button" className="nav-link nav-logout" onClick={handleAdminLogout}>
+                <LogOut size={16} /> Logout
+              </button>
+            </li>}
           </ul>
         </nav>
 

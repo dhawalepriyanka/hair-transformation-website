@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginAdmin } from '../../services/api';
+import { setAdminSession } from '../../services/adminSession';
 import { ShieldCheck, Lock, User, AlertCircle, Scissors } from 'lucide-react';
 
 const AdminLogin = () => {
@@ -18,7 +19,7 @@ const AdminLogin = () => {
     try {
       const data = await loginAdmin({ username, password });
       if (data.token) {
-        localStorage.setItem('adminToken', data.token);
+        setAdminSession(data.token);
         navigate('/admin/dashboard');
       } else {
         setError(data.message || 'Login failed');

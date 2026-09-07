@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAdminSession } from '../services/adminSession';
 import { Instagram, MapPin, Scissors, MessageCircle, Phone, Youtube } from 'lucide-react';
 
 const Footer = () => {
+  const isAdmin = useAdminSession();
   return (
     <footer className="footer" id="contact">
       <div className="container">
@@ -131,7 +133,7 @@ const Footer = () => {
               <li><Link to="/">Home</Link></li>
               <li><Link to="/hair-styles">Products Catalogue</Link></li>
               <li><Link to="/transformations">Real Transformations</Link></li>
-              <li><Link to="/selected-styles">Selected Products</Link></li>
+              {isAdmin && <li><Link to="/selected-styles">Selected Products</Link></li>}
             </ul>
           </div>
 

@@ -67,7 +67,7 @@ const HomePage = () => {
               </h1>
               
               <p style={{ fontSize: '1rem', color: '#CCC', marginBottom: '1.75rem', lineHeight: '1.7' }}>
-                Professional Hair Transformations, Hair Regrowth Treatments, Skin Care & Wellness products by Dipali Wakale. Browse our products and select items for your printable consultation sheet.
+                Professional Hair Transformations, Hair Regrowth Treatments, Skin Care & Wellness products by Dipali Wakale. Browse our products and find the right care for your needs.
               </p>
 
               <div className="hero-buttons">
@@ -135,8 +135,8 @@ const HomePage = () => {
             </div>
             <div style={{ padding: '1rem' }}>
               <HeartHandshake size={32} color="#C88A75" style={{ marginBottom: '0.85rem' }} />
-              <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Printable Product Catalogue</h3>
-              <p style={{ fontSize: '0.9rem', color: '#666' }}>Select multiple products online and generate a clean A4 sheet instantly.</p>
+              <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Product Catalogue</h3>
+              <p style={{ fontSize: '0.9rem', color: '#666' }}>Explore our hair care, skin care and wellness products.</p>
             </div>
           </div>
         </div>

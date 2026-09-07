@@ -6,6 +6,7 @@ import {
   Play, Pause, Maximize2
 } from 'lucide-react';
 import { fetchTransformations } from '../services/api';
+import VideoComparison from '../components/VideoComparison';
 
 
 /* ─────────────── BEFORE / AFTER DATA ─────────────── */
@@ -389,12 +390,12 @@ const TransformationsPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!isPlaying || transformationsList.length < 2) return undefined;
+    if (!isPlaying || transformationsList.length < 2 || transformationsList[activeSlide]?.video || transformationsList[activeSlide]?.beforeVideo) return undefined;
     const timer = window.setInterval(() => {
       setActiveSlide((current) => (current + 1) % transformationsList.length);
     }, 7000);
     return () => window.clearInterval(timer);
-  }, [isPlaying, transformationsList.length]);
+  }, [isPlaying, transformationsList, activeSlide]);
 
   useEffect(() => {
     if (activeSlide >= transformationsList.length && transformationsList.length) {
@@ -441,14 +442,24 @@ const TransformationsPage = () => {
           <div className="tv-showcase" ref={showcaseRef} style={{ marginBottom: '4rem' }}>
             <div className="tv-showcase-glow" />
             <div className="tv-slide" key={activeItem.id}>
-              <div className="tv-visual">
-                <img className="tv-after-image" src={activeItem.after} alt={`After - ${activeItem.clientName}`} />
-                <div className="tv-before-layer">
-                  <img src={activeItem.before} alt={`Before - ${activeItem.clientName}`} />
-                </div>
-                <div className="tv-reveal-line"><span>✦</span></div>
-                <span className="tv-label tv-label-before">BEFORE</span>
-                <span className="tv-label tv-label-after">AFTER ✨</span>
+              <div className={`tv-visual ${activeItem.video || activeItem.beforeVideo ? 'tv-video-visual' : ''}`}>
+                {activeItem.beforeVideo && activeItem.afterVideo ? (
+                  <VideoComparison before={activeItem.beforeVideo} after={activeItem.afterVideo} clientName={activeItem.clientName} />
+                ) : activeItem.video ? (
+                  <video className="tv-transformation-video" src={activeItem.video} poster={activeItem.after} controls autoPlay muted loop playsInline>
+                    Your browser does not support video playback.
+                  </video>
+                ) : (
+                  <>
+                    <img className="tv-after-image" src={activeItem.after} alt={`After - ${activeItem.clientName}`} />
+                    <div className="tv-before-layer">
+                      <img src={activeItem.before} alt={`Before - ${activeItem.clientName}`} />
+                    </div>
+                    <div className="tv-reveal-line"><span>✦</span></div>
+                    <span className="tv-label tv-label-before">BEFORE</span>
+                    <span className="tv-label tv-label-after">AFTER ✨</span>
+                  </>
+                )}
               </div>
 
               <div className="tv-story">
