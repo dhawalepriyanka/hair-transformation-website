@@ -64,6 +64,15 @@ const Navbar = () => {
             </li>
             {isAdmin && <li>
               <Link
+                to="/admin/dashboard"
+                className={`nav-link ${isActive('/admin/dashboard') ? 'active' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Admin Dashboard
+              </Link>
+            </li>}
+            {isAdmin && <li>
+              <Link
                 to="/admin/product-selection"
                 className={`nav-link ${isActive('/admin/product-selection') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
