@@ -27,7 +27,7 @@
       }
     },
     {
-      "source": "/(products|selected-styles|selected-products|transformations)/?",
+      "source": "/(products|selected-styles|selected-products|transformations)(/)?",
       "destination": {
         "type": "service",
         "service": "frontend",
