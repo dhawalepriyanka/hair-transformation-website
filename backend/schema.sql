@@ -17,8 +17,7 @@ CREATE TABLE IF NOT EXISTS products (
 ALTER TABLE products DROP CONSTRAINT IF EXISTS products_product_code_key;
 CREATE INDEX IF NOT EXISTS idx_products_product_code ON products(product_code);
 
--- Remove the previous sample hairstyle catalogue and seed the clinic's real list.
-DELETE FROM products WHERE product_code ~ '^H0[0-9]{2}$';
+-- Seed the clinic catalogue without removing any existing product records.
 
 WITH clinic_products (name, product_code, category, image_url, price, description) AS (
     VALUES

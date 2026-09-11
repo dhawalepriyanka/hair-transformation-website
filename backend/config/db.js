@@ -56,7 +56,26 @@ const ensureDatabase = () => {
   if (!databaseReadyPromise) {
     const schemaPath = path.join(__dirname, '..', 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
-    databaseReadyPromise = pool.query(schema).catch((error) => {
+    databaseReadyPromise = (async () => {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // Serialize first-time setup across concurrent serverless instances.
+        await client.query('SELECT pg_advisory_xact_lock(724913082)');
+        await client.query('CREATE TABLE IF NOT EXISTS clinic_schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())');
+        const applied = await client.query('SELECT version FROM clinic_schema_migrations WHERE version = $1', ['clinic-v1']);
+        if (!applied.rows.length) {
+          await client.query(schema);
+          await client.query('INSERT INTO clinic_schema_migrations (version) VALUES ($1)', ['clinic-v1']);
+        }
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    })().catch((error) => {
       databaseReadyPromise = undefined;
       throw error;
     });

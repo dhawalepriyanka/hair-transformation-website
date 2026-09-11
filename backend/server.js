@@ -22,6 +22,7 @@ const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000')
   .split(',')
   .map(origin => origin.trim())
   .filter(Boolean);
+allowedOrigins.push('https://hair-transformation-website.vercel.app');
 
 app.use(cors({
   origin(origin, callback) {
