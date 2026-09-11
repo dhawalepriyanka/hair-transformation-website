@@ -2,7 +2,9 @@ import axios from 'axios';
 import { normalizeTransformation } from './transformationMedia.js';
 import { getStaffSession } from './adminSession.js';
 
-const API_BASE_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5000/api';
+const runtimeEnv = import.meta.env || {};
+const configuredApiUrl = runtimeEnv.VITE_API_URL?.trim();
+const API_BASE_URL = configuredApiUrl || (runtimeEnv.DEV ? 'http://localhost:5000/api' : '/api');
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -292,10 +294,21 @@ export const loginAdmin = async (credentials) => {
   }
 };
 
-export const fetchPatientVisits = async () => (await apiClient.get('/patient-visits')).data.data;
-export const fetchPatientVisit = async (id) => (await apiClient.get(`/patient-visits/${id}`)).data.data;
-export const createPatientVisit = async (data) => (await apiClient.post('/patient-visits', data)).data.data;
-export const updatePatientVisit = async (id, data) => (await apiClient.put(`/patient-visits/${id}`, data)).data.data;
+const patientRequest = async (request) => {
+  try {
+    return (await request()).data.data;
+  } catch (error) {
+    if (!error.response) {
+      throw new Error('The clinic service could not be reached. Please check the connection and try again.');
+    }
+    throw new Error(error.response.data?.message || 'The patient record could not be processed.');
+  }
+};
+
+export const fetchPatientVisits = async () => patientRequest(() => apiClient.get('/patient-visits'));
+export const fetchPatientVisit = async (id) => patientRequest(() => apiClient.get(`/patient-visits/${id}`));
+export const createPatientVisit = async (data) => patientRequest(() => apiClient.post('/patient-visits', data));
+export const updatePatientVisit = async (id, data) => patientRequest(() => apiClient.put(`/patient-visits/${id}`, data));
 
 export const createProduct = async (productData) => {
   try {

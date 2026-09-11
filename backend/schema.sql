@@ -1,4 +1,4 @@
--- PostgreSQL Schema for Dipali Wakale Hair Artist Catalogue
+-- PostgreSQL schema for the Dipali Wakale Hair & Skin Care website.
 
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
@@ -66,6 +66,10 @@ CREATE TABLE IF NOT EXISTS patients (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- A mobile number identifies one patient profile. Future visits reuse this
+-- record instead of duplicating personal details.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_patients_mobile_unique ON patients(mobile);
+
 CREATE TABLE IF NOT EXISTS patient_visits (
     id SERIAL PRIMARY KEY,
     patient_id INTEGER NOT NULL REFERENCES patients(id),
@@ -85,6 +89,13 @@ CREATE TABLE IF NOT EXISTS patient_visits (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Environment-backed staff accounts do not necessarily have a staff_users row,
+-- so retain the authenticated username directly for queue ownership and audit.
+ALTER TABLE patient_visits ADD COLUMN IF NOT EXISTS created_by_username VARCHAR(80);
+ALTER TABLE patient_visits ADD COLUMN IF NOT EXISTS updated_by_username VARCHAR(80);
+CREATE INDEX IF NOT EXISTS idx_patient_visits_created_by_username ON patient_visits(created_by_username);
+CREATE INDEX IF NOT EXISTS idx_patient_visits_sent_to_admin ON patient_visits(sent_to_admin, visit_at DESC);
 
 CREATE TABLE IF NOT EXISTS consultations (
     id SERIAL PRIMARY KEY,
@@ -136,3 +147,5 @@ CREATE TABLE IF NOT EXISTS patient_consents (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (visit_id, version)
 );
+
+ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS recorded_by_username VARCHAR(80);

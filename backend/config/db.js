@@ -1,5 +1,7 @@
 const { Pool } = require('pg');
 const dotenv = require('dotenv');
+const fs = require('fs');
+const path = require('path');
 
 dotenv.config();
 
@@ -39,8 +41,29 @@ let isDbConnected = false;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 3000
+  connectionTimeoutMillis: 5000,
+  max: process.env.NODE_ENV === 'production' ? 5 : 10,
+  idleTimeoutMillis: 10000
 });
+
+let databaseReadyPromise;
+
+const ensureDatabase = () => {
+  if (!process.env.DATABASE_URL) {
+    return Promise.reject(new Error('DATABASE_URL is not configured.'));
+  }
+
+  if (!databaseReadyPromise) {
+    const schemaPath = path.join(__dirname, '..', 'schema.sql');
+    const schema = fs.readFileSync(schemaPath, 'utf8');
+    databaseReadyPromise = pool.query(schema).catch((error) => {
+      databaseReadyPromise = undefined;
+      throw error;
+    });
+  }
+
+  return databaseReadyPromise;
+};
 
 pool.on('connect', () => {
   isDbConnected = true;
@@ -55,5 +78,6 @@ module.exports = {
   pool,
   getInMemoryProducts: () => inMemoryProducts,
   setInMemoryProducts: (newProducts) => { inMemoryProducts = newProducts; },
-  isDbConnected: () => isDbConnected
+  isDbConnected: () => isDbConnected,
+  ensureDatabase
 };

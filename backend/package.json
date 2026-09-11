@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Backend API for Dipali Wakale Hair Artist Catalogue Website",
   "main": "server.js",
+  "engines": {
+    "node": ">=20 <25"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"

@@ -7,6 +7,7 @@ const productRoutes = require('./routes/productRoutes');
 const authRoutes = require('./routes/authRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
+const { ensureDatabase } = require('./config/db');
 
 dotenv.config();
 
@@ -45,18 +46,41 @@ const loginLimiter = rateLimit({
 });
 app.use('/api', apiLimiter);
 
+const requireDatabase = async (req, res, next) => {
+  try {
+    await ensureDatabase();
+    next();
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      message: 'The clinic database is temporarily unavailable.'
+    });
+  }
+};
+
 // API Routes
 app.use('/api/products', productRoutes);
 app.use('/api/auth', loginLimiter, authRoutes);
-app.use('/api/patient-visits', patientRoutes);
+app.use('/api/patient-visits', requireDatabase, patientRoutes);
 
 // Health Check Endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    message: 'Dipali Wakale Hair Artist Catalogue API is running smoothly',
-    timestamp: new Date()
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    await ensureDatabase();
+    res.status(200).json({
+      status: 'OK',
+      database: 'connected',
+      message: 'Dipali Wakale Hair & Skin Care API is ready',
+      timestamp: new Date()
+    });
+  } catch {
+    res.status(503).json({
+      status: 'DEGRADED',
+      database: 'unavailable',
+      message: 'The API is running, but the clinic database is unavailable.',
+      timestamp: new Date()
+    });
+  }
 });
 
 // Error handling middleware
@@ -65,6 +89,10 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`✨ Dipali Wakale Hair Artist Backend Server running on port ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Dipali Wakale Hair & Skin Care API running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
