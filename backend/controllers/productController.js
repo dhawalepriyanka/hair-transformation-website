@@ -39,6 +39,7 @@ const getProducts = async (req, res, next) => {
         data: result.rows
       });
     } catch (dbErr) {
+      if (process.env.NODE_ENV === 'production') throw dbErr;
       console.warn('DB query failed, using in-memory products:', dbErr.message);
 
       let products = getInMemoryProducts();
@@ -84,6 +85,7 @@ const getProductById = async (req, res, next) => {
       }
       return res.status(200).json({ success: true, data: result.rows[0] });
     } catch (dbErr) {
+      if (process.env.NODE_ENV === 'production') throw dbErr;
       const products = getInMemoryProducts();
       const product = products.find(p => p.id === parseInt(id));
       if (!product) {
@@ -125,6 +127,7 @@ const createProduct = async (req, res, next) => {
         data: result.rows[0]
       });
     } catch (dbErr) {
+      if (process.env.NODE_ENV === 'production') throw dbErr;
       const products = getInMemoryProducts();
       const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
       const newProduct = {
@@ -187,6 +190,7 @@ const updateProduct = async (req, res, next) => {
         data: result.rows[0]
       });
     } catch (dbErr) {
+      if (process.env.NODE_ENV === 'production') throw dbErr;
       let products = getInMemoryProducts();
       const index = products.findIndex(p => p.id === parseInt(id));
 
@@ -244,6 +248,7 @@ const deleteProduct = async (req, res, next) => {
         message: 'Product deactivated successfully (soft delete)'
       });
     } catch (dbErr) {
+      if (process.env.NODE_ENV === 'production') throw dbErr;
       let products = getInMemoryProducts();
       const index = products.findIndex(p => p.id === parseInt(id));
 

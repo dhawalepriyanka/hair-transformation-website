@@ -59,7 +59,7 @@ const requireDatabase = async (req, res, next) => {
 };
 
 // API Routes
-app.use('/api/products', productRoutes);
+app.use('/api/products', requireDatabase, productRoutes);
 app.use('/api/auth', loginLimiter, authRoutes);
 app.use('/api/patient-visits', requireDatabase, patientRoutes);
 

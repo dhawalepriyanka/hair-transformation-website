@@ -11,7 +11,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 6000
+  timeout: 20000
 });
 
 // Add Authorization header if token exists
@@ -278,7 +278,7 @@ export const loginAdmin = async (credentials) => {
     return response.data;
   } catch (error) {
     // Keep the local staff portal usable while the development backend is offline.
-    if (!error.response) {
+    if (runtimeEnv.DEV && !error.response) {
       const validLocalLogin =
         (credentials.role === 'admin' && credentials.username === 'admin' && credentials.password === '1234') ||
         (credentials.role === 'receptionist' && credentials.username === 'receptionist' && credentials.password === '1234');
@@ -315,6 +315,7 @@ export const createProduct = async (productData) => {
     const response = await apiClient.post('/products', productData);
     return response.data;
   } catch (e) {
+    if (!runtimeEnv.DEV) throw new Error(e.response?.data?.message || 'Product was not saved. Please try again.');
     const list = getStoredProducts();
     const newProduct = {
       id: Date.now(),
@@ -333,6 +334,7 @@ export const updateProduct = async (id, productData) => {
     const response = await apiClient.put(`/products/${id}`, productData);
     return response.data;
   } catch (e) {
+    if (!runtimeEnv.DEV) throw new Error(e.response?.data?.message || 'Product changes were not saved. Please try again.');
     const list = getStoredProducts();
     const updated = list.map(p => p.id === parseInt(id) ? { ...p, ...productData } : p);
     saveStoredProducts(updated);
@@ -345,6 +347,7 @@ export const deleteProduct = async (id) => {
     const response = await apiClient.delete(`/products/${id}`);
     return response.data;
   } catch (e) {
+    if (!runtimeEnv.DEV) throw new Error(e.response?.data?.message || 'Product was not removed. Please try again.');
     const list = getStoredProducts();
     const updated = list.filter(p => p.id !== parseInt(id));
     saveStoredProducts(updated);
