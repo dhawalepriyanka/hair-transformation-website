@@ -1,6 +1,8 @@
 const errorHandler = (err, req, res, next) => {
   console.error('Server Error:', err);
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  const statusCode = Number.isInteger(err.status) && err.status >= 400 && err.status <= 599
+    ? err.status
+    : res.statusCode === 200 ? 500 : res.statusCode;
   res.status(statusCode).json({
     success: false,
     message: process.env.NODE_ENV === 'production' && statusCode >= 500

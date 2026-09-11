@@ -8,6 +8,7 @@ const authRoutes = require('./routes/authRoutes');
 const patientRoutes = require('./routes/patientRoutes');
 const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 const { ensureDatabase } = require('./config/db');
+const { createCorsOptions } = require('./config/cors');
 
 dotenv.config();
 
@@ -18,18 +19,7 @@ if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000')
-  .split(',')
-  .map(origin => origin.trim())
-  .filter(Boolean);
-allowedOrigins.push('https://hair-transformation-website.vercel.app');
-
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('This website origin is not allowed to access the API.'));
-  }
-}));
+app.use(cors(createCorsOptions()));
 app.use(express.json({ limit: '8mb' }));
 
 const apiLimiter = rateLimit({
