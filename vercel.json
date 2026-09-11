@@ -19,6 +19,22 @@
       }
     },
     {
+      "source": "/(admin|receptionist|hair-styles)(/.*)?",
+      "destination": {
+        "type": "service",
+        "service": "frontend",
+        "path": "/index.html"
+      }
+    },
+    {
+      "source": "/(products|selected-styles|selected-products|transformations)/?",
+      "destination": {
+        "type": "service",
+        "service": "frontend",
+        "path": "/index.html"
+      }
+    },
+    {
       "source": "/(.*)",
       "destination": {
         "type": "service",
