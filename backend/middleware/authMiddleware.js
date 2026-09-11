@@ -8,7 +8,8 @@ const verifyToken = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'jewellery_catalogue_secret_key_2026');
+    if (!process.env.JWT_SECRET) throw new Error('Server authentication is not configured');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
@@ -16,4 +17,11 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-module.exports = { verifyToken };
+const requireRole = (...roles) => (req, res, next) => {
+  if (!req.user || !roles.includes(req.user.role)) {
+    return res.status(403).json({ success: false, message: 'You do not have permission to access this resource.' });
+  }
+  next();
+};
+
+module.exports = { verifyToken, requireRole };

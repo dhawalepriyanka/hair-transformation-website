@@ -9,79 +9,55 @@ import { fetchTransformations } from '../services/api';
 import VideoComparison from '../components/VideoComparison';
 
 
-/* ─────────────── BEFORE / AFTER DATA ─────────────── */
+/* ─────────────── REAL INSTAGRAM SALON MEDIA ─────────────── */
 const transformations = [
   {
-    id: 1,
-    clientName: 'Priya Deshmukh',
-    village: 'Nashik, Maharashtra',
-    treatment: 'Premium Keratin Hair Extensions',
-    period: 'June 2024 · 3 hrs',
-    rating: 5,
-    testimonial: '"माझ्या केसांमध्ये एवढी volume येईल असं वाटलं नव्हतं! Dipali didi खूप छान करतात।"',
-    before: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800&h=700',
+    id: 9100001,
+    clientName: 'Hair Transformation',
+    treatment: 'Real salon transformation reel',
+    period: 'Instagram reel',
+    video: '/instagram/reels/hair-transformation.mp4',
+    category: 'Hair Transformation',
+  },
+  {
+    id: 9100002,
+    clientName: 'Hair Extensions',
+    treatment: 'Length and volume transformation',
+    period: 'Instagram reel',
+    video: '/instagram/reels/hair-extensions.mp4',
     category: 'Hair Extensions',
   },
   {
-    id: 2,
-    clientName: 'Savita Kulkarni',
-    village: 'Ahmednagar, Maharashtra',
-    treatment: 'Butterfly Cut & Layer Styling',
-    period: 'July 2024 · 2 hrs',
-    rating: 5,
-    testimonial: '"खूप छान काम केलं! माझ्या केसांमध्ये आता खूप volume आहे।"',
-    before: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&q=80&w=800&h=700',
-    category: 'Haircut Transformation',
+    id: 9100003,
+    clientName: 'Hair Styling',
+    treatment: 'Professional salon styling',
+    period: 'Instagram reel',
+    video: '/instagram/reels/hair-styling.mp4',
+    category: 'Hair Styling',
   },
   {
-    id: 3,
-    clientName: 'Anita Shinde',
-    village: 'Pune, Maharashtra',
-    treatment: 'Full Volume Hair Transformation',
-    period: 'August 2024 · 4 hrs',
-    rating: 5,
-    testimonial: '"Dipali tai ne maza look completely badlun takla! Khup khush aahe mi."',
-    before: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&q=80&w=800&h=700',
-    category: 'Full Makeover',
+    id: 9100004,
+    clientName: 'Client Transformation',
+    treatment: 'Finished salon look',
+    period: 'Instagram photo',
+    image: '/instagram/hair-transformation-client.jpg',
+    category: 'Hair Transformation',
   },
   {
-    id: 4,
-    clientName: 'Rekha Jadhav',
-    village: 'Aurangabad, Maharashtra',
-    treatment: 'Royal Bridal Hairstyle & Updo',
-    period: 'September 2024 · 3.5 hrs',
-    rating: 5,
-    testimonial: '"माझ्या लग्नाचा दिवस perfect झाला Dipali didi मुळे! Thank you so much."',
-    before: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80&w=800&h=700',
-    category: 'Bridal Styling',
+    id: 9100005,
+    clientName: 'Long Hair Styling',
+    treatment: 'Length, texture and styling result',
+    period: 'Instagram photo',
+    image: '/instagram/long-hair-styling.jpg',
+    category: 'Hair Styling',
   },
   {
-    id: 5,
-    clientName: 'Meena Patil',
-    village: 'Kolhapur, Maharashtra',
-    treatment: 'Balayage & Ombre Color',
-    period: 'October 2024 · 5 hrs',
-    rating: 5,
-    testimonial: '"Color ekdum natural disto! Mala watla nahi itka sundar hoel."',
-    before: 'https://images.unsplash.com/photo-1487412947147-5cebf96c66de?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1487412947147-5cebf96c66de?auto=format&fit=crop&q=80&w=800&h=700',
-    category: 'Color Transformation',
-  },
-  {
-    id: 6,
-    clientName: 'Kavita Bhosale',
-    village: 'Solapur, Maharashtra',
-    treatment: 'Chic Bob & Short Haircut',
-    period: 'November 2024 · 1.5 hrs',
-    rating: 5,
-    testimonial: '"मला खूप धाडस वाटत होतं short cut साठी, पण result पाहून मी खूश झाले!"',
-    before: 'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&q=80&w=800&h=700',
-    category: 'Haircut Makeover',
+    id: 9100006,
+    clientName: 'Salon Client',
+    treatment: 'Dipali Wakale salon work',
+    period: 'Instagram photo',
+    image: '/instagram/salon-client.jpg',
+    category: 'Salon Work',
   },
 ];
 
@@ -449,6 +425,8 @@ const TransformationsPage = () => {
                   <video className="tv-transformation-video" src={activeItem.video} poster={activeItem.after} controls autoPlay muted loop playsInline>
                     Your browser does not support video playback.
                   </video>
+                ) : activeItem.image ? (
+                  <img className="tv-single-image" src={activeItem.image} alt={activeItem.clientName} />
                 ) : (
                   <>
                     <img className="tv-after-image" src={activeItem.after} alt={`After - ${activeItem.clientName}`} />
@@ -464,15 +442,15 @@ const TransformationsPage = () => {
 
               <div className="tv-story">
                 <span className="tv-category">{activeItem.category}</span>
-                <p className="tv-kicker">A beautiful new chapter</p>
+                <p className="tv-kicker">From Dipali's Instagram</p>
                 <h2>{activeItem.clientName}</h2>
                 <h3>{activeItem.treatment}</h3>
                 <div className="tv-meta">
-                  <span><MapPin size={18} /> {activeItem.village}</span>
-                  <span><Clock size={18} /> {activeItem.period}</span>
+                  {activeItem.village && <span><MapPin size={18} /> {activeItem.village}</span>}
+                  {activeItem.period && <span><Clock size={18} /> {activeItem.period}</span>}
                 </div>
-                <div className="tv-stars"><StarRating count={activeItem.rating} /></div>
-                <blockquote>{activeItem.testimonial}</blockquote>
+                {activeItem.rating > 0 && <div className="tv-stars"><StarRating count={activeItem.rating} /></div>}
+                {activeItem.testimonial && <blockquote>{activeItem.testimonial}</blockquote>}
                 <p className="tv-signature">Transformation by Dipali Wakale</p>
               </div>
             </div>

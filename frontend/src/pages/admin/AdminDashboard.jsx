@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { validateMediaFile, validateVideoSource } from '../../services/transformationMedia.js';
-import { setAdminSession } from '../../services/adminSession';
+import { setAdminSession, getStaffSession } from '../../services/adminSession';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   fetchProducts, deleteProduct, updateProduct,
@@ -122,8 +122,8 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    const token = sessionStorage.getItem('adminToken');
-    if (!token) {
+    const session = getStaffSession();
+    if (session?.user?.role !== 'admin') {
       navigate('/admin/login');
       return;
     }
@@ -363,17 +363,6 @@ const AdminDashboard = () => {
           >
             <Package size={17} /> Products Catalogue ({products.length})
           </button>
-
-          <Link
-            to="/admin/product-selection"
-            style={{
-              padding: '0.65rem 1.4rem', borderRadius: '25px', fontWeight: '700',
-              fontSize: '0.92rem', display: 'inline-flex', alignItems: 'center', gap: '8px',
-              backgroundColor: '#F7EFEA', color: '#555', textDecoration: 'none'
-            }}
-          >
-            <Check size={17} /> Select & Print Products
-          </Link>
 
           <button
             onClick={() => setActiveTab('transformations')}

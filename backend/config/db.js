@@ -3,152 +3,36 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-// In-memory fallback mock dataset for Dipali Wakale Hair Artist Catalogue
+const product = (id, name, productCode, category, imageUrl, price, description) => ({
+  id,
+  name,
+  product_code: productCode,
+  category,
+  image_url: imageUrl,
+  price,
+  description,
+  is_active: true,
+  created_at: new Date(),
+  updated_at: new Date()
+});
+
+// In-memory catalogue used when PostgreSQL is unavailable.
+// These entries match the clinic's supplied PRODUCT REPORT.
 let inMemoryProducts = [
-  {
-    id: 1,
-    name: 'Long Layered Haircut & Blowdry',
-    product_code: 'H001',
-    category: 'Haircut',
-    image_url: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80&w=800',
-    price: 1500.00,
-    description: 'Modern long layered cut with face-framing texture and salon blowdry finishing.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  },
-  {
-    id: 2,
-    name: 'Trendy Butterfly Cut & Styling',
-    product_code: 'H002',
-    category: 'Haircut',
-    image_url: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800',
-    price: 1800.00,
-    description: 'Voluminous butterfly layers adding movement and lightness to long hair.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  },
-  {
-    id: 3,
-    name: 'Premium Keratin Hair Extensions',
-    product_code: 'H003',
-    category: 'Hair Extension',
-    image_url: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&q=80&w=800',
-    price: 12000.00,
-    description: '100% natural human hair extensions offering instant length and dense volume.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  },
-  {
-    id: 4,
-    name: 'Full Volume Hair Transformation',
-    product_code: 'H004',
-    category: 'Hair Transformation',
-    image_url: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&q=80&w=800',
-    price: 8500.00,
-    description: 'Complete hair makeover including texturizing, extension blend, and gloss finish.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  },
-  {
-    id: 5,
-    name: 'Chic Bob & Short Haircut Transformation',
-    product_code: 'H005',
-    category: 'Hair Transformation',
-    image_url: 'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&q=80&w=800',
-    price: 2200.00,
-    description: 'Stylish short haircut makeover designed to suit individual facial contours.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  },
-  {
-    id: 6,
-    name: 'Soft Feathered Layer Haircut',
-    product_code: 'H006',
-    category: 'Haircut',
-    image_url: 'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?auto=format&fit=crop&q=80&w=800',
-    price: 1600.00,
-    description: 'Delicate soft feathered layers creating effortless grace and everyday bounce.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  },
-  {
-    id: 7,
-    name: 'Face Framing Curtain Bangs & Waves',
-    product_code: 'H007',
-    category: 'Hair Styling',
-    image_url: 'https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?auto=format&fit=crop&q=80&w=800',
-    price: 1400.00,
-    description: 'Trending curtain bangs paired with soft glossy beach waves.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  },
-  {
-    id: 8,
-    name: 'Sleek & Straight Hair Styling',
-    product_code: 'H008',
-    category: 'Hair Styling',
-    image_url: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&q=80&w=800',
-    price: 1200.00,
-    description: 'Ultra-smooth glass hair shine straightening treatment and styling.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  },
-  {
-    id: 9,
-    name: 'Voluminous Glam Curls Styling',
-    product_code: 'H009',
-    category: 'Hair Styling',
-    image_url: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&q=80&w=800',
-    price: 1600.00,
-    description: 'Bouncy celebrity style red carpet curls with long-lasting hold.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  },
-  {
-    id: 10,
-    name: 'Balayage & Ombre Hair Color',
-    product_code: 'H010',
-    category: 'Hair Color',
-    image_url: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&q=80&w=800',
-    price: 6500.00,
-    description: 'Sun-kissed hand-painted balayage highlights seamlessly blended for depth.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  },
-  {
-    id: 11,
-    name: 'Royal Bridal Hairstyle & Accessories',
-    product_code: 'H011',
-    category: 'Bridal Style',
-    image_url: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800',
-    price: 4500.00,
-    description: 'Intricate traditional bridal hair updo accessorized with floral or floral pins.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  },
-  {
-    id: 12,
-    name: 'Elegant Party Updo & Braid',
-    product_code: 'H012',
-    category: 'Hair Styling',
-    image_url: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80&w=800',
-    price: 2500.00,
-    description: 'Sophisticated French braid updo suitable for receptions and festive occasions.',
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  }
+  product(1, 'HAIRIVA SERUM', '10014', 'Hair Serum', '/products/hairiva-serum.png', 1345.00, 'Advanced hair serum for deep nourishment, shine and frizz control.'),
+  product(2, 'Hair Mask', '10027', 'Hair Treatment', '/products/hair-mask.png', 1245.00, 'Deep conditioning hair mask for soft, smooth and manageable hair.'),
+  product(3, 'HAIRCIN TABLET', '10027', 'Supplement', '/products/haircin-tablet.png', 210.00, 'Hair supplement tablet with essential vitamins and minerals for healthy hair growth.'),
+  product(4, 'MINOXYTOP F 2', '10037', 'Hair Growth', '/products/minoxytop-f2.png', 1075.00, 'Hair growth solution for thinning and hair-loss concerns.'),
+  product(5, 'DA Moisturizer', '10038', 'Skin Care', '/products/da-moisturizer.png', 1245.00, 'Lightweight daily moisturizer for soft and hydrated skin.'),
+  product(6, 'DA SPF SUNSCREEN', '10039', 'Skin Care', '/products/da-spf-sunscreen.png', 1245.00, 'Daily sunscreen for broad-spectrum UV protection.'),
+  product(7, 'DA NIGHT CREAM', '10040', 'Skin Care', '/products/da-night-cream.png', 3945.00, 'Overnight cream for moisturising and supporting the skin barrier.'),
+  product(8, 'DA FACE WASH', '10041', 'Skin Care', '/products/da-face-wash.png', 1295.00, 'Gentle face wash that cleanses without stripping natural oils.'),
+  product(9, 'MINOXYTOP 5', '10049', 'Hair Growth', '/products/minoxytop-5.png', 725.00, 'Topical hair and scalp-care solution.'),
+  product(10, 'Hair Fact AA 2', '10052', 'Supplement', '/products/hair-fact-aa2.png', 2946.00, 'Amino-acid hair supplement for use as directed by the clinic.'),
+  product(11, 'NEW MOCOTROY PLUS TAB', '10053', 'Supplement', '/products/new-mocotroy-plus-tab.png', 219.60, 'Multivitamin supplement for use as directed by the clinic.'),
+  product(12, 'Advance Hair Growth Shampoo 200Ml', '10054', 'Hair Care', '/products/advance-hair-growth-shampoo-200ml.png', 1150.00, 'Scalp-cleansing shampoo for the clinic hair-care routine.'),
+  product(13, 'Da Hair Growth Serum 100Ml', '10055', 'Hair Serum', '/products/da-hair-growth-serum-100ml.png', 1850.00, 'Scalp serum for the clinic hair-care routine.'),
+  product(14, 'New Da Hair Oil 100Ml', '10057', 'Hair Oil', '/products/new-da-hair-oil-100ml.png', 780.00, 'Nourishing hair oil for scalp care and shine.')
 ];
 
 let isDbConnected = false;

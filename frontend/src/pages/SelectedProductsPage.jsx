@@ -151,9 +151,10 @@ const SelectedProductsPage = () => {
                 <section className="print-page" key={pageIndex}>
                   <div className="print-only-header">
                     <div className="print-header-top">
-                      <div>
-                        <h1 className="print-brand-title">Dipali Wakale</h1>
-                        <p className="print-brand-subtitle">Hair Artist & Skin Care Specialist</p>
+                      <div className="legacy-print-brand">
+                        <img src="/brand/dipali-wakale-logo.png" alt="" />
+                        <div><h1 className="print-brand-title">Dipali Wakale</h1>
+                        <p className="print-brand-subtitle">Hair &amp; Skin Care</p></div>
                         <p className="print-contact">
                           Tel: +91 8805291910 / 8237108495 | Instagram: @wakale_dipali_ | Ghargaon, Sangamner (Pune-Nashik Hwy)
                         </p>

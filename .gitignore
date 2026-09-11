@@ -12,6 +12,7 @@ frontend/build/
 frontend/.env
 backend/.env
 *.env.local
+backend/data/patient-visits.json
 
 # Logs
 *.log

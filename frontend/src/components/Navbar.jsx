@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSelection } from '../context/SelectionContext';
-import { setAdminSession, useAdminSession } from '../services/adminSession';
-import { Scissors, Menu, X, LogOut } from 'lucide-react';
+import { setAdminSession, useAdminSession, useStaffSession } from '../services/adminSession';
+import { Menu, X, LogOut } from 'lucide-react';
+import BrandLogo from './BrandLogo';
 
 const Navbar = () => {
   const isAdmin = useAdminSession();
-  const { selectedCount, clearSelection } = useSelection();
+  const staffSession = useStaffSession();
+  const isReceptionist = staffSession?.user?.role === 'receptionist';
+  const { clearSelection } = useSelection();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -24,18 +27,12 @@ const Navbar = () => {
     <header className="navbar">
       <div className="container nav-container">
         <Link to="/" className="logo-link">
-          <div className="logo-icon">
-            <Scissors size={18} />
-          </div>
-          <div className="logo-text">
-            Dipali Wakale
-            <span>Hair Artist</span>
-          </div>
+          <BrandLogo />
         </Link>
 
         <nav>
           <ul className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-            <li>
+            {!isAdmin && <li>
               <Link
                 to="/"
                 className={`nav-link ${isActive('/') ? 'active' : ''}`}
@@ -43,8 +40,8 @@ const Navbar = () => {
               >
                 Home
               </Link>
-            </li>
-            <li>
+            </li>}
+            {!staffSession && <li>
               <Link
                 to="/hair-styles"
                 className={`nav-link ${isActive('/hair-styles') || isActive('/products') ? 'active' : ''}`}
@@ -52,8 +49,8 @@ const Navbar = () => {
               >
                 Products
               </Link>
-            </li>
-            <li>
+            </li>}
+            {!staffSession && <li>
               <Link
                 to="/transformations"
                 className={`nav-link ${isActive('/transformations') ? 'active' : ''}`}
@@ -61,7 +58,18 @@ const Navbar = () => {
               >
                 Transformations
               </Link>
-            </li>
+            </li>}
+            {!staffSession && <li>
+              <Link
+                to="/admin/login"
+                className={`nav-link ${isActive('/admin') || isActive('/admin/login') ? 'active' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Admin
+              </Link>
+            </li>}
+            {isReceptionist && <li><Link to="/receptionist" className={`nav-link ${isActive('/receptionist') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Receptionist Dashboard</Link></li>}
+            {isReceptionist && <li><Link to="/receptionist/add-patient#patient-form" className={`nav-link ${isActive('/receptionist/add-patient') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Add Patient</Link></li>}
             {isAdmin && <li>
               <Link
                 to="/admin/dashboard"
@@ -71,28 +79,9 @@ const Navbar = () => {
                 Admin Dashboard
               </Link>
             </li>}
-            {isAdmin && <li>
-              <Link
-                to="/admin/product-selection"
-                className={`nav-link ${isActive('/admin/product-selection') ? 'active' : ''}`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Product Selection
-              </Link>
-            </li>}
-            {isAdmin && <li>
-              <Link
-                to="/selected-styles"
-                className={`nav-link ${isActive('/selected-styles') || isActive('/selected-products') ? 'active' : ''}`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Selected Products
-                {selectedCount > 0 && (
-                  <span className="selected-badge">{selectedCount}</span>
-                )}
-              </Link>
-            </li>}
-            {isAdmin && <li>
+            {isAdmin && <li><Link to="/admin/patients" className={`nav-link ${location.pathname.startsWith('/admin/patients') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Today’s Patients</Link></li>}
+            {isAdmin && <li><Link to="/admin/add-patient" className={`nav-link ${isActive('/admin/add-patient') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Add Patient</Link></li>}
+            {staffSession && <li>
               <button type="button" className="nav-link nav-logout" onClick={handleAdminLogout}>
                 <LogOut size={16} /> Logout
               </button>

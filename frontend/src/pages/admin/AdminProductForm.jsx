@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { createProduct, fetchProductById, updateProduct } from '../../services/api';
 import { ArrowLeft, Save, FolderOpen } from 'lucide-react';
+import { getStaffSession } from '../../services/adminSession';
 
 const CATEGORIES = ['Hair Serum', 'Hair Treatment', 'Hair Growth', 'Hair Care', 'Hair Oil', 'Skin Care', 'Supplement', 'Other'];
 
@@ -39,8 +40,8 @@ const AdminProductForm = () => {
   };
 
   useEffect(() => {
-    const token = sessionStorage.getItem('adminToken');
-    if (!token) {
+    const session = getStaffSession();
+    if (session?.user?.role !== 'admin') {
       navigate('/admin/login');
       return;
     }

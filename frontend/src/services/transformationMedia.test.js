@@ -7,7 +7,7 @@ const details = { clientName: 'Client', village: 'Nashik', treatment: 'Styling',
 const video = 'data:video/mp4;base64,AAAA';
 let saved;
 beforeEach(() => {
-  saved = new Map([['admin_transformations', '[]'], ['transformation_video_demo_added_v1', 'true'], ['transformation_video_pair_demo_added_v1', 'true']]);
+  saved = new Map([['admin_transformations', '[]']]);
   globalThis.localStorage = {
     getItem: key => saved.get(key) ?? null,
     setItem: (key, value) => saved.set(key, value),
@@ -94,29 +94,18 @@ test('video pairs persist, can be edited, and clear when switching media modes',
   assert.equal(item.video, video);
 });
 
-test('requested sample is added once, preserves existing entries and stays deleted', async () => {
-  const existing = await createTransformation({ ...details, video });
-  saved.delete('transformation_video_demo_added_v1');
-  const list = await fetchTransformations();
-  assert.equal(list.length, 2);
-  assert.equal(list[0].id, 9000001);
-  assert.equal(list[1].id, existing.id);
-  assert.equal((await fetchTransformations()).length, 2);
-  await deleteTransformation(9000001);
-  assert.deepEqual((await fetchTransformations()).map(item => item.id), [existing.id]);
-});
+test('legacy flower demos and stock entries are replaced by real Instagram media', async () => {
+  const custom = { id: 123456789, ...details, video };
+  saved.set('admin_transformations', JSON.stringify([
+    { id: 9000002, clientName: 'Before & After Video Demo' },
+    { id: 9000001, clientName: 'Video Demo' },
+    { id: 1, clientName: 'Old stock entry' },
+    custom,
+  ]));
 
-test('before/after demo is inserted once with both players and respects deletion', async () => {
-  const existing = await createTransformation({ ...details, video });
-  saved.delete('transformation_video_pair_demo_added_v1');
   const list = await fetchTransformations();
-  assert.equal(list.length, 2);
-  assert.equal(list[0].id, 9000002);
-  assert.ok(list[0].beforeVideo);
-  assert.ok(list[0].afterVideo);
-  assert.equal(list[0].video, '');
-  assert.equal(list[1].id, existing.id);
-  assert.equal((await fetchTransformations()).length, 2);
-  await deleteTransformation(9000002);
-  assert.deepEqual((await fetchTransformations()).map(item => item.id), [existing.id]);
+  assert.deepEqual(list.slice(0, 6).map(item => item.id), [9100001, 9100002, 9100003, 9100004, 9100005, 9100006]);
+  assert.equal(list.some(item => [1, 9000001, 9000002].includes(item.id)), false);
+  assert.equal(list.at(-1).id, custom.id);
+  assert.match(list[0].video, /^\/instagram\/reels\//);
 });

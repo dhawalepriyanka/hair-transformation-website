@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { normalizeTransformation } from './transformationMedia.js';
+import { getStaffSession } from './adminSession.js';
 
 const API_BASE_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -13,7 +14,7 @@ const apiClient = axios.create({
 
 // Add Authorization header if token exists
 apiClient.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('adminToken');
+  const token = getStaffSession()?.token;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -27,7 +28,7 @@ const mockProducts = [
     name: 'HAIRIVA SERUM',
     product_code: '10014',
     category: 'Hair Serum',
-    image_url: 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/hairiva-serum.png',
     price: 1345.00,
     description: 'Advanced hair serum for deep nourishment, shine and frizz control.',
     is_active: true
@@ -37,7 +38,7 @@ const mockProducts = [
     name: 'Hair Mask',
     product_code: '10027',
     category: 'Hair Treatment',
-    image_url: 'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/hair-mask.png',
     price: 1245.00,
     description: 'Deep conditioning hair mask for soft, smooth and manageable hair.',
     is_active: true
@@ -47,7 +48,7 @@ const mockProducts = [
     name: 'HAIRCIN TABLET',
     product_code: '10027',
     category: 'Supplement',
-    image_url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/haircin-tablet.png',
     price: 210.00,
     description: 'Hair supplement tablet with essential vitamins and minerals for healthy hair growth.',
     is_active: true
@@ -57,7 +58,7 @@ const mockProducts = [
     name: 'MINOXYTOP F 2',
     product_code: '10037',
     category: 'Hair Growth',
-    image_url: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/minoxytop-f2.png',
     price: 1075.00,
     description: 'Clinically proven hair growth solution for thinning and hair loss concerns.',
     is_active: true
@@ -67,7 +68,7 @@ const mockProducts = [
     name: 'DA Moisturizer',
     product_code: '10038',
     category: 'Skin Care',
-    image_url: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/da-moisturizer.png',
     price: 1245.00,
     description: 'Lightweight daily moisturizer for soft, hydrated and glowing skin.',
     is_active: true
@@ -77,7 +78,7 @@ const mockProducts = [
     name: 'DA SPF SUNSCREEN',
     product_code: '10039',
     category: 'Skin Care',
-    image_url: 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/da-spf-sunscreen.png',
     price: 1245.00,
     description: 'Broad-spectrum SPF sunscreen providing protection against UV rays and tan.',
     is_active: true
@@ -87,8 +88,8 @@ const mockProducts = [
     name: 'DA NIGHT CREAM',
     product_code: '10040',
     category: 'Skin Care',
-    image_url: 'https://images.unsplash.com/photo-1611080541599-8c6dbde6ed28?auto=format&fit=crop&q=80&w=800',
-    price: 3045.00,
+    image_url: '/products/da-night-cream.png',
+    price: 3945.00,
     description: 'Intensive overnight repair night cream for deep skin renewal and radiance.',
     is_active: true
   },
@@ -97,7 +98,7 @@ const mockProducts = [
     name: 'DA FACE WASH',
     product_code: '10041',
     category: 'Skin Care',
-    image_url: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/da-face-wash.png',
     price: 1295.00,
     description: 'Gentle foaming face wash that cleanses deeply without stripping natural oils.',
     is_active: true
@@ -107,7 +108,7 @@ const mockProducts = [
     name: 'MINOXYTOP 5',
     product_code: '10049',
     category: 'Hair Growth',
-    image_url: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/minoxytop-5.png',
     price: 725.00,
     description: 'Minoxidil 5% topical solution to stimulate hair regrowth effectively.',
     is_active: true
@@ -117,17 +118,17 @@ const mockProducts = [
     name: 'Hair Fact AA 2',
     product_code: '10052',
     category: 'Supplement',
-    image_url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/hair-fact-aa2.png',
     price: 2946.00,
     description: 'Advanced amino acid supplement for strong, thick and healthy hair from within.',
     is_active: true
   },
   {
     id: 11,
-    name: 'New Mocotrop Plus Tab',
+    name: 'NEW MOCOTROY PLUS TAB',
     product_code: '10053',
     category: 'Supplement',
-    image_url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/new-mocotroy-plus-tab.png',
     price: 219.60,
     description: 'Multivitamin supplement supporting overall hair and scalp health.',
     is_active: true
@@ -137,7 +138,7 @@ const mockProducts = [
     name: 'Advance Hair Growth Shampoo 200Ml',
     product_code: '10054',
     category: 'Hair Care',
-    image_url: 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/advance-hair-growth-shampoo-200ml.png',
     price: 1150.00,
     description: 'DHT-blocking shampoo that cleanses the scalp and promotes new hair growth.',
     is_active: true
@@ -147,7 +148,7 @@ const mockProducts = [
     name: 'Da Hair Growth Serum 100Ml',
     product_code: '10055',
     category: 'Hair Serum',
-    image_url: 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/da-hair-growth-serum-100ml.png',
     price: 1850.00,
     description: 'Potent scalp serum with active peptides to boost hair density and growth.',
     is_active: true
@@ -157,7 +158,7 @@ const mockProducts = [
     name: 'New Da Hair Oil 100Ml',
     product_code: '10057',
     category: 'Hair Oil',
-    image_url: 'https://images.unsplash.com/photo-1615461066841-6116e61058f4?auto=format&fit=crop&q=80&w=800',
+    image_url: '/products/new-da-hair-oil-100ml.png',
     price: 780.00,
     description: 'Nourishing hair oil blend for scalp health, shine and reduced hair fall.',
     is_active: true
@@ -167,107 +168,55 @@ const mockProducts = [
 
 
 
-// Initial default transformations list
+// Real salon media sourced from Dipali Wakale's public Instagram account.
 const defaultTransformations = [
   {
-    id: 9000002,
-    clientName: 'Before & After Video Demo',
-    village: 'Sample only',
-    treatment: 'Before & After Video Preview',
-    period: 'Two sample excerpts',
-    rating: 5,
-    testimonial: 'Two excerpts from a sample flower clip to demonstrate the Before and After players. This is not a client transformation.',
-    before: '',
-    after: '',
-    video: '',
-    beforeVideo: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4#t=0,2',
-    afterVideo: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4#t=2,5',
-    category: 'Other',
+    id: 9100001,
+    clientName: 'Hair Transformation',
+    treatment: 'Real salon transformation reel',
+    period: 'Instagram reel',
+    video: '/instagram/reels/hair-transformation.mp4',
+    category: 'Hair Transformation',
   },
   {
-    id: 9000001,
-    clientName: 'Video Demo',
-    village: 'Sample only',
-    treatment: 'Sample Video Playback',
-    period: 'Demo clip',
-    rating: 5,
-    testimonial: 'Sample flower video for testing playback. This is not a client transformation.',
-    before: '',
-    after: '',
-    video: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-    category: 'Other',
-  },
-  {
-    id: 1,
-    clientName: 'Priya Deshmukh',
-    village: 'Nashik, Maharashtra',
-    treatment: 'Premium Keratin Hair Extensions',
-    period: 'June 2024 · 3 hrs',
-    rating: 5,
-    testimonial: '"माझ्या केसांमध्ये एवढी volume येईल असं वाटलं नव्हतं! Dipali didi खूप छान करतात।"',
-    before: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=800&h=700',
+    id: 9100002,
+    clientName: 'Hair Extensions',
+    treatment: 'Length and volume transformation',
+    period: 'Instagram reel',
+    video: '/instagram/reels/hair-extensions.mp4',
     category: 'Hair Extensions',
   },
   {
-    id: 2,
-    clientName: 'Savita Kulkarni',
-    village: 'Ahmednagar, Maharashtra',
-    treatment: 'Butterfly Cut & Layer Styling',
-    period: 'July 2024 · 2 hrs',
-    rating: 5,
-    testimonial: '"खूप छान काम केलं! माझ्या केसांमध्ये आता खूप volume आहे।"',
-    before: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&q=80&w=800&h=700',
-    category: 'Haircut Transformation',
+    id: 9100003,
+    clientName: 'Hair Styling',
+    treatment: 'Professional salon styling',
+    period: 'Instagram reel',
+    video: '/instagram/reels/hair-styling.mp4',
+    category: 'Hair Styling',
   },
   {
-    id: 3,
-    clientName: 'Anita Shinde',
-    village: 'Pune, Maharashtra',
-    treatment: 'Full Volume Hair Transformation',
-    period: 'August 2024 · 4 hrs',
-    rating: 5,
-    testimonial: '"Dipali tai ne maza look completely badlun takla! Khup khush aahe mi."',
-    before: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&q=80&w=800&h=700',
-    category: 'Full Makeover',
+    id: 9100004,
+    clientName: 'Client Transformation',
+    treatment: 'Finished salon look',
+    period: 'Instagram photo',
+    image: '/instagram/hair-transformation-client.jpg',
+    category: 'Hair Transformation',
   },
   {
-    id: 4,
-    clientName: 'Rekha Jadhav',
-    village: 'Aurangabad, Maharashtra',
-    treatment: 'Royal Bridal Hairstyle & Updo',
-    period: 'September 2024 · 3.5 hrs',
-    rating: 5,
-    testimonial: '"माझ्या लग्नाचा दिवस perfect झाला Dipali didi मुळे! Thank you so much."',
-    before: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&q=80&w=800&h=700',
-    category: 'Bridal Styling',
+    id: 9100005,
+    clientName: 'Long Hair Styling',
+    treatment: 'Length, texture and styling result',
+    period: 'Instagram photo',
+    image: '/instagram/long-hair-styling.jpg',
+    category: 'Hair Styling',
   },
   {
-    id: 5,
-    clientName: 'Meena Patil',
-    village: 'Kolhapur, Maharashtra',
-    treatment: 'Balayage & Ombre Color',
-    period: 'October 2024 · 5 hrs',
-    rating: 5,
-    testimonial: '"Color ekdum natural disto! Mala watla nahi itka sundar hoel."',
-    before: 'https://images.unsplash.com/photo-1487412947147-5cebf96c66de?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1487412947147-5cebf96c66de?auto=format&fit=crop&q=80&w=800&h=700',
-    category: 'Color Transformation',
-  },
-  {
-    id: 6,
-    clientName: 'Kavita Bhosale',
-    village: 'Solapur, Maharashtra',
-    treatment: 'Chic Bob & Short Haircut',
-    period: 'November 2024 · 1.5 hrs',
-    rating: 5,
-    testimonial: '"मला खूप धाडस वाटत होतं short cut साठी, पण result पाहून मी खूश झाले!"',
-    before: 'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&q=80&w=800&h=700',
-    after:  'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?auto=format&fit=crop&q=80&w=800&h=700',
-    category: 'Haircut Makeover',
+    id: 9100006,
+    clientName: 'Salon Client',
+    treatment: 'Dipali Wakale salon work',
+    period: 'Instagram photo',
+    image: '/instagram/salon-client.jpg',
+    category: 'Salon Work',
   },
 ];
 
@@ -326,21 +275,27 @@ export const loginAdmin = async (credentials) => {
     const response = await apiClient.post('/auth/login', credentials);
     return response.data;
   } catch (error) {
-    // Graceful offline admin authentication fallback
-    if (
-      (credentials.username === 'dipali_admin' && credentials.password === 'Dipali@Studio#2026') ||
-      (credentials.username === 'admin' && credentials.password === 'admin123')
-    ) {
-      return {
-        success: true,
-        message: 'Admin authentication successful',
-        token: 'admin_token_' + Date.now(),
-        user: { username: credentials.username, role: 'admin' }
-      };
+    // Keep the local staff portal usable while the development backend is offline.
+    if (!error.response) {
+      const validLocalLogin =
+        (credentials.role === 'admin' && credentials.username === 'admin' && credentials.password === '1234') ||
+        (credentials.role === 'receptionist' && credentials.username === 'receptionist' && credentials.password === '1234');
+      if (validLocalLogin) {
+        return {
+          success: true,
+          token: `local_${credentials.role}_${Date.now()}`,
+          user: { username: credentials.username, role: credentials.role }
+        };
+      }
     }
-    throw new Error(error.response?.data?.message || 'Invalid admin credentials');
+    throw new Error(error.response?.data?.message || 'Unable to sign in. Check your credentials and try again.');
   }
 };
+
+export const fetchPatientVisits = async () => (await apiClient.get('/patient-visits')).data.data;
+export const fetchPatientVisit = async (id) => (await apiClient.get(`/patient-visits/${id}`)).data.data;
+export const createPatientVisit = async (data) => (await apiClient.post('/patient-visits', data)).data.data;
+export const updatePatientVisit = async (id, data) => (await apiClient.put(`/patient-visits/${id}`, data)).data.data;
 
 export const createProduct = async (productData) => {
   try {
@@ -409,22 +364,12 @@ const saveStoredTransformations = (list) => {
 
 export const fetchTransformations = async () => {
   let list = getStoredTransformations();
-  // Add the requested demo once for existing galleries, respecting later deletion.
-  const demoKey = 'transformation_video_demo_added_v1';
-  if (!localStorage.getItem(demoKey)) {
-    const demo = defaultTransformations.find(item => item.id === 9000001);
-    const updated = list.some(item => item.id === demo.id) ? list : [demo, ...list];
-    saveStoredTransformations(updated);
-    localStorage.setItem(demoKey, 'true');
-    list = updated;
-  }
-  const pairDemoKey = 'transformation_video_pair_demo_added_v1';
-  if (!localStorage.getItem(pairDemoKey)) {
-    const demo = defaultTransformations.find(item => item.id === 9000002);
-    const updated = list.some(item => item.id === demo.id) ? list : [demo, ...list];
-    saveStoredTransformations(updated);
-    localStorage.setItem(pairDemoKey, 'true');
-    list = updated;
+  // Replace the old flower demos and stock-photo seed data already stored in browsers.
+  const legacyIds = new Set([1, 2, 3, 4, 5, 6, 9000001, 9000002]);
+  if (list.some(item => legacyIds.has(Number(item.id)))) {
+    const customItems = list.filter(item => !legacyIds.has(Number(item.id)));
+    list = [...defaultTransformations, ...customItems];
+    saveStoredTransformations(list);
   }
   return list;
 };
