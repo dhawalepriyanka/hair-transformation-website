@@ -1388,6 +1388,28 @@ h1, h2, h3, h4, .serif {
   }
 }
 
+.footer-admin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.85rem;
+  padding: 0.65rem 1.15rem;
+  border: 1px solid var(--primary-accent);
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #b4871a, #80580a);
+  font-size: 0.85rem;
+  font-weight: 750;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.footer-admin-button:hover {
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(201, 162, 39, 0.2);
+}
+
 .footer-brand { margin-bottom: 1.2rem; }
 .footer-brand .brand-emblem { width: 68px; height: 68px; }
 .footer-brand .brand-copy strong { font-size: 1.75rem; }

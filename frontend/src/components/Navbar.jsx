@@ -59,15 +59,6 @@ const Navbar = () => {
                 Transformations
               </Link>
             </li>}
-            {!staffSession && <li>
-              <Link
-                to="/admin/login"
-                className={`nav-link ${isActive('/admin') || isActive('/admin/login') ? 'active' : ''}`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Admin
-              </Link>
-            </li>}
             {isReceptionist && <li><Link to="/receptionist" className={`nav-link ${isActive('/receptionist') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Receptionist Dashboard</Link></li>}
             {isReceptionist && <li><Link to="/receptionist/add-patient#patient-form" className={`nav-link ${isActive('/receptionist/add-patient') ? 'active' : ''}`} onClick={() => setMobileMenuOpen(false)}>Add Patient</Link></li>}
             {isAdmin && <li>

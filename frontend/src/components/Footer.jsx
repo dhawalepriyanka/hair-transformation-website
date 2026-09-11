@@ -5,7 +5,7 @@ import { Instagram, MapPin, MessageCircle, Phone, Youtube } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { scrollToPageTop } from '../services/navigation';
 
-const FooterLink = ({ to, children }) => <Link to={to} onClick={scrollToPageTop}>{children}</Link>;
+const FooterLink = ({ to, children, className }) => <Link to={to} className={className} onClick={scrollToPageTop}>{children}</Link>;
 
 const Footer = () => {
   const isAdmin = useAdminSession();
@@ -132,6 +132,7 @@ const Footer = () => {
               <li><FooterLink to="/transformations">Real Transformations</FooterLink></li>
               {isAdmin && <li><FooterLink to="/selected-styles">Selected Products</FooterLink></li>}
             </ul>
+            <FooterLink to="/admin/login" className="footer-admin-button">Admin Login</FooterLink>
           </div>
 
           <div>
