@@ -3,7 +3,17 @@
   "services": {
     "frontend": {
       "root": "frontend",
-      "framework": "vite"
+      "framework": "vite",
+      "rewrites": [
+        {
+          "source": "/(admin|receptionist|hair-styles)(/.*)?",
+          "destination": "/index.html"
+        },
+        {
+          "source": "/(products|selected-styles|selected-products|transformations)(/)?",
+          "destination": "/index.html"
+        }
+      ]
     },
     "backend": {
       "root": "backend",
@@ -16,22 +26,6 @@
       "destination": {
         "type": "service",
         "service": "backend"
-      }
-    },
-    {
-      "source": "/(admin|receptionist|hair-styles)(/.*)?",
-      "destination": {
-        "type": "service",
-        "service": "frontend",
-        "path": "/index.html"
-      }
-    },
-    {
-      "source": "/(products|selected-styles|selected-products|transformations)(/)?",
-      "destination": {
-        "type": "service",
-        "service": "frontend",
-        "path": "/index.html"
       }
     },
     {
