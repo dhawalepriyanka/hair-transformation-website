@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { useAdminSession } from '../services/adminSession';
 import { Instagram, MapPin, MessageCircle, Phone, Youtube } from 'lucide-react';
 import BrandLogo from './BrandLogo';
+import { scrollToPageTop } from '../services/navigation';
+
+const FooterLink = ({ to, children }) => <Link to={to} onClick={scrollToPageTop}>{children}</Link>;
 
 const Footer = () => {
   const isAdmin = useAdminSession();
@@ -124,20 +127,20 @@ const Footer = () => {
           <div>
             <h4 className="footer-title">Quick Links</h4>
             <ul style={{ listStyle: 'none', lineHeight: '2.2', fontSize: '0.9rem', color: '#CCC' }}>
-              <li><Link to="/">Home</Link></li>
-              <li><Link to="/hair-styles">Products Catalogue</Link></li>
-              <li><Link to="/transformations">Real Transformations</Link></li>
-              {isAdmin && <li><Link to="/selected-styles">Selected Products</Link></li>}
+              <li><FooterLink to="/">Home</FooterLink></li>
+              <li><FooterLink to="/hair-styles">Products Catalogue</FooterLink></li>
+              <li><FooterLink to="/transformations">Real Transformations</FooterLink></li>
+              {isAdmin && <li><FooterLink to="/selected-styles">Selected Products</FooterLink></li>}
             </ul>
           </div>
 
           <div>
             <h4 className="footer-title">Specialized Services</h4>
             <ul style={{ listStyle: 'none', lineHeight: '2.2', fontSize: '0.9rem', color: '#CCC' }}>
-              <li><Link to="/transformations">Hair &amp; Scalp Consultation</Link></li>
-              <li><Link to="/transformations">Hair Regrowth Care</Link></li>
-              <li><Link to="/hair-styles">Product Guidance</Link></li>
-              <li><Link to="/hair-styles">Skin Care &amp; Wellness</Link></li>
+              <li><FooterLink to="/transformations">Hair &amp; Scalp Consultation</FooterLink></li>
+              <li><FooterLink to="/transformations">Hair Regrowth Care</FooterLink></li>
+              <li><FooterLink to="/hair-styles">Product Guidance</FooterLink></li>
+              <li><FooterLink to="/hair-styles">Skin Care &amp; Wellness</FooterLink></li>
             </ul>
           </div>
 

@@ -168,7 +168,7 @@ h1, h2, h3, h4, .serif {
 
 .main-content {
   flex: 1;
-  padding-bottom: 5rem; /* Room for sticky bar */
+  width: 100%;
 }
 
 /* Section Spacing Utility */

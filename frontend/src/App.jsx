@@ -4,6 +4,7 @@ import { SelectionProvider } from './context/SelectionContext';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import ScrollToTop from './components/ScrollToTop';
 
 import HomePage from './pages/HomePage';
 import ProductsPage from './pages/ProductsPage';
@@ -27,6 +28,7 @@ function App() {
   return (
     <SelectionProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ScrollToTop />
         <div className="app-wrapper">
           <Navbar />
           <main className="main-content">
