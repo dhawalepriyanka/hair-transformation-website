@@ -3,6 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import SelectionBar from '../components/SelectionBar';
 import SkeletonLoader from '../components/SkeletonLoader';
+import Reveal from '../components/Reveal';
 import { fetchProducts } from '../services/api';
 import { Search, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAdminSession } from '../services/adminSession';
@@ -80,7 +81,7 @@ const ProductsPage = ({ selectionEnabled = false }) => {
     <div className="products-page section-padding">
       <div className="container">
         {/* Header & Subheading */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+        <Reveal style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <h1 className="serif section-title">
             Our Products Catalogue
           </h1>
@@ -89,10 +90,10 @@ const ProductsPage = ({ selectionEnabled = false }) => {
               ? 'Select products to prepare and print an admin product sheet'
               : 'Browse our complete range of hair & skin care products'}
           </p>
-        </div>
+        </Reveal>
 
         {/* Search & Category Filter Section */}
-        <div className="filter-section">
+        <Reveal className="filter-section" delay={80}>
           <div className="search-category-bar">
             {/* Search Input */}
             <div className="search-input-wrapper">
@@ -121,7 +122,7 @@ const ProductsPage = ({ selectionEnabled = false }) => {
               ))}
             </ul>
           </div>
-        </div>
+        </Reveal>
 
         {/* Main Content State Handling */}
         {loading ? (
@@ -174,8 +175,10 @@ const ProductsPage = ({ selectionEnabled = false }) => {
           </div>
         ) : (
           <div className="product-grid">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} mode={selectionEnabled ? 'select' : 'display'} />
+            {filteredProducts.map((product, index) => (
+              <Reveal key={product.id} className="product-reveal" delay={(index % 4) * 65}>
+                <ProductCard product={product} mode={selectionEnabled ? 'select' : 'display'} />
+              </Reveal>
             ))}
           </div>
         )}

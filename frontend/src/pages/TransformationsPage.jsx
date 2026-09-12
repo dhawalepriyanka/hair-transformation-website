@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { fetchTransformations } from '../services/api';
 import VideoComparison from '../components/VideoComparison';
+import Reveal from '../components/Reveal';
 
 
 /* ─────────────── REAL INSTAGRAM SALON MEDIA ─────────────── */
@@ -397,7 +398,7 @@ const TransformationsPage = () => {
       <div className="container">
 
         {/* ── PAGE HEADER ── */}
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+        <Reveal style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
             background: '#F7EFEA', color: '#C88A75', padding: '6px 16px',
@@ -409,12 +410,13 @@ const TransformationsPage = () => {
           <p style={{ color: '#666', fontSize: '1rem', maxWidth: '650px', margin: '0.75rem auto 0' }}>
             Sit back and watch real client transformations come to life in our automatic Before & After showcase.
           </p>
-        </div>
+        </Reveal>
 
         {/* ── TV-FRIENDLY AUTOMATIC SHOWCASE ── */}
         {loading ? (
           <p style={{ textAlign: 'center', padding: '3rem', color: '#888' }}>Loading transformations...</p>
         ) : activeItem ? (
+          <Reveal variant="scale" delay={80}>
           <div className="tv-showcase" ref={showcaseRef} style={{ marginBottom: '4rem' }}>
             <div className="tv-showcase-glow" />
             <div className="tv-slide" key={activeItem.id}>
@@ -475,12 +477,13 @@ const TransformationsPage = () => {
               <button type="button" onClick={openFullscreen} aria-label="Open fullscreen"><Maximize2 /></button>
             </div>
           </div>
+          </Reveal>
         ) : <p style={{ textAlign: 'center' }}>No transformations available.</p>}
 
 
 
         {/* ── CTA SECTION (original) ── */}
-        <div style={{
+        <Reveal className="transformation-cta" style={{
           backgroundColor: '#FAF8F6', borderRadius: '20px', padding: '2.5rem 1.5rem',
           textAlign: 'center', border: '1px solid #EBE5E0',
         }}>
@@ -511,7 +514,7 @@ const TransformationsPage = () => {
               <Instagram size={18} /> Watch Transformation Reels on Instagram
             </a>
           </div>
-        </div>
+        </Reveal>
 
       </div>
     </div>

@@ -2120,3 +2120,121 @@ h1, h2, h3, h4, .serif {
   .legacy-print-brand > img { width: 16mm; height: 16mm; grid-row: 1 / 3; object-fit: contain; }
   .legacy-print-brand .print-contact { grid-column: 1 / -1; }
 }
+
+/* Calm, performance-friendly motion system */
+html { scroll-behavior: smooth; }
+
+.reveal {
+  --reveal-delay: 0ms;
+  opacity: 0;
+  transform: translate3d(0, 26px, 0);
+  transition:
+    opacity .7s cubic-bezier(.22, 1, .36, 1) var(--reveal-delay),
+    transform .7s cubic-bezier(.22, 1, .36, 1) var(--reveal-delay);
+  will-change: opacity, transform;
+}
+
+.reveal-left { transform: translate3d(-34px, 0, 0); }
+.reveal-right { transform: translate3d(34px, 0, 0); }
+.reveal-scale { transform: translate3d(0, 14px, 0) scale(.965); }
+.reveal-fade { transform: none; }
+.reveal.is-visible { opacity: 1; transform: none; will-change: auto; }
+
+.navbar { animation: clinic-nav-in .5s cubic-bezier(.22, 1, .36, 1) both; }
+
+.hero-copy.reveal.is-visible > * {
+  animation: clinic-hero-item-in .65s cubic-bezier(.22, 1, .36, 1) both;
+}
+.hero-copy.reveal.is-visible > :nth-child(1) { animation-delay: .04s; }
+.hero-copy.reveal.is-visible > :nth-child(2) { animation-delay: .11s; }
+.hero-copy.reveal.is-visible > :nth-child(3) { animation-delay: .18s; }
+.hero-copy.reveal.is-visible > :nth-child(4) { animation-delay: .25s; }
+.hero-copy.reveal.is-visible > :nth-child(5) { animation-delay: .32s; }
+.hero-copy.reveal.is-visible > :nth-child(6) { animation-delay: .39s; }
+
+.clinic-highlight,
+.service-reveal,
+.product-reveal,
+.about-photo,
+.transformation-cta {
+  transition-property: opacity, transform, box-shadow, border-color;
+}
+
+.service-reveal,
+.product-reveal { height: 100%; }
+.service-reveal .instagram-service-card,
+.product-reveal .product-card { height: 100%; }
+
+.instagram-service-card {
+  transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+}
+.instagram-service-card video { transition: transform .55s cubic-bezier(.22, 1, .36, 1); }
+
+.connect-reveal a,
+.footer-reveal a,
+.logo-link .brand-emblem {
+  transition: transform .22s ease, box-shadow .22s ease, filter .22s ease;
+}
+
+.form-alert,
+.form-success { animation: clinic-feedback-in .28s ease-out both; }
+.visit-card,
+.admin-patient-card { animation: clinic-row-in .3s ease-out both; }
+
+@keyframes clinic-nav-in {
+  from { opacity: 0; transform: translate3d(0, -12px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes clinic-hero-item-in {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes clinic-feedback-in {
+  from { opacity: 0; transform: translate3d(0, -7px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes clinic-row-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (hover: hover) {
+  .clinic-highlight.is-visible:hover { transform: translateY(-6px); }
+  .service-reveal:hover .instagram-service-card {
+    transform: translateY(-6px);
+    border-color: var(--brand-gold);
+    box-shadow: 0 20px 42px rgba(98,73,13,.16);
+  }
+  .service-reveal:hover video { transform: scale(1.025); }
+  .about-photo.is-visible:hover { transform: translateY(-4px) scale(1.008); }
+  .connect-reveal a:hover,
+  .footer-reveal a[title]:hover { transform: translateY(-3px); filter: brightness(1.06); }
+  .logo-link:hover .brand-emblem { transform: rotate(-3deg) scale(1.04); }
+}
+
+.hero-primary-button:active,
+.hero-secondary-button:active,
+.primary-button:active,
+.footer-admin-button:active { transform: translateY(0) scale(.98); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    transition-delay: 0ms !important;
+  }
+  .reveal,
+  .reveal-left,
+  .reveal-right,
+  .reveal-scale,
+  .reveal-fade {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

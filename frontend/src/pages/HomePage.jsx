@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import SkeletonLoader from '../components/SkeletonLoader';
 import BrandLogo from '../components/BrandLogo';
+import Reveal from '../components/Reveal';
 import { fetchProducts } from '../services/api';
 import {
   Stethoscope, ArrowRight, Instagram, Sparkles, MapPin,
@@ -36,7 +37,7 @@ const HomePage = () => {
       <section className="section-padding home-hero">
         <div className="container">
           <div className="hero-grid">
-            <div className="hero-copy">
+            <Reveal className="hero-copy hero-entrance" variant="fade">
               <BrandLogo className="hero-brand-lockup" />
               <span className="hero-eyebrow">
                 <Stethoscope size={16} /> Dipali Wakale – Hair Doctor &amp; Skin Care Specialist
@@ -70,9 +71,9 @@ const HomePage = () => {
                   View Transformations
                 </Link>
               </div>
-            </div>
+            </Reveal>
 
-            <div className="hero-visual">
+            <Reveal className="hero-visual" variant="scale" delay={140}>
               <div className="hero-image-wrapper">
                 <img
                   src="/instagram/dipali-wakale-hair-doctor-hero.png"
@@ -83,7 +84,7 @@ const HomePage = () => {
                   <span>Personalized clinical care</span>
                 </div>
               </div>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
@@ -92,21 +93,21 @@ const HomePage = () => {
       <section className="section-padding" style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #EBE5E0' }}>
         <div className="container">
           <div className="highlights-grid">
-            <div style={{ padding: '1rem' }}>
+            <Reveal className="clinic-highlight" style={{ padding: '1rem' }}>
               <Stethoscope size={32} color="#A97912" style={{ marginBottom: '0.85rem' }} />
               <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Hair &amp; Scalp Consultation</h3>
               <p style={{ fontSize: '0.9rem', color: '#666' }}>Personalized consultation and care guidance for hair fall, scalp health and regrowth concerns.</p>
-            </div>
-            <div style={{ padding: '1rem' }}>
+            </Reveal>
+            <Reveal className="clinic-highlight" style={{ padding: '1rem' }} delay={90}>
               <Sparkles size={32} color="#A97912" style={{ marginBottom: '0.85rem' }} />
               <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Hair & Skin Care Products</h3>
               <p style={{ fontSize: '0.9rem', color: '#666' }}>Trusted serums, shampoos, oils, and supplements for healthy hair growth.</p>
-            </div>
-            <div style={{ padding: '1rem' }}>
+            </Reveal>
+            <Reveal className="clinic-highlight" style={{ padding: '1rem' }} delay={180}>
               <HeartHandshake size={32} color="#A97912" style={{ marginBottom: '0.85rem' }} />
               <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Guided Product Care</h3>
               <p style={{ fontSize: '0.9rem', color: '#666' }}>Explore clinic-recommended hair care, skin care and wellness products.</p>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
@@ -114,32 +115,31 @@ const HomePage = () => {
       {/* Services Showcase */}
       <section className="section-padding" style={{ backgroundColor: '#FAF8F6' }}>
         <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <Reveal style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
             <h2 className="serif section-title">
               Treatment &amp; Care Highlights
             </h2>
             <p style={{ color: '#666', fontSize: '0.95rem' }}>Explore hair-care journeys, treatment results and professional guidance</p>
-          </div>
+          </Reveal>
 
           <div className="services-grid">
-            {services.map((service) => (
-              <article
-                key={service.title}
-                className="instagram-service-card"
-              >
-                <div className="instagram-reel-frame">
-                  <video
-                    src={service.video}
-                    title={service.title}
-                    muted
-                    loop
-                    autoPlay
-                    playsInline
-                    controls
-                    preload="metadata"
-                  />
-                </div>
-              </article>
+            {services.map((service, index) => (
+              <Reveal key={service.title} className="service-reveal" delay={(index % 4) * 75}>
+                <article className="instagram-service-card">
+                  <div className="instagram-reel-frame">
+                    <video
+                      src={service.video}
+                      title={service.title}
+                      muted
+                      loop
+                      autoPlay
+                      playsInline
+                      controls
+                      preload="metadata"
+                    />
+                  </div>
+                </article>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -149,7 +149,7 @@ const HomePage = () => {
       <section className="section-padding" style={{ backgroundColor: '#FFFFFF' }}>
         <div className="container">
           {/* Section Header rearranges cleanly into a column on mobile */}
-          <div className="section-header">
+          <Reveal className="section-header">
             <div>
               <h2 className="serif section-title">
                 Featured Products
@@ -170,14 +170,16 @@ const HomePage = () => {
             >
               View All Products ({featuredProducts.length}+ Options) <ArrowRight size={16} />
             </Link>
-          </div>
+          </Reveal>
 
           {loading ? (
             <SkeletonLoader count={4} />
           ) : (
             <div className="product-grid">
-              {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} mode="view" />
+              {featuredProducts.map((product, index) => (
+                <Reveal key={product.id} className="product-reveal" delay={(index % 4) * 70}>
+                  <ProductCard product={product} mode="view" />
+                </Reveal>
               ))}
             </div>
           )}
@@ -188,7 +190,7 @@ const HomePage = () => {
       <section id="about" className="section-padding" style={{ backgroundColor: '#FAF8F6', borderTop: '1px solid #EBE5E0' }}>
         <div className="container">
           <div className="about-grid">
-            <div>
+            <Reveal variant="left">
               <span style={{ color: '#8B6410', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.8rem' }}>
                 About Your Hair-Care Specialist
               </span>
@@ -201,22 +203,22 @@ const HomePage = () => {
               <p style={{ color: '#555', lineHeight: '1.75', marginBottom: '0', fontSize: '0.95rem' }}>
                 Follow her social channels for hair-care education, treatment journeys, hair regrowth results, product guidance and client experiences.
               </p>
-            </div>
+            </Reveal>
 
-            <div style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', height: '380px' }}>
+            <Reveal className="about-photo" variant="right" delay={100} style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.08)', height: '380px' }}>
               <img
                 src="/instagram/dipali-wakale-hair-doctor-about.png"
                 alt="Dipali Wakale in her professional hair and scalp clinic"
                 style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 34%' }}
               />
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
       {/* Instagram, YouTube & Location Banner */}
       <section className="section-padding" style={{ backgroundColor: '#FAF8F6', borderTop: '1px solid #EBE5E0' }}>
-        <div className="container" style={{ textAlign: 'center' }}>
+        <Reveal className="container connect-reveal" style={{ textAlign: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginBottom: '0.85rem' }}>
             <Instagram size={36} color="#A97912" />
             <Youtube size={36} color="#FF0000" />
@@ -302,7 +304,7 @@ const HomePage = () => {
               <MessageCircle size={18} /> WhatsApp Chat
             </a>
           </div>
-        </div>
+        </Reveal>
       </section>
 
     </div>

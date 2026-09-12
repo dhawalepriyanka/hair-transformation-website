@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAdminSession } from '../services/adminSession';
 import { Instagram, MapPin, MessageCircle, Phone, Youtube } from 'lucide-react';
 import BrandLogo from './BrandLogo';
+import Reveal from './Reveal';
 import { scrollToPageTop } from '../services/navigation';
 
 const FooterLink = ({ to, children, className }) => <Link to={to} className={className} onClick={scrollToPageTop}>{children}</Link>;
@@ -11,7 +12,7 @@ const Footer = () => {
   const isAdmin = useAdminSession();
   return (
     <footer className="footer" id="contact">
-      <div className="container">
+      <Reveal className="container footer-reveal">
         <div className="footer-content">
           <div>
             <BrandLogo inverse className="footer-brand" />
@@ -177,7 +178,7 @@ const Footer = () => {
         <div className="footer-bottom">
           <p>© {new Date().getFullYear()} Dipali Wakale – Hair & Skin Care. All Rights Reserved.</p>
         </div>
-      </div>
+      </Reveal>
     </footer>
   );
 };
