@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { normalizeTransformation } from './transformationMedia.js';
-import { getStaffSession } from './adminSession.js';
+import { getStaffSession, setAdminSession } from './adminSession.js';
 
 const runtimeEnv = import.meta.env || {};
 const configuredApiUrl = runtimeEnv.VITE_API_URL?.trim();
@@ -22,6 +22,21 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Clear stale credentials when the API rejects a protected request.
+apiClient.interceptors.response.use(
+  response => response,
+  error => {
+    const isLoginRequest = String(error.config?.url || '').includes('/auth/login');
+    if (error.response?.status === 401 && !isLoginRequest && getStaffSession()) {
+      setAdminSession(null);
+      if (window.location.pathname !== '/admin/login') {
+        window.location.replace('/admin/login?expired=1');
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Real products from Dipali Wakale product list (Excel PRODUCT REPORT)
 const mockProducts = [

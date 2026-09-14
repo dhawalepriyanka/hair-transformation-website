@@ -1717,7 +1717,8 @@ h1, h2, h3, h4, .serif {
 @media(max-width:600px){.clinic-form .form-grid{grid-template-columns:1fr}.admin-patient-header-actions{justify-content:flex-start}}
 .inline-product-grid article[role='button']:hover{border-color:#cf8e77;transform:translateY(-1px)}
 .inline-product-grid article[role='button']:focus-visible{outline:3px solid rgba(200,138,117,.28);outline-offset:2px}
-.print-toolbar>div>button:nth-child(2),.print-toolbar .complete-button{display:none}
+.print-finish-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}.print-finish-actions>span{max-width:330px;color:#756a64;font-size:.76rem;line-height:1.4;text-align:right}.print-toolbar .print-finish-actions .complete-button{display:inline-flex;white-space:nowrap}
+@media(max-width:700px){.print-finish-actions{align-items:flex-start;flex-direction:column}.print-finish-actions>span{text-align:left}.print-toolbar .print-finish-actions .complete-button{width:100%;justify-content:center}}
 
 /* Six visual product cards per recommendation page */
 .visual-product-page{display:flex;flex-direction:column}.visual-patient-strip{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:7px;margin:6mm 0 4mm}.visual-patient-strip>div{padding:8px 10px;border-radius:7px;background:#faf6f4}.visual-patient-strip small,.visual-consultation-footer small{display:block;color:#a66b56;font-size:.6rem;font-weight:850;letter-spacing:.05em}.visual-patient-strip strong,.visual-patient-strip span{display:block;margin-top:2px;font-size:.76rem}.visual-products-title{margin:0 0 3mm;font-size:1.4rem}.visual-product-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,minmax(0,1fr));gap:8px;flex:1;min-height:0}.visual-print-product{display:flex;min-height:0;flex-direction:column;overflow:hidden;border:1px solid #e4d9d3;border-radius:9px;background:#fff}.visual-print-product>img{display:block;width:100%;height:0;min-height:0;flex:1 1 auto;object-fit:cover;background:#f4efed}.visual-product-copy{position:relative;flex:0 0 auto;padding:8px}.visual-product-copy>strong,.visual-product-copy>small,.visual-product-copy>em{display:block}.visual-product-copy>strong{padding-right:25px;font-size:.83rem}.visual-product-copy>small{color:#776b66;font-size:.65rem}.visual-product-copy>p{margin:3px 0;font-size:.7rem;line-height:1.25}.visual-product-copy>em{font-size:.63rem;color:#805f52}.visual-product-number{position:absolute;right:7px;top:7px;display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:#f2ded5;color:#965d49;font-size:.68rem;font-weight:850}.visual-consultation-footer{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:3mm}.visual-consultation-footer>div{padding:7px 9px;border-radius:7px;background:#faf6f4}.visual-consultation-footer span{font-size:.72rem}
@@ -2181,6 +2182,41 @@ html { scroll-behavior: smooth; }
 .visit-card,
 .admin-patient-card { animation: clinic-row-in .3s ease-out both; }
 
+/* Top notifications for staff actions */
+.app-toast {
+  position: fixed;
+  top: 104px;
+  right: max(18px, calc((100vw - 1200px) / 2 + 18px));
+  z-index: 1200;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 11px;
+  width: min(420px, calc(100vw - 32px));
+  padding: 14px 13px 16px;
+  overflow: hidden;
+  border: 1px solid;
+  border-radius: 14px;
+  background: rgba(255,255,255,.97);
+  box-shadow: 0 18px 48px rgba(42,31,16,.2);
+  backdrop-filter: blur(14px);
+  animation: clinic-toast-in .4s cubic-bezier(.22, 1, .36, 1) both;
+}
+.app-toast-success { border-color: #b8dfc7; }
+.app-toast-error { border-color: #f1bfc3; }
+.app-toast-icon { display:grid;place-items:center;width:42px;height:42px;border-radius:11px; }
+.app-toast-icon svg { width:21px;height:21px; }
+.app-toast-success .app-toast-icon { color:#227747;background:#e5f5eb; }
+.app-toast-error .app-toast-icon { color:#b52f3a;background:#fdebed; }
+.app-toast-copy { display:grid;min-width:0;line-height:1.35; }
+.app-toast-copy strong { color:#29231f;font-size:.82rem; }
+.app-toast-copy span { margin-top:2px;color:#665d57;font-size:.84rem; }
+.app-toast>button { display:grid;place-items:center;width:32px;height:32px;border-radius:8px;color:#887d75; }
+.app-toast>button:hover { color:#2f2925;background:#f3efec; }
+.app-toast>button svg { width:17px;height:17px; }
+.app-toast-progress { position:absolute;right:0;bottom:0;left:0;height:3px;transform-origin:left;background:#3b9861;animation:clinic-toast-progress var(--toast-duration) linear both; }
+.app-toast-error .app-toast-progress { background:#cc4b55; }
+
 @keyframes clinic-nav-in {
   from { opacity: 0; transform: translate3d(0, -12px, 0); }
   to { opacity: 1; transform: none; }
@@ -2199,6 +2235,16 @@ html { scroll-behavior: smooth; }
 @keyframes clinic-row-in {
   from { opacity: 0; transform: translate3d(0, 8px, 0); }
   to { opacity: 1; transform: none; }
+}
+
+@keyframes clinic-toast-in {
+  from { opacity:0;transform:translate3d(26px,-8px,0) scale(.98); }
+  to { opacity:1;transform:none; }
+}
+
+@keyframes clinic-toast-progress {
+  from { transform:scaleX(1); }
+  to { transform:scaleX(0); }
 }
 
 @media (hover: hover) {
@@ -2237,4 +2283,9 @@ html { scroll-behavior: smooth; }
     opacity: 1 !important;
     transform: none !important;
   }
+  .app-toast-progress { display:none; }
+}
+
+@media (max-width: 600px) {
+  .app-toast { top: 94px; right: 16px; left: 16px; width: auto; }
 }

@@ -2,18 +2,31 @@ import { useMemo, useSyncExternalStore } from 'react';
 
 const KEY = 'staffSession';
 
+const readSession = storage => {
+  try {
+    const raw = storage?.getItem(KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    if (session?.expiresAt && new Date(session.expiresAt).getTime() <= Date.now()) return null;
+    return session || null;
+  } catch { return null; }
+};
+
 export const getStaffSession = () => {
-  try { return JSON.parse(sessionStorage.getItem(KEY)) || null; } catch { return null; }
+  return readSession(globalThis.sessionStorage);
 };
 
 export const hasAdminSession = () => getStaffSession()?.user?.role === 'admin';
 
 export function setAdminSession(tokenOrSession, user) {
+  try { sessionStorage.removeItem(KEY); } catch { /* Storage can be blocked. */ }
+  try { localStorage.removeItem(KEY); } catch { /* Storage can be blocked. */ }
+  try { localStorage.removeItem('rememberedStaffLogin'); } catch { /* Legacy cleanup only. */ }
   if (tokenOrSession) {
     const session = typeof tokenOrSession === 'object' ? tokenOrSession : { token: tokenOrSession, user: user || { role: 'admin' } };
-    sessionStorage.setItem(KEY, JSON.stringify(session));
-  } else sessionStorage.removeItem(KEY);
-  sessionStorage.removeItem('adminToken');
+    try { sessionStorage.setItem(KEY, JSON.stringify(session)); } catch { /* Login still fails closed if storage is unavailable. */ }
+  }
+  try { sessionStorage.removeItem('adminToken'); } catch { /* Legacy cleanup only. */ }
   window.dispatchEvent(new Event('admin-session-change'));
 }
 
@@ -24,7 +37,8 @@ function subscribe(callback) {
 }
 
 const getRawSession = () => {
-  try { return sessionStorage.getItem(KEY) || ''; } catch { return ''; }
+  const session = getStaffSession();
+  return session ? JSON.stringify(session) : '';
 };
 
 export const useStaffSession = () => {

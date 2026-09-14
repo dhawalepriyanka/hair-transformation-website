@@ -42,17 +42,19 @@ const loginAdmin = async (req, res, next) => {
     }
 
     if (authenticated) {
+      const sessionSeconds = 8 * 60 * 60;
       const token = jwt.sign(
         { username, role },
         process.env.JWT_SECRET,
-        { expiresIn: '8h' }
+        { expiresIn: sessionSeconds }
       );
 
       return res.status(200).json({
         success: true,
         message: 'Authentication successful',
         token,
-        user: { username, role }
+        user: { username, role },
+        expiresAt: new Date(Date.now() + sessionSeconds * 1000).toISOString()
       });
     }
 

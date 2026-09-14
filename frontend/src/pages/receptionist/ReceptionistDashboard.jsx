@@ -4,6 +4,7 @@ import { CalendarDays, CalendarPlus, Clock3, Phone, Search, Stethoscope, Users }
 import { createPatientVisit, fetchPatientVisits, updatePatientVisit } from '../../services/api';
 import { useStaffSession } from '../../services/adminSession';
 import PatientRegistrationFields, { emptyPatientForm } from '../../components/PatientRegistrationFields';
+import Toast from '../../components/Toast';
 
 const blank = emptyPatientForm();
 
@@ -32,10 +33,10 @@ export default function ReceptionistDashboard() {
     catch (err) { setError(err.response?.data?.message || err.message); }
   };
   return <section className="clinic-page receptionist-page"><div className="container">
+    <Toast message={error || message} type={error ? 'error' : 'success'} onClose={() => { setError(''); setMessage(''); }} />
     <header className="clinic-heading"><CalendarPlus /><div><h1 className="serif">Receptionist Dashboard</h1><p>Register patient visits and manage today’s queue.</p></div></header>
     <div className="clinic-layout">
       <form id="patient-form" ref={patientFormRef} className="clinic-panel clinic-form" onSubmit={submit}><h2 className="serif">Add Patient Visit</h2>
-        {message && <div className="form-success">{message}</div>}{error && <div className="form-alert">{error}</div>}
         <PatientRegistrationFields form={form} onChange={change} />
         <button className="primary-button" disabled={saving}>{saving ? 'Saving…' : 'Register Patient Visit'}</button>
       </form>
