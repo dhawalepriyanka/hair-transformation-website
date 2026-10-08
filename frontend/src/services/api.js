@@ -614,7 +614,7 @@ export const deleteProduct = async (id) => {
 /* ─────────────── SLIDESHOW & 55" TV SETTINGS ─────────────── */
 export const DEFAULT_SLIDESHOW_SETTINGS = {
   autoSwitch: true,
-  imageDuration: 8,          // seconds for images & sliders
+  imageDuration: 5,          // seconds for images & sliders
   videoDurationMode: 'fixed', // 'fixed' = switch after videoDuration secs | 'end' = switch after video ends
   videoDuration: 15,         // seconds for videos in fixed mode
   hideTextInFullscreen: true, // remove right-side text when in fullscreen / 55" TV mode
@@ -671,10 +671,10 @@ const saveStoredTransformations = (list) => {
 
 export const fetchTransformations = async () => {
   let list = getStoredTransformations();
-  // Automatically migrate legacy IDs or refresh if stored items are outdated or fewer than new social media catalog
+  // Automatically migrate legacy IDs if stored items contain old demo/stock entries
   const legacyIds = new Set([1, 2, 3, 4, 5, 6, 9000001, 9000002]);
-  const isOutdatedOrFewer = list.some(item => legacyIds.has(Number(item.id))) || list.length < defaultTransformations.length;
-  if (isOutdatedOrFewer) {
+  const hasLegacy = list.some(item => legacyIds.has(Number(item.id)));
+  if (hasLegacy) {
     const customItems = list.filter(item => !legacyIds.has(Number(item.id)) && !(item.id >= 9100001 && item.id <= 9100050));
     list = [...defaultTransformations, ...customItems];
     saveStoredTransformations(list);
@@ -710,10 +710,11 @@ export const createTransformation = async (itemData) => {
 export const updateTransformation = async (id, itemData) => {
   itemData = normalizeTransformation(itemData);
   const list = getStoredTransformations();
-  if (!list.some(item => item.id === Number(id))) {
+  const numericId = Number(id);
+  if (!list.some(item => Number(item.id) === numericId || String(item.id) === String(id))) {
     throw new Error('Transformation not found. Refresh the list and try again.');
   }
-  const updated = list.map(item => item.id === parseInt(id) ? {
+  const updated = list.map(item => (Number(item.id) === numericId || String(item.id) === String(id)) ? {
     ...item,
     ...itemData,
     duration: itemData.duration ? parseInt(itemData.duration, 10) : undefined,
@@ -724,7 +725,8 @@ export const updateTransformation = async (id, itemData) => {
 
 export const deleteTransformation = async (id) => {
   const list = getStoredTransformations();
-  const updated = list.filter(item => item.id !== parseInt(id));
+  const numericId = Number(id);
+  const updated = list.filter(item => Number(item.id) !== numericId && String(item.id) !== String(id));
   saveStoredTransformations(updated);
   return { success: true };
 };

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MapPin, Clock, Star, ChevronLeft, ChevronRight,
   Play, Pause, Maximize2, Minimize2, Eye, EyeOff, Volume2, VolumeX,
-  Tv, Instagram, Heart, MessageCircle, ExternalLink, Sparkles
+  Instagram, Heart, MessageCircle, ExternalLink, Sparkles
 } from 'lucide-react';
 import { fetchTransformations, fetchSlideshowSettings } from '../services/api';
 import VideoComparison from '../components/VideoComparison';
@@ -406,10 +406,17 @@ const TransformationsPage = () => {
   }, [transformationsList.length]);
 
   // Handle slide countdown and auto-advance
+  // Handle slide countdown and auto-advance with admin control
   useEffect(() => {
+    // Clear any existing timer
     if (slideTimerRef.current) {
       clearInterval(slideTimerRef.current);
       slideTimerRef.current = null;
+    }
+
+    // Respect admin's autoSwitch setting
+    if (!slideshowSettings.autoSwitch) {
+      return;
     }
 
     if (!isPlaying || transformationsList.length < 2 || !activeItem) {
@@ -419,7 +426,7 @@ const TransformationsPage = () => {
     const duration = calculateSlideDuration();
 
     if (duration === 'end') {
-      // Waiting for video ended event; provide a safety timer of 75 seconds
+      // For video awaiting end, set safety timer
       setTotalSlideDuration(30);
       setTimeLeft(30);
       slideTimerRef.current = window.setTimeout(() => {
@@ -448,7 +455,7 @@ const TransformationsPage = () => {
         slideTimerRef.current = null;
       }
     };
-  }, [activeSlide, isPlaying, transformationsList.length, calculateSlideDuration, changeSlide, activeItem]);
+  }, [activeSlide, isPlaying, transformationsList.length, calculateSlideDuration, changeSlide, activeItem, slideshowSettings.autoSwitch]);
 
   // Handle video ended event
   const handleVideoEnded = () => {
@@ -523,10 +530,6 @@ const TransformationsPage = () => {
               {/* Top Corner TV Bar */}
               <div className="tv-top-bar">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span className="tv-badge-55in">
-                    <Tv size={15} /> 55″ TV SHOWCASE
-                  </span>
-
                   {/* Auto-Switch Countdown Indicator */}
                   <span className="tv-timer-pill" title="Auto-advance countdown">
                     <Clock size={14} color="#F5A58D" />

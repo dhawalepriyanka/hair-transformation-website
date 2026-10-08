@@ -172,6 +172,7 @@ const AdminDashboard = () => {
     try {
       const saved = saveSlideshowSettings(slideshowSettings);
       setSlideshowSettings(saved);
+      setSlideshowModalOpen(false);
       setSlideshowSavedMsg('Slideshow settings saved successfully! 55″ TV display will use these timings.');
       setTimeout(() => setSlideshowSavedMsg(''), 4000);
     } catch (err) {
@@ -415,6 +416,12 @@ const AdminDashboard = () => {
             </button>
           </div>
         </div>
+
+        {slideshowSavedMsg && (
+          <div style={{ backgroundColor: '#E8F5E9', color: '#2E7D32', padding: '0.85rem 1.25rem', borderRadius: '12px', marginBottom: '1.5rem', fontSize: '0.92rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #C8E6C9', boxShadow: '0 2px 8px rgba(46,125,50,0.08)' }}>
+            <Check size={18} /> {slideshowSavedMsg}
+          </div>
+        )}
 
         {/* ── TAB SELECTOR ── */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '1.75rem', borderBottom: '2px solid #EBE5E0', paddingBottom: '0.5rem' }}>
@@ -1173,6 +1180,7 @@ const AdminDashboard = () => {
         {/* ════════════════════ 55" TV & SLIDESHOW SETTINGS MODAL ════════════════════ */}
         {slideshowModalOpen && (
           <div
+            onClick={() => setSlideshowModalOpen(false)}
             style={{
               position: 'fixed',
               inset: 0,
@@ -1185,6 +1193,7 @@ const AdminDashboard = () => {
             }}
           >
             <div
+              onClick={(e) => e.stopPropagation()}
               style={{
                 backgroundColor: '#FFFFFF',
                 borderRadius: '18px',
@@ -1379,7 +1388,7 @@ const AdminDashboard = () => {
                           cursor: 'pointer'
                         }}
                       >
-                        {sec}s {sec === 8 ? '⭐' : ''}
+                        {sec}s {sec === 5 ? '⭐' : ''}
                       </button>
                     ))}
                   </div>
