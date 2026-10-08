@@ -46,6 +46,10 @@ export function normalizeTransformation(data) {
   if (!Number.isInteger(item.rating) || item.rating < 1 || item.rating > 5) {
     throw new Error('Choose a star rating between 1 and 5.');
   }
+  if (item.duration !== undefined && item.duration !== '' && item.duration !== null) {
+    const parsedDuration = parseInt(item.duration, 10);
+    item.duration = !isNaN(parsedDuration) && parsedDuration > 0 ? parsedDuration : undefined;
+  }
   if (item.beforeVideo || item.afterVideo) {
     if (!item.beforeVideo || !item.afterVideo) throw new Error('Add both Before and After videos.');
     item.beforeVideo = validateVideoSource(item.beforeVideo);
@@ -57,9 +61,12 @@ export function normalizeTransformation(data) {
     item.video = validateVideoSource(item.video);
     item.before = '';
     item.after = '';
+  } else if (item.image) {
+    item.image = item.image.trim();
+    item.video = '';
   } else {
     if (!item.before?.trim() || !item.after?.trim()) {
-      throw new Error('Add both Before and After images, or choose Video instead.');
+      throw new Error('Add both Before and After images, single Image, or choose Video instead.');
     }
     item.video = '';
   }

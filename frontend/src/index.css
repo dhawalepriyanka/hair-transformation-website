@@ -1193,12 +1193,233 @@ h1, h2, h3, h4, .serif {
 .tv-signature { margin-top: 1.5rem; color: #c88a75; font-size: .8rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 .tv-controls { position: absolute; z-index: 10; right: 28px; bottom: 24px; display: flex; align-items: center; gap: 10px; }
 .tv-controls > button { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); backdrop-filter: blur(10px); }
-.tv-controls > button:hover { background: #c88a75; }
-.tv-dots { display: flex; gap: 6px; padding: 0 8px; }
-.tv-dots button { width: 8px; height: 8px; padding: 0; border-radius: 10px; background: rgba(255,255,255,.35); transition: .3s ease; }
-.tv-dots button.active { width: 28px; background: #c88a75; }
-.tv-showcase:fullscreen { border-radius: 0; width: 100vw; height: 100vh; }
-.tv-showcase:fullscreen .tv-slide, .tv-showcase:fullscreen .tv-visual { min-height: 100vh; }
+.tv-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 6px;
+  max-width: 320px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tv-dots::-webkit-scrollbar { display: none; }
+.tv-dots button {
+  width: 7px;
+  height: 7px;
+  min-width: 7px;
+  padding: 0;
+  border-radius: 10px;
+  background: rgba(255,255,255,.35);
+  transition: .3s ease;
+  flex-shrink: 0;
+}
+.tv-dots button.active { width: 22px; background: #c88a75; }
+/* 55-inch TV presentation and Fullscreen rules */
+.tv-showcase:fullscreen,
+.tv-showcase.tv-55in-mode {
+  border-radius: 0;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  margin-bottom: 0 !important;
+  background: #0d0807;
+}
+
+.tv-showcase:fullscreen .tv-slide,
+.tv-showcase.tv-55in-mode .tv-slide {
+  min-height: 100vh;
+  height: 100vh;
+}
+
+/* Remove right-side text in Fullscreen or when clean/hide mode is toggled */
+.tv-showcase:fullscreen:not(.show-side-text) .tv-slide,
+.tv-showcase.tv-hide-text .tv-slide {
+  grid-template-columns: 1fr !important;
+}
+
+.tv-showcase:fullscreen:not(.show-side-text) .tv-story,
+.tv-showcase.tv-hide-text .tv-story {
+  display: none !important;
+}
+
+.tv-showcase:fullscreen:not(.show-side-text) .tv-visual,
+.tv-showcase.tv-hide-text .tv-visual {
+  width: 100% !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+}
+
+/* 55-inch TV typography & layout scaling (1080p, 2K, 4K) */
+@media (min-width: 1500px) {
+  .tv-showcase {
+    min-height: 720px;
+  }
+  .tv-slide {
+    min-height: 720px;
+  }
+  .tv-visual {
+    min-height: 720px;
+  }
+  .tv-story {
+    padding: 5rem 4rem 7rem;
+  }
+  .tv-story h2 {
+    font-size: clamp(3.2rem, 4.5vw, 5.2rem);
+  }
+  .tv-story h3 {
+    font-size: 1.5rem;
+  }
+  .tv-story blockquote {
+    font-size: 1.35rem;
+    line-height: 1.6;
+  }
+  .tv-controls > button {
+    width: 46px;
+    height: 46px;
+  }
+}
+
+/* Floating overlay chip for 55" screen when side text is hidden */
+.tv-floating-tag {
+  position: absolute;
+  bottom: 24px;
+  left: 28px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: rgba(18, 12, 10, 0.78);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 40px;
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.4s ease;
+  pointer-events: none;
+  max-width: calc(100vw - 250px);
+}
+
+.tv-floating-tag .tag-badge {
+  background: #C88A75;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.tv-floating-tag .tag-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.tv-floating-tag .tag-desc {
+  font-size: 0.82rem;
+  color: #e2d7d2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* TV Ambient Glow Backdrop for vertical reels on 55" wide screens */
+.tv-ambient-backdrop {
+  position: absolute;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  object-fit: cover;
+  filter: blur(40px) brightness(0.35) saturate(1.4);
+  transform: scale(1.1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Countdown Progress Bar */
+.tv-progress-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  z-index: 25;
+}
+
+.tv-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #C88A75, #F5A58D);
+  transition: width 0.9s linear;
+}
+
+/* Top corner TV badges & quick toggles */
+.tv-top-bar {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  right: 24px;
+  z-index: 15;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.tv-top-bar > * {
+  pointer-events: auto;
+}
+
+.tv-badge-55in {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(20, 14, 12, 0.75);
+  border: 1px solid rgba(200, 138, 117, 0.4);
+  color: #F5A58D;
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(10px);
+}
+
+.tv-timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(20, 14, 12, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 30px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+}
+
+.tv-speed-dropdown {
+  background: rgba(20, 14, 12, 0.85);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  accent-color: #C88A75;
+}
+
+.tv-speed-dropdown option {
+  background: #1E1614;
+  color: #fff;
+}
 
 @keyframes tvSlideIn { from { opacity: 0; transform: scale(1.025); } to { opacity: 1; transform: scale(1); } }
 @keyframes tvGlow { to { transform: translate3d(-4%, 3%, 0) scale(1.08); } }
@@ -1211,6 +1432,7 @@ h1, h2, h3, h4, .serif {
   .tv-story { padding: 2.5rem 1.5rem 6rem; }
   .tv-before-layer img { width: 100vw; }
   .tv-controls { left: 18px; right: 18px; justify-content: center; }
+  .tv-floating-tag { left: 18px; bottom: 85px; max-width: calc(100vw - 36px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

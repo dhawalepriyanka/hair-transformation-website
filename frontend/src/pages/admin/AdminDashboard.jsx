@@ -4,11 +4,13 @@ import { setAdminSession, getStaffSession } from '../../services/adminSession';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   fetchProducts, deleteProduct, updateProduct,
-  fetchTransformations, createTransformation, updateTransformation, deleteTransformation
+  fetchTransformations, createTransformation, updateTransformation, deleteTransformation,
+  fetchSlideshowSettings, saveSlideshowSettings, DEFAULT_SLIDESHOW_SETTINGS
 } from '../../services/api';
 import {
   Plus, Edit, Trash2, Search, LogOut, Eye, EyeOff,
-  Sparkles, RefreshCw, Package, Star, X, Check, Image, Upload, FolderOpen, Video
+  Sparkles, RefreshCw, Package, Star, X, Check, Image, Upload, FolderOpen, Video,
+  Tv, Clock, Settings
 } from 'lucide-react';
 
 const TRANSFORMATION_CATEGORIES = [
@@ -35,10 +37,15 @@ const AdminDashboard = () => {
   const [loadingTransformations, setLoadingTransformations] = useState(true);
   const [transformationSearch, setTransformationSearch] = useState('');
 
+  // 55" TV & Slideshow Settings state
+  const [slideshowModalOpen, setSlideshowModalOpen] = useState(false);
+  const [slideshowSettings, setSlideshowSettings] = useState(fetchSlideshowSettings());
+  const [slideshowSavedMsg, setSlideshowSavedMsg] = useState('');
+
   // Transformation Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [mediaType, setMediaType] = useState('images');
+  const [mediaType, setMediaType] = useState('images'); // 'images' | 'image' | 'video' | 'videos'
   const [readingMedia, setReadingMedia] = useState(false);
   const [savingTransformation, setSavingTransformation] = useState(false);
   const [videoError, setVideoError] = useState('');
@@ -53,7 +60,9 @@ const AdminDashboard = () => {
     testimonial: '',
     before: '',
     after: '',
+    image: '',
     video: '', beforeVideo: '', afterVideo: '',
+    duration: '',
     category: 'Hair Extensions'
   });
 
@@ -157,6 +166,19 @@ const AdminDashboard = () => {
     }
   };
 
+  // 55" TV & Slideshow Settings handler
+  const handleSaveSlideshowSettings = (e) => {
+    e.preventDefault();
+    try {
+      const saved = saveSlideshowSettings(slideshowSettings);
+      setSlideshowSettings(saved);
+      setSlideshowSavedMsg('Slideshow settings saved successfully! 55″ TV display will use these timings.');
+      setTimeout(() => setSlideshowSavedMsg(''), 4000);
+    } catch (err) {
+      alert('Failed to save slideshow settings: ' + err.message);
+    }
+  };
+
   // Transformation actions
   const openAddModal = () => {
     setEditingItem(null);
@@ -170,7 +192,9 @@ const AdminDashboard = () => {
       testimonial: '',
       before: '',
       after: '',
+      image: '',
       video: '', beforeVideo: '', afterVideo: '',
+      duration: '',
       category: 'Hair Extensions'
     });
     setModalOpen(true);
@@ -178,7 +202,14 @@ const AdminDashboard = () => {
 
   const openEditModal = (item) => {
     setEditingItem(item);
-    setMediaType(item.beforeVideo || item.afterVideo ? 'videos' : item.video ? 'video' : 'images');
+    const initialMediaType = item.beforeVideo || item.afterVideo
+      ? 'videos'
+      : item.video
+        ? 'video'
+        : item.image
+          ? 'image'
+          : 'images';
+    setMediaType(initialMediaType);
     setFormData({
       clientName: item.clientName || '',
       village: item.village || '',
@@ -188,9 +219,11 @@ const AdminDashboard = () => {
       testimonial: item.testimonial || '',
       before: item.before || '',
       after: item.after || '',
+      image: item.image || '',
       video: item.video || '',
       beforeVideo: item.beforeVideo || '',
       afterVideo: item.afterVideo || '',
+      duration: item.duration || '',
       category: item.category || 'Hair Extensions'
     });
     setModalOpen(true);
@@ -200,18 +233,35 @@ const AdminDashboard = () => {
     e.preventDefault();
     if (readingMedia || savingTransformation) return;
     if (mediaType === 'images' && (!formData.before || !formData.after)) {
-      alert('Please add both Before and After images, or choose Video instead.');
+      alert('Please add both Before and After images, or choose Video/Single Photo instead.');
+      return;
+    }
+    if (mediaType === 'image' && !formData.image) {
+      alert('Please choose or enter a Photo for this transformation.');
       return;
     }
     if (mediaType === 'video' && !formData.video) {
       alert('Please choose a video file or paste a direct video URL.');
       return;
     }
-    const mediaData = mediaType === 'videos'
-      ? { ...formData, before: '', after: '', video: '' }
-      : mediaType === 'video'
-        ? { ...formData, before: '', after: '', beforeVideo: '', afterVideo: '' }
-        : { ...formData, video: '', beforeVideo: '', afterVideo: '' };
+    let mediaData = { ...formData };
+    if (mediaType === 'videos') {
+      mediaData = { ...mediaData, before: '', after: '', image: '', video: '' };
+    } else if (mediaType === 'video') {
+      mediaData = { ...mediaData, before: '', after: '', image: '', beforeVideo: '', afterVideo: '' };
+    } else if (mediaType === 'image') {
+      mediaData = { ...mediaData, before: '', after: '', video: '', beforeVideo: '', afterVideo: '' };
+    } else {
+      mediaData = { ...mediaData, image: '', video: '', beforeVideo: '', afterVideo: '' };
+    }
+
+    if (formData.duration) {
+      const dur = parseInt(formData.duration, 10);
+      mediaData.duration = !isNaN(dur) && dur > 0 ? dur : undefined;
+    } else {
+      mediaData.duration = undefined;
+    }
+
     try {
       if (mediaType === 'video') {
         mediaData.video = validateVideoSource(mediaData.video);
@@ -301,24 +351,48 @@ const AdminDashboard = () => {
                 <Plus size={18} /> Add New Product
               </Link>
             ) : (
-              <button
-                onClick={openAddModal}
-                style={{
-                  backgroundColor: '#C88A75',
-                  color: '#FFF',
-                  padding: '0.7rem 1.4rem',
-                  borderRadius: '30px',
-                  fontWeight: '600',
-                  fontSize: '0.9rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <Plus size={18} /> Add New Transformation
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setSlideshowModalOpen(true)}
+                  style={{
+                    backgroundColor: '#1E1E1E',
+                    color: '#FFF',
+                    padding: '0.7rem 1.3rem',
+                    borderRadius: '30px',
+                    fontWeight: '600',
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.12)'
+                  }}
+                  title="Configure 55″ TV display settings and auto-switch video timings"
+                >
+                  <Tv size={17} color="#F5A58D" /> 55″ TV & Video Time
+                </button>
+
+                <button
+                  onClick={openAddModal}
+                  style={{
+                    backgroundColor: '#C88A75',
+                    color: '#FFF',
+                    padding: '0.7rem 1.4rem',
+                    borderRadius: '30px',
+                    fontWeight: '600',
+                    fontSize: '0.9rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Plus size={18} /> Add New Transformation
+                </button>
+              </div>
             )}
 
             <button
@@ -543,6 +617,7 @@ const AdminDashboard = () => {
                       <th style={{ padding: '0.75rem' }}>Treatment & Category</th>
                       <th style={{ padding: '0.75rem' }}>Period</th>
                       <th style={{ padding: '0.75rem' }}>Rating</th>
+                      <th style={{ padding: '0.75rem' }}>Display Time</th>
                       <th style={{ padding: '0.75rem', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
@@ -555,6 +630,14 @@ const AdminDashboard = () => {
                               <span title="Video transformation" style={{ width: '80px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', borderRadius: '4px', color: '#FFF', background: '#C88A75', fontSize: '0.72rem', fontWeight: '700' }}>
                                 <Video size={17} /> {item.beforeVideo ? 'BEFORE / AFTER' : 'VIDEO'}
                               </span>
+                            ) : item.image && !item.before && !item.after ? (
+                              <img
+                                src={item.image}
+                                alt="Instagram Photo"
+                                title="Instagram Photo"
+                                style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #C88A75' }}
+                                onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=200'; }}
+                              />
                             ) : <>
                             <img
                               src={item.before}
@@ -593,6 +676,23 @@ const AdminDashboard = () => {
                               <Star key={i} size={13} fill="#C88A75" />
                             ))}
                           </div>
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '0.78rem',
+                            fontWeight: '700',
+                            padding: '3px 9px',
+                            borderRadius: '12px',
+                            background: item.duration ? '#FFF0EC' : '#F5F5F5',
+                            color: item.duration ? '#C88A75' : '#666',
+                            border: `1px solid ${item.duration ? '#F2C8BD' : '#E0E0E0'}`
+                          }}>
+                            <Clock size={12} />
+                            {item.duration ? `${item.duration}s` : (item.video || item.beforeVideo ? `${slideshowSettings.videoDuration}s (Def)` : `${slideshowSettings.imageDuration}s (Def)`)}
+                          </span>
                         </td>
                         <td style={{ padding: '0.75rem', textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '8px' }}>
@@ -753,19 +853,41 @@ const AdminDashboard = () => {
                 </div>
 
                 <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.35rem' }}>
+                    <Clock size={14} style={{ verticalAlign: 'middle', marginRight: '5px', color: '#C88A75' }} />
+                    Slide / Video Display Time on 55″ TV (seconds)
+                  </label>
+                  <input
+                    type="number"
+                    min="3"
+                    max="180"
+                    placeholder={`e.g. 15 (leave blank to use default ${slideshowSettings.videoDuration}s for videos / ${slideshowSettings.imageDuration}s for photos)`}
+                    value={formData.duration || ''}
+                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                    style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #CCC' }}
+                  />
+                  <span style={{ fontSize: '0.74rem', color: '#777', marginTop: '3px', display: 'block' }}>
+                    Control how long this video/slide stays visible on the salon screen before advancing. Leave blank to follow the global 55″ TV timing.
+                  </span>
+                </div>
+
+                <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', marginBottom: '0.5rem' }}>Choose Transformation Media *</label>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
                     <button type="button" onClick={() => setMediaType('images')} style={{ padding: '0.7rem', borderRadius: '8px', border: `1.5px solid ${mediaType === 'images' ? '#C88A75' : '#DDD'}`, background: mediaType === 'images' ? '#F7EFEA' : '#FFF', color: mediaType === 'images' ? '#9A5F4D' : '#666', fontWeight: '700', cursor: 'pointer' }}>
                       <Image size={16} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Before & After Images
                     </button>
+                    <button type="button" onClick={() => setMediaType('image')} style={{ padding: '0.7rem', borderRadius: '8px', border: `1.5px solid ${mediaType === 'image' ? '#C88A75' : '#DDD'}`, background: mediaType === 'image' ? '#F7EFEA' : '#FFF', color: mediaType === 'image' ? '#9A5F4D' : '#666', fontWeight: '700', cursor: 'pointer' }}>
+                      <Image size={16} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Single Photo (Instagram)
+                    </button>
+                    <button type="button" onClick={() => setMediaType('video')} style={{ padding: '0.7rem', borderRadius: '8px', border: `1.5px solid ${mediaType === 'video' ? '#C88A75' : '#DDD'}`, background: mediaType === 'video' ? '#F7EFEA' : '#FFF', color: mediaType === 'video' ? '#9A5F4D' : '#666', fontWeight: '700', cursor: 'pointer' }}>
+                      <Video size={16} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Video Only (Reel)
+                    </button>
                     <button type="button" aria-pressed={mediaType === 'videos'} onClick={() => setMediaType('videos')} style={{ padding: '0.7rem', borderRadius: '8px', border: mediaType === 'videos' ? '1.5px solid #C88A75' : '1.5px solid #DDD', background: mediaType === 'videos' ? '#F7EFEA' : '#FFF', color: mediaType === 'videos' ? '#9A5F4D' : '#666', fontWeight: '700', cursor: 'pointer' }}>
                       <Video size={16} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Before & After Videos
                     </button>
-                    <button type="button" onClick={() => setMediaType('video')} style={{ padding: '0.7rem', borderRadius: '8px', border: `1.5px solid ${mediaType === 'video' ? '#C88A75' : '#DDD'}`, background: mediaType === 'video' ? '#F7EFEA' : '#FFF', color: mediaType === 'video' ? '#9A5F4D' : '#666', fontWeight: '700', cursor: 'pointer' }}>
-                      <Video size={16} style={{ verticalAlign: 'middle', marginRight: '6px' }} /> Video Only
-                    </button>
                   </div>
-                  <p style={{ margin: '0.45rem 0 0', color: '#777', fontSize: '0.78rem' }}>Choose a Before & After image or video pair, or a single transformation video.</p>
+                  <p style={{ margin: '0.45rem 0 0', color: '#777', fontSize: '0.78rem' }}>Choose Before & After comparison, an Instagram photo, or a video reel.</p>
                 </div>
 
                 {mediaType === 'images' && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
@@ -902,6 +1024,72 @@ const AdminDashboard = () => {
                   </div>
                 </div>}
 
+                {mediaType === 'image' && (
+                  <div style={{ background: '#FAF8F6', padding: '1rem', borderRadius: '12px', border: '1px solid #EBE5E0', marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', color: '#1E1E1E', marginBottom: '0.4rem' }}>
+                      Transformation Photo (Instagram Post / Clinic Picture) *
+                    </label>
+
+                    <div style={{ marginBottom: '0.6rem' }}>
+                      <label
+                        htmlFor="single-image-file-upload"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          backgroundColor: '#FFF',
+                          border: '1.5px dashed #C88A75',
+                          color: '#C88A75',
+                          padding: '0.65rem',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          textAlign: 'center'
+                        }}
+                      >
+                        <FolderOpen size={16} /> Choose from PC / Gallery
+                      </label>
+                      <input
+                        id="single-image-file-upload"
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileUpload(e, 'image')}
+                      />
+                    </div>
+
+                    <div style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '0.4rem' }}>— or paste image path / URL —</div>
+
+                    <input
+                      type="text"
+                      placeholder="e.g. /instagram/salon-client.jpg or https://..."
+                      value={formData.image.startsWith('data:') ? '[Local PC Image Selected]' : formData.image}
+                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.82rem' }}
+                    />
+
+                    {formData.image && (
+                      <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img
+                          src={formData.image}
+                          alt="Photo Preview"
+                          style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #C88A75' }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, image: '' })}
+                          style={{ background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {mediaType === 'videos' && <div className="transformation-video-pair-inputs">
                   {[['beforeVideo', 'Before Video'], ['afterVideo', 'After Video']].map(([field, label]) => (
                     <div key={field} style={{ background: '#FAF8F6', padding: '1rem', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
@@ -976,6 +1164,279 @@ const AdminDashboard = () => {
                   >
                     <Check size={16} /> {readingMedia ? 'Reading Media…' : savingTransformation ? 'Saving…' : editingItem ? 'Update Transformation' : 'Save Transformation'}
                   </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ════════════════════ 55" TV & SLIDESHOW SETTINGS MODAL ════════════════════ */}
+        {slideshowModalOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              zIndex: 1000,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: '1rem'
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '18px',
+                width: '100%',
+                maxWidth: '640px',
+                maxHeight: '92vh',
+                overflowY: 'auto',
+                padding: '2.2rem',
+                boxShadow: '0 12px 50px rgba(0,0,0,0.25)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ backgroundColor: '#F7EFEA', padding: '10px', borderRadius: '12px' }}>
+                    <Tv size={26} color="#C88A75" />
+                  </div>
+                  <div>
+                    <h2 className="serif" style={{ fontSize: '1.6rem', color: '#1E1E1E', margin: 0 }}>
+                      55″ TV & Video Time Settings
+                    </h2>
+                    <p style={{ margin: '3px 0 0', color: '#777', fontSize: '0.85rem' }}>
+                      Configure automatic slideshow timings & video playback for salon displays
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSlideshowModalOpen(false)}
+                  style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: '4px' }}
+                >
+                  <X size={22} />
+                </button>
+              </div>
+
+              {slideshowSavedMsg && (
+                <div style={{ backgroundColor: '#E8F5E9', color: '#2E7D32', padding: '0.8rem 1rem', borderRadius: '8px', marginBottom: '1.25rem', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={18} /> {slideshowSavedMsg}
+                </div>
+              )}
+
+              <form onSubmit={handleSaveSlideshowSettings}>
+                {/* 1. Auto Switch Master Toggle */}
+                <div style={{ background: '#FAF8F6', padding: '1rem 1.2rem', borderRadius: '12px', border: '1px solid #EBE5E0', marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.92rem', color: '#1E1E1E' }}>
+                    <input
+                      type="checkbox"
+                      checked={slideshowSettings.autoSwitch !== false}
+                      onChange={(e) => setSlideshowSettings({ ...slideshowSettings, autoSwitch: e.target.checked })}
+                      style={{ width: '18px', height: '18px', accentColor: '#C88A75' }}
+                    />
+                    Enable Automatic Slideshow Switching
+                  </label>
+                  <p style={{ margin: '0.35rem 0 0 28px', color: '#666', fontSize: '0.8rem' }}>
+                    Automatically advances to the next transformation slide without manual clicks.
+                  </p>
+                </div>
+
+                {/* 2. Video Time & Switching Mode (ADMIN ACCESS) */}
+                <div style={{ background: '#FAF8F6', padding: '1.2rem', borderRadius: '12px', border: '1px solid #EBE5E0', marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.6rem' }}>
+                    <Video size={18} color="#C88A75" />
+                    <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: '#1E1E1E' }}>
+                      Video Slides Display & Switch Time
+                    </h3>
+                  </div>
+                  <p style={{ margin: '0 0 1rem', color: '#666', fontSize: '0.82rem' }}>
+                    Set how long videos and reels play before the 55″ screen automatically moves to the next transformation.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="videoDurationMode"
+                        value="fixed"
+                        checked={slideshowSettings.videoDurationMode !== 'end'}
+                        onChange={() => setSlideshowSettings({ ...slideshowSettings, videoDurationMode: 'fixed' })}
+                        style={{ accentColor: '#C88A75' }}
+                      />
+                      <span>Auto-switch after fixed time limit (Recommended for continuous salon flow)</span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="videoDurationMode"
+                        value="end"
+                        checked={slideshowSettings.videoDurationMode === 'end'}
+                        onChange={() => setSlideshowSettings({ ...slideshowSettings, videoDurationMode: 'end' })}
+                        style={{ accentColor: '#C88A75' }}
+                      />
+                      <span>Auto-switch only after video finishes playing</span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem', color: '#333' }}>
+                      Default Video Duration: <span style={{ color: '#C88A75', fontWeight: '800' }}>{slideshowSettings.videoDuration || 15} seconds</span>
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '0.6rem' }}>
+                      <input
+                        type="range"
+                        min="5"
+                        max="60"
+                        step="1"
+                        value={slideshowSettings.videoDuration || 15}
+                        onChange={(e) => setSlideshowSettings({ ...slideshowSettings, videoDuration: parseInt(e.target.value, 10) })}
+                        style={{ flex: 1, accentColor: '#C88A75' }}
+                      />
+                      <input
+                        type="number"
+                        min="5"
+                        max="120"
+                        value={slideshowSettings.videoDuration || 15}
+                        onChange={(e) => setSlideshowSettings({ ...slideshowSettings, videoDuration: parseInt(e.target.value, 10) || 15 })}
+                        style={{ width: '70px', padding: '0.4rem', borderRadius: '6px', border: '1px solid #CCC', textAlign: 'center', fontWeight: '700' }}
+                      />
+                      <span style={{ fontSize: '0.82rem', color: '#666' }}>sec</span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {[10, 15, 20, 30, 45].map((sec) => (
+                        <button
+                          key={sec}
+                          type="button"
+                          onClick={() => setSlideshowSettings({ ...slideshowSettings, videoDuration: sec })}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '15px',
+                            border: `1px solid ${slideshowSettings.videoDuration === sec ? '#C88A75' : '#DDD'}`,
+                            background: slideshowSettings.videoDuration === sec ? '#F7EFEA' : '#FFF',
+                            color: slideshowSettings.videoDuration === sec ? '#9A5F4D' : '#666',
+                            fontSize: '0.78rem',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {sec}s {sec === 15 ? '⭐' : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Photo & Before/After Slide Display Time */}
+                <div style={{ background: '#FAF8F6', padding: '1.2rem', borderRadius: '12px', border: '1px solid #EBE5E0', marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.6rem' }}>
+                    <Image size={18} color="#C88A75" />
+                    <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: '#1E1E1E' }}>
+                      Photo & Split Comparison Slide Time
+                    </h3>
+                  </div>
+
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem', color: '#333' }}>
+                    Image Display Duration: <span style={{ color: '#C88A75', fontWeight: '800' }}>{slideshowSettings.imageDuration || 8} seconds</span>
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '0.6rem' }}>
+                    <input
+                      type="range"
+                      min="4"
+                      max="30"
+                      step="1"
+                      value={slideshowSettings.imageDuration || 8}
+                      onChange={(e) => setSlideshowSettings({ ...slideshowSettings, imageDuration: parseInt(e.target.value, 10) })}
+                      style={{ flex: 1, accentColor: '#C88A75' }}
+                    />
+                    <input
+                      type="number"
+                      min="4"
+                      max="60"
+                      value={slideshowSettings.imageDuration || 8}
+                      onChange={(e) => setSlideshowSettings({ ...slideshowSettings, imageDuration: parseInt(e.target.value, 10) || 8 })}
+                      style={{ width: '70px', padding: '0.4rem', borderRadius: '6px', border: '1px solid #CCC', textAlign: 'center', fontWeight: '700' }}
+                    />
+                    <span style={{ fontSize: '0.82rem', color: '#666' }}>sec</span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {[5, 7, 8, 10, 12].map((sec) => (
+                      <button
+                        key={sec}
+                        type="button"
+                        onClick={() => setSlideshowSettings({ ...slideshowSettings, imageDuration: sec })}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '15px',
+                          border: `1px solid ${slideshowSettings.imageDuration === sec ? '#C88A75' : '#DDD'}`,
+                          background: slideshowSettings.imageDuration === sec ? '#F7EFEA' : '#FFF',
+                          color: slideshowSettings.imageDuration === sec ? '#9A5F4D' : '#666',
+                          fontSize: '0.78rem',
+                          fontWeight: '600',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {sec}s {sec === 8 ? '⭐' : ''}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. Fullscreen Behavior (Remove Right Side Text) */}
+                <div style={{ background: '#FAF8F6', padding: '1rem 1.2rem', borderRadius: '12px', border: '1px solid #EBE5E0', marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.92rem', color: '#1E1E1E' }}>
+                    <input
+                      type="checkbox"
+                      checked={slideshowSettings.hideTextInFullscreen !== false}
+                      onChange={(e) => setSlideshowSettings({ ...slideshowSettings, hideTextInFullscreen: e.target.checked })}
+                      style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: '#C88A75' }}
+                    />
+                    <div>
+                      <span>Remove right-side text on Fullscreen / 55″ TV Mode (Recommended)</span>
+                      <p style={{ margin: '0.3rem 0 0', fontWeight: '400', color: '#666', fontSize: '0.8rem' }}>
+                        When fullscreen is clicked, removes the right description text so videos and photos expand to 100% full width and height on 55-inch displays.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <a
+                    href="/transformations"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      color: '#C88A75',
+                      fontWeight: '700',
+                      fontSize: '0.88rem',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <Tv size={16} /> Open 55″ TV Display Page ↗
+                  </a>
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setSlideshowModalOpen(false)}
+                      style={{ padding: '0.7rem 1.3rem', borderRadius: '25px', border: '1px solid #CCC', background: '#FFF', color: '#666', fontWeight: '600', cursor: 'pointer' }}
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="submit"
+                      style={{ padding: '0.7rem 1.6rem', borderRadius: '25px', border: 'none', backgroundColor: '#C88A75', color: '#FFF', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Check size={16} /> Save Timings & TV Settings
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
