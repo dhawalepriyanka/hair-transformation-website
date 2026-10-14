@@ -25,6 +25,20 @@ const RoleRoute = ({ role, children }) => {
 };
 
 function App() {
+  const isTv = typeof window !== 'undefined' && (
+    window.location.pathname === '/tv' ||
+    window.location.search.includes('tv=1') ||
+    window.location.hash.includes('tv')
+  );
+
+  if (isTv) {
+    return (
+      <SelectionProvider>
+        <TransformationsPage isTvMode={true} />
+      </SelectionProvider>
+    );
+  }
+
   return (
     <SelectionProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -34,6 +48,7 @@ function App() {
           <main className="main-content">
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/tv" element={<TransformationsPage isTvMode={true} />} />
               <Route path="/hair-styles" element={<ProductsPage />} />
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/selected-styles" element={<Navigate to="/admin/patients" replace />} />

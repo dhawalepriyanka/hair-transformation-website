@@ -2511,3 +2511,35 @@ html { scroll-behavior: smooth; }
 @media (max-width: 600px) {
   .app-toast { top: 94px; right: 16px; left: 16px; width: auto; }
 }
+
+/* ─────────────── STANDALONE ANDROID TV KIOSK STYLES ─────────────── */
+.tv-cursor-hidden,
+.tv-cursor-hidden * {
+  cursor: none !important;
+}
+
+.tv-kiosk-wrapper {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #0d0807;
+  z-index: 999999;
+}
+
+.tv-kiosk-wrapper .tv-showcase {
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+.tv-kiosk-wrapper .reveal {
+  width: 100% !important;
+  height: 100% !important;
+}

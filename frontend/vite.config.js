@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const devApiTarget = env.VITE_DEV_API_TARGET?.trim();
 
   return {
+    base: './',
     plugins: [react()],
     server: {
       port: 3000,

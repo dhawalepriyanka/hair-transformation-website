@@ -17,6 +17,7 @@ const defaultFallbackTransformations = [
     village: 'Sangamner, Maharashtra',
     period: 'Instagram Reel • 48K Views',
     video: '/instagram/reels/hair-transformation.mp4',
+    poster: '/instagram/hair-transformation-client.jpg',
     category: 'Hair Transformation',
     rating: 5,
     likes: '2.8K',
@@ -33,6 +34,7 @@ const defaultFallbackTransformations = [
     village: 'Nashik, Maharashtra',
     period: 'Instagram Reel • 36K Views',
     video: '/instagram/reels/hair-extensions.mp4',
+    poster: '/instagram/long-hair-styling.jpg',
     category: 'Hair Extensions',
     rating: 5,
     likes: '2.1K',
@@ -49,6 +51,7 @@ const defaultFallbackTransformations = [
     village: 'Ghargaon, Sangamner',
     period: 'Instagram Reel • 29K Views',
     video: '/instagram/reels/hair-styling.mp4',
+    poster: '/instagram/salon-client.jpg',
     category: 'Hair Styling',
     rating: 5,
     likes: '1.9K',
@@ -97,7 +100,7 @@ const defaultFallbackTransformations = [
     treatment: 'Custom Dimensional Hair Color & Gloss',
     village: 'Pune, Maharashtra',
     period: 'Instagram Post • 2.6K Likes',
-    image: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&w=1200&q=80',
+    image: '/instagram/dipali-wakale-professional-solo-hero.png',
     category: 'Hair Color',
     rating: 5,
     likes: '2.6K',
@@ -129,7 +132,7 @@ const defaultFallbackTransformations = [
     treatment: 'Precision Cuticle Care & Gel Extension Art',
     village: 'Sangamner Studio',
     period: 'Instagram Story & Post • 1.2K Likes',
-    image: 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=1200&q=80',
+    image: '/instagram/dipali-wakale-about-professional.png',
     category: 'Nail Art',
     rating: 5,
     likes: '1.2K',
@@ -161,7 +164,7 @@ const defaultFallbackTransformations = [
     treatment: '7-Step Hydra Extraction & Serum Infusion',
     village: 'Sangamner Clinic',
     period: 'Instagram Reel • 32K Views',
-    image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1200&q=80',
+    image: '/instagram/dipali-wakale-hair-doctor-hero.png',
     category: 'Skin Care',
     rating: 5,
     likes: '2.3K',
@@ -241,7 +244,7 @@ const defaultFallbackTransformations = [
     treatment: 'Deep Scalp Clarifying & Ozone Therapy',
     village: 'Ghargaon Clinic',
     period: 'Instagram Post • 1.9K Likes',
-    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1200&q=80',
+    image: '/instagram/dipali-wakale-professional-hero-v2.png',
     category: 'Hair Care',
     rating: 5,
     likes: '1.9K',
@@ -311,16 +314,24 @@ const StarRating = ({ count }) => (
 );
 
 /* ─────────────── MAIN TRANSFORMATIONS PAGE ─────────────── */
-const TransformationsPage = () => {
+const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
+  const isTvMode = isTvModeProp || (typeof window !== 'undefined' && (
+    window.location.search.includes('tv=1') ||
+    window.location.pathname === '/tv' ||
+    window.location.hash.includes('tv')
+  ));
+
   const [transformationsList, setTransformationsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeSlide, setActiveSlide] = useState(0);
   const [slideshowSettings, setSlideshowSettings] = useState(fetchSlideshowSettings());
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [hideDetails, setHideDetails] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(isTvMode);
+  const [hideDetails, setHideDetails] = useState(isTvMode);
   const [isMuted, setIsMuted] = useState(true);
   const [userSpeedOption, setUserSpeedOption] = useState('auto'); // 'auto' | '5' | '8' | '12' | '15' | '20' | '30' | 'end'
+  const [cursorVisible, setCursorVisible] = useState(true);
+  const cursorTimerRef = useRef(null);
 
   // Countdown timer state
   const [timeLeft, setTimeLeft] = useState(8);
@@ -457,6 +468,22 @@ const TransformationsPage = () => {
     };
   }, [activeSlide, isPlaying, transformationsList.length, calculateSlideDuration, changeSlide, activeItem, slideshowSettings.autoSwitch]);
 
+  // Ensure video playback starts smoothly on active slide change
+  useEffect(() => {
+    if (videoRef.current && isVideo) {
+      videoRef.current.currentTime = 0;
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          if (videoRef.current) {
+            videoRef.current.muted = true;
+            videoRef.current.play().catch(() => {});
+          }
+        });
+      }
+    }
+  }, [activeSlide, isVideo]);
+
   // Handle video ended event
   const handleVideoEnded = () => {
     const duration = calculateSlideDuration();
@@ -480,32 +507,78 @@ const TransformationsPage = () => {
     }
   };
 
+  // TV Remote navigation keys (D-Pad Left, Right, OK, Back, etc.)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'MediaTrackPrevious') {
+        changeSlide(-1);
+      } else if (e.key === 'ArrowRight' || e.key === 'MediaTrackNext') {
+        changeSlide(1);
+      } else if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space' || e.key === 'MediaPlayPause') {
+        setIsPlaying((prev) => !prev);
+      } else if (e.key === 'm' || e.key === 'M') {
+        setIsMuted((prev) => !prev);
+      } else if (e.key === 't' || e.key === 'T' || e.key === 'ArrowDown') {
+        setHideDetails((prev) => !prev);
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [changeSlide]);
+
+  // TV Inactivity cursor auto-hide
+  useEffect(() => {
+    if (!isTvMode) return;
+    const handleMouseMove = () => {
+      setCursorVisible(true);
+      if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
+      cursorTimerRef.current = setTimeout(() => {
+        setCursorVisible(false);
+      }, 2500);
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    cursorTimerRef.current = setTimeout(() => {
+      setCursorVisible(false);
+    }, 2500);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
+    };
+  }, [isTvMode]);
+
   const progressPercent = totalSlideDuration > 0
     ? Math.max(0, Math.min(100, ((totalSlideDuration - timeLeft) / totalSlideDuration) * 100))
     : 0;
 
   return (
-    <div className="transformations-page section-padding" style={{ paddingTop: '1.5rem', paddingBottom: '3rem' }}>
-      <div className="container">
+    <div
+      className={isTvMode ? `tv-kiosk-wrapper ${!cursorVisible ? 'tv-cursor-hidden' : ''}` : 'transformations-page section-padding'}
+      style={isTvMode ? undefined : { paddingTop: '1.5rem', paddingBottom: '3rem' }}
+    >
+      <div className={isTvMode ? 'tv-kiosk-inner' : 'container'}>
 
-        {/* ── TOP ACTION BAR ── */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '12px',
-          marginBottom: '1.5rem'
-        }}>
-          <div>
-            <h1 className="serif" style={{ fontSize: '1.8rem', margin: 0, color: '#1E1E1E' }}>
-              Transformation Screen
-            </h1>
-            <p style={{ margin: '3px 0 0', color: '#777', fontSize: '0.88rem' }}>
-              Dipali Wakale Salon & Clinic Showcase • Optimized for 55″ Displays
-            </p>
+        {/* ── TOP ACTION BAR (Hidden on TV) ── */}
+        {!isTvMode && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            marginBottom: '1.5rem'
+          }}>
+            <div>
+              <h1 className="serif" style={{ fontSize: '1.8rem', margin: 0, color: '#1E1E1E' }}>
+                Transformation Screen
+              </h1>
+              <p style={{ margin: '3px 0 0', color: '#777', fontSize: '0.88rem' }}>
+                Dipali Wakale Salon & Clinic Showcase • Optimized for 55″ Displays
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── 55-INCH TV AUTOMATIC SHOWCASE SCREEN ── */}
         {loading ? (
@@ -513,9 +586,9 @@ const TransformationsPage = () => {
         ) : activeItem ? (
           <Reveal variant="scale" delay={50}>
             <div
-              className={`tv-showcase ${hideDetails ? 'tv-hide-text' : ''} ${isFullscreen ? 'tv-55in-mode' : ''}`}
+              className={`tv-showcase ${hideDetails ? 'tv-hide-text' : ''} ${isFullscreen || isTvMode ? 'tv-55in-mode' : ''}`}
               ref={showcaseRef}
-              style={{ marginBottom: '1rem' }}
+              style={{ marginBottom: isTvMode ? 0 : '1rem' }}
             >
               {/* Top Countdown Progress Line */}
               {isPlaying && (
@@ -661,7 +734,7 @@ const TransformationsPage = () => {
                       ref={videoRef}
                       className="tv-transformation-video"
                       src={activeItem.video}
-                      poster={activeItem.after || activeItem.image}
+                      poster={activeItem.poster || activeItem.after || activeItem.image}
                       controls
                       autoPlay
                       muted={isMuted}
