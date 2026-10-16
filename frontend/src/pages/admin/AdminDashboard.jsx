@@ -2,12 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { validateMediaFile, validateVideoSource, isInstagramUrl } from '../../services/transformationMedia.js';
 import { setAdminSession, getStaffSession } from '../../services/adminSession';
 import { Link, useNavigate } from 'react-router-dom';
-import { compressImageFile, fileToOptimizedDataUri } from '../../services/imageOptimizer.js';
+import { compressImageFile, fileToOptimizedDataUri, compressDataUri } from '../../services/imageOptimizer.js';
 import {
   fetchProducts, deleteProduct, updateProduct,
   fetchTransformations, createTransformation, updateTransformation, deleteTransformation,
   fetchSlideshowSettings, saveSlideshowSettings, DEFAULT_SLIDESHOW_SETTINGS,
-  uploadTransformationMediaFile
+  uploadTransformationMediaFile, clearBulkyLocalStorage
 } from '../../services/api';
 import {
   Plus, Edit, Trash2, Search, LogOut, Eye, EyeOff,
@@ -164,6 +164,7 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
+    clearBulkyLocalStorage();
     const session = getStaffSession();
     if (session?.user?.role !== 'admin') {
       navigate('/admin/login');
@@ -312,6 +313,13 @@ const AdminDashboard = () => {
         if (pairErrors.beforeVideo || pairErrors.afterVideo) throw new Error('Please replace the video that could not be played.');
       }
       setSavingTransformation(true);
+      // Ensure any large base64 data URIs are compressed down to web-friendly sizes (< 200KB)
+      for (const f of ['before', 'after', 'image']) {
+        if (typeof mediaData[f] === 'string' && mediaData[f].startsWith('data:image/')) {
+          mediaData[f] = await compressDataUri(mediaData[f], 1600, 1600, 0.80);
+        }
+      }
+
       if (editingItem) {
         await updateTransformation(editingItem.id, mediaData);
       } else {

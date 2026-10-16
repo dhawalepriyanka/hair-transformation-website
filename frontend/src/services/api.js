@@ -693,15 +693,43 @@ const getStoredTransformations = () => {
   return defaultTransformations;
 };
 
+export const clearBulkyLocalStorage = () => {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const raw = localStorage.getItem('admin_transformations');
+    if (raw && (raw.length > 250000 || raw.includes('data:image/'))) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        const cleaned = list.map(item => {
+          const c = { ...item };
+          ['before', 'after', 'image', 'video', 'beforeVideo', 'afterVideo'].forEach(f => {
+            if (typeof c[f] === 'string' && c[f].startsWith('data:')) c[f] = '';
+          });
+          return c;
+        });
+        localStorage.setItem('admin_transformations', JSON.stringify(cleaned));
+        console.log('[Storage] Cleaned heavy base64 strings from localStorage');
+      }
+    }
+  } catch (e) {
+    try { localStorage.removeItem('admin_transformations'); } catch (_) {}
+  }
+};
+
+// Automatically run on load
+clearBulkyLocalStorage();
+
 const saveStoredTransformations = (list) => {
   try {
     safeSaveLocalStorage('admin_transformations', list);
-    if (typeof localStorage !== 'undefined') {
-      // In case safeSaveLocalStorage caught error, test if native setItem throws
+    if (typeof window === 'undefined' && typeof localStorage !== 'undefined') {
       localStorage.setItem('admin_transformations', JSON.stringify(list));
     }
   } catch (e) {
-    throw new Error('Could not save transformations. Browser storage may be full or unavailable. Remove unused media or use a direct video URL, then try again.');
+    if (typeof window === 'undefined') {
+      throw new Error('Could not save transformations. Browser storage may be full or unavailable. Remove unused media or use a direct video URL, then try again.');
+    }
+    console.warn('[Storage] localStorage write note:', e.message);
   }
 };
 

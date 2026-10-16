@@ -89,3 +89,40 @@ export async function fileToOptimizedDataUri(file, options = {}) {
     reader.readAsDataURL(optimized);
   });
 }
+
+/**
+ * Takes any large Base64 data URI and compresses it down to ~150KB
+ */
+export async function compressDataUri(dataUri, maxWidth = 1600, maxHeight = 1600, quality = 0.80) {
+  if (!dataUri || typeof dataUri !== 'string' || !dataUri.startsWith('data:image/')) {
+    return dataUri;
+  }
+  // If already under 150KB, return as is
+  if (dataUri.length < 150 * 1024) {
+    return dataUri;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onerror = () => resolve(dataUri);
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(dataUri);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressedUri = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressedUri.length < dataUri.length ? compressedUri : dataUri);
+    };
+    img.src = dataUri;
+  });
+}
