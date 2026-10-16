@@ -83,23 +83,46 @@ const DEFAULT_REELS = [
   }
 ];
 
+let didSeedTransformations = false;
+const seedInitialTransformationsIfEmpty = async () => {
+  if (didSeedTransformations) return;
+  try {
+    const countRes = await pool.query('SELECT COUNT(*) as count FROM transformations');
+    const count = parseInt(countRes.rows[0]?.count || '0', 10);
+    if (count === 0) {
+      for (const item of DEFAULT_REELS) {
+        await pool.query(`
+          INSERT INTO transformations (
+            id, client_name, village, treatment, period, rating, testimonial,
+            video, duration, category, display_order
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          ON CONFLICT (id) DO NOTHING
+        `, [
+          item.id, item.client_name, item.village, item.treatment, item.period,
+          item.rating, item.testimonial, item.video, item.duration, item.category, item.display_order
+        ]);
+      }
+      console.log('Seeded initial transformation reels into database');
+    }
+    didSeedTransformations = true;
+  } catch (err) {
+    console.warn('Initial transformations seed check note:', err.message);
+  }
+};
+
 // @desc    Get all transformations (Admin dashboard + TV APK)
 // @route   GET /api/transformations
 // @access  Public
 const getTransformations = async (req, res, next) => {
   try {
     try {
+      await seedInitialTransformationsIfEmpty();
       const query = `
         SELECT * FROM transformations 
         ORDER BY display_order ASC, created_at DESC
       `;
       const result = await pool.query(query);
-      let items = result.rows.map(rowToItem);
-      const itemIds = new Set(items.map(t => String(t.id)));
-      const missing = DEFAULT_REELS.filter(r => !itemIds.has(r.id)).map(rowToItem);
-      if (missing.length > 0) {
-        items = [...missing, ...items];
-      }
+      const items = result.rows.map(rowToItem);
       return res.status(200).json({
         success: true,
         count: items.length,
@@ -107,13 +130,10 @@ const getTransformations = async (req, res, next) => {
       });
     } catch (dbErr) {
       console.warn('DB transformations query fallback:', dbErr.message);
-      const fallbackIds = new Set(inMemoryTransformations.map(t => String(t.id)));
-      const missingFallback = DEFAULT_REELS.filter(r => !fallbackIds.has(r.id)).map(rowToItem);
-      const allFallback = [...missingFallback, ...inMemoryTransformations];
       return res.status(200).json({
         success: true,
-        count: allFallback.length,
-        data: allFallback
+        count: inMemoryTransformations.length,
+        data: inMemoryTransformations
       });
     }
   } catch (error) {

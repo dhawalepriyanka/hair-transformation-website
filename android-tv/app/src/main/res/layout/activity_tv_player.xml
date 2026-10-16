@@ -386,43 +386,6 @@
             android:padding="10dp"
             android:visibility="gone" />
 
-        <!-- ── Elegant Transformation Title Overlay on Video ── -->
-        <LinearLayout
-            android:id="@+id/videoInfoOverlay"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|center_horizontal"
-            android:layout_marginTop="16dp"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/control_panel_bg"
-            android:paddingStart="18dp"
-            android:paddingEnd="18dp"
-            android:paddingTop="7dp"
-            android:paddingBottom="7dp"
-            android:elevation="12dp"
-            android:visibility="visible">
-
-            <TextView
-                android:id="@+id/videoClientTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Hair Transformation Reel"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textColor="#F2C9B6"
-                android:letterSpacing="0.04" />
-
-            <TextView
-                android:id="@+id/videoTreatmentSubtitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Keratin Smoothening &amp; Gloss Shine • Sangamner, Maharashtra"
-                android:textSize="10sp"
-                android:textColor="#C88A75"
-                android:letterSpacing="0.02" />
-        </LinearLayout>
-
         <!-- ══════════════════════════════════════════════
              SMALL FLOATING CONTROLS — overlaid near bottom of video
              Auto-hides after 4s; reappears on remote interaction

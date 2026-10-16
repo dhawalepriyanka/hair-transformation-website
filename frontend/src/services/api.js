@@ -746,14 +746,6 @@ export const fetchTransformations = async () => {
 
   // If backend returned items:
   if (backendItems) {
-    // Always preserve and include the 3 signature Instagram transformation reels
-    const defaultReels = defaultTransformations.slice(0, 3);
-    const backendIdSet = new Set(backendItems.map(item => String(item.id)));
-    const missingReels = defaultReels.filter(r => !backendIdSet.has(String(r.id)));
-    if (missingReels.length > 0) {
-      backendItems = [...missingReels, ...backendItems];
-    }
-
     // Check if there are local-only items that need migration into the persistent database
     try {
       const localList = getStoredTransformations();

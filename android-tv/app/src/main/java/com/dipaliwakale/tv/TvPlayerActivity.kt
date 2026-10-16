@@ -67,37 +67,6 @@ class TvPlayerActivity : Activity() {
         private const val CONTROLS_AUTOHIDE_MS       = 4_000L   // auto-hide controls after 4s
         const val DEFAULT_DURATION_MS                = 15_000L  // default 15s for reels
         private const val PANEL_ROTATION_INTERVAL_MS = 16_000L  // rotate side promo slides every 16s
-
-        // ── The 3 Transformation Reels from Admin Dashboard ──
-        val ADMIN_DASHBOARD_REELS = listOf(
-            PlaylistItem(
-                id = "9100001",
-                type = MediaType.VIDEO,
-                clientName = "Hair Transformation Reel",
-                treatment = "Keratin Smoothening & Gloss Shine",
-                village = "Sangamner, Maharashtra",
-                videoUrl = "instagram/reels/hair-transformation.mp4",
-                durationMs = 15_000L
-            ),
-            PlaylistItem(
-                id = "9100002",
-                type = MediaType.VIDEO,
-                clientName = "Hair Extensions Reel",
-                treatment = "Seamless Length & Volume Blend",
-                village = "Nashik, Maharashtra",
-                videoUrl = "instagram/reels/hair-extensions.mp4",
-                durationMs = 15_000L
-            ),
-            PlaylistItem(
-                id = "9100003",
-                type = MediaType.VIDEO,
-                clientName = "Hair Styling Reel",
-                treatment = "Professional Salon Blowdry & Curls",
-                village = "Ghargaon, Sangamner",
-                videoUrl = "instagram/reels/hair-styling.mp4",
-                durationMs = 15_000L
-            )
-        )
     }
 
     // ── Media Types ──
@@ -116,10 +85,8 @@ class TvPlayerActivity : Activity() {
         val durationMs: Long = DEFAULT_DURATION_MS
     )
 
-    // ── Playlist state (pre-loaded with Admin Dashboard's 3 reels; updated dynamically via API) ──
-    private val playlist = mutableListOf<PlaylistItem>().apply {
-        addAll(ADMIN_DASHBOARD_REELS)
-    }
+    // ── Dynamic Playlist state (synchronized with Website Admin Dashboard & Backend) ──
+    private val playlist = mutableListOf<PlaylistItem>()
     private var pendingPlaylist: List<PlaylistItem>? = null
     private var currentIndex = 0
     private var isPlaying = true
@@ -137,9 +104,6 @@ class TvPlayerActivity : Activity() {
     private lateinit var beforeAfterContainer:   LinearLayout
     private lateinit var imageBeforeView:        ImageView
     private lateinit var imageAfterView:         ImageView
-    private lateinit var videoInfoOverlay:       LinearLayout
-    private lateinit var videoClientTitle:       TextView
-    private lateinit var videoTreatmentSubtitle: TextView
     private lateinit var emptyStateContainer:    LinearLayout
     private lateinit var emptyStateTitle:        TextView
     private lateinit var emptyStateSubtitle:     TextView
@@ -213,11 +177,22 @@ class TvPlayerActivity : Activity() {
             }
         }.start()
 
-        // Start playback of Admin Dashboard reels immediately!
-        hideEmptyState()
-        loadCurrentItem()
+        // Load cached transformations from disk for instant startup
+        val cached = loadCachedPlaylist()
+        if (cached.isNotEmpty()) {
+            playlist.clear()
+            playlist.addAll(cached)
+            currentIndex = 0
+            hideEmptyState()
+            loadCurrentItem()
+        } else {
+            showEmptyState(
+                "Waiting for Transformations",
+                "Add videos or Before & After photos from the Website Admin Dashboard."
+            )
+        }
 
-        // Start periodic sync and background fetch
+        // Start periodic sync and background fetch (every 30s)
         startPeriodicSync()
 
         // Start side panel rotation
@@ -272,9 +247,6 @@ class TvPlayerActivity : Activity() {
         beforeAfterContainer   = findViewById(R.id.beforeAfterContainer)
         imageBeforeView        = findViewById(R.id.imageBeforeView)
         imageAfterView         = findViewById(R.id.imageAfterView)
-        videoInfoOverlay       = findViewById(R.id.videoInfoOverlay)
-        videoClientTitle       = findViewById(R.id.videoClientTitle)
-        videoTreatmentSubtitle = findViewById(R.id.videoTreatmentSubtitle)
         emptyStateContainer    = findViewById(R.id.emptyStateContainer)
         emptyStateTitle        = findViewById(R.id.emptyStateTitle)
         emptyStateSubtitle     = findViewById(R.id.emptyStateSubtitle)
@@ -407,12 +379,14 @@ class TvPlayerActivity : Activity() {
                 mainHandler.post {
                     isSyncing = false
                     if (playlist.isEmpty()) {
-                        // Check local disk cache, or fallback to Admin Dashboard 3 reels
                         val cached = loadCachedPlaylist()
                         if (cached.isNotEmpty()) {
                             handleSyncResult(cached)
                         } else {
-                            handleSyncResult(ADMIN_DASHBOARD_REELS)
+                            showEmptyState(
+                                "Waiting for Transformations",
+                                "Add videos or Before & After photos from the Website Admin Dashboard."
+                            )
                         }
                     }
                 }
@@ -423,28 +397,28 @@ class TvPlayerActivity : Activity() {
     private fun fetchTransformationsFromApi(): List<PlaylistItem> {
         val endpoints = listOf(
             PRIMARY_API_URL,
+            "https://dipaliwakale.in/api/transformations",
             "https://hair-transformation-website.vercel.app/api/transformations"
         )
         for (urlStr in endpoints) {
             try {
                 val url = URL(urlStr)
                 val conn = (url.openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 8000
-                    readTimeout = 8000
+                    connectTimeout = 10000
+                    readTimeout = 10000
                     requestMethod = "GET"
                     setRequestProperty("Accept", "application/json")
+                    setRequestProperty("User-Agent", "DipaliWakaleTV/3.1")
                 }
                 if (conn.responseCode == 200) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
                     val parsed = parseTransformationsJson(body)
-                    if (parsed.isNotEmpty()) {
-                        // Cache json to disk
-                        saveCachedPlaylistJson(body)
-                        return parsed
-                    }
+                    // Cache json to disk so offline restart retains real admin transformations
+                    saveCachedPlaylistJson(body)
+                    return parsed
                 }
             } catch (e: Exception) {
-                Log.v(TAG, "Endpoint $urlStr failed: ${e.message}")
+                Log.v(TAG, "Endpoint $urlStr note: ${e.message}")
             }
         }
         throw Exception("All transformation endpoints unavailable")
@@ -538,12 +512,16 @@ class TvPlayerActivity : Activity() {
 
     private fun handleSyncResult(newItems: List<PlaylistItem>) {
         if (newItems.isEmpty()) {
-            if (playlist.isEmpty()) {
-                showEmptyState(
-                    "No Transformations Added",
-                    "Add transformation videos or Before & After photos from the Admin Dashboard."
-                )
+            if (playlist.isNotEmpty()) {
+                playlist.clear()
+                pendingPlaylist = null
+                videoView.stopPlayback()
+                cancelImageSlideshow()
             }
+            showEmptyState(
+                "Waiting for Transformations",
+                "Add videos or Before & After photos from the Website Admin Dashboard."
+            )
             return
         }
 
@@ -558,10 +536,10 @@ class TvPlayerActivity : Activity() {
             hideEmptyState()
             loadCurrentItem()
         } else {
-            // Check if playlist changed
-            val currentIds = playlist.map { it.id }
-            val newIds = newItems.map { it.id }
-            if (currentIds != newIds) {
+            // Check if playlist changed (items added, deleted, reordered, or media edited)
+            val currentSignatures = playlist.map { "${it.id}:${it.videoUrl}:${it.beforeUrl}:${it.afterUrl}:${it.singleImageUrl}:${it.durationMs}" }
+            val newSignatures = newItems.map { "${it.id}:${it.videoUrl}:${it.beforeUrl}:${it.afterUrl}:${it.singleImageUrl}:${it.durationMs}" }
+            if (currentSignatures != newSignatures) {
                 Log.d(TAG, "Playlist changed in Admin Dashboard. Queuing update for next transition.")
                 pendingPlaylist = newItems
             }
@@ -793,13 +771,6 @@ class TvPlayerActivity : Activity() {
         loadingSpinner.visibility       = View.VISIBLE
         errorText.visibility            = View.GONE
 
-        // Update video title pill
-        videoClientTitle.text = item.clientName
-        val sub = listOf(item.treatment, item.village).filter { it.isNotBlank() }.joinToString(" • ")
-        videoTreatmentSubtitle.text = sub
-        videoTreatmentSubtitle.visibility = if (sub.isNotBlank()) View.VISIBLE else View.GONE
-        videoInfoOverlay.visibility = View.VISIBLE
-
         val uri = getCachedOrRemoteVideoUri(item.videoUrl, item.id)
         videoView.setVideoURI(uri)
         videoView.start()
@@ -818,7 +789,6 @@ class TvPlayerActivity : Activity() {
         beforeAfterContainer.visibility = View.VISIBLE
         loadingSpinner.visibility       = View.VISIBLE
         errorText.visibility            = View.GONE
-        videoInfoOverlay.visibility     = View.GONE
         hideControls()
 
         Thread {
@@ -851,13 +821,6 @@ class TvPlayerActivity : Activity() {
         beforeAfterContainer.visibility = View.GONE
         loadingSpinner.visibility       = View.VISIBLE
         errorText.visibility            = View.GONE
-
-        // Update title pill
-        videoClientTitle.text = item.clientName
-        val sub = listOf(item.treatment, item.village).filter { it.isNotBlank() }.joinToString(" • ")
-        videoTreatmentSubtitle.text = sub
-        videoTreatmentSubtitle.visibility = if (sub.isNotBlank()) View.VISIBLE else View.GONE
-        videoInfoOverlay.visibility = View.VISIBLE
 
         Thread {
             val bmp = loadBitmapFlexible(item.singleImageUrl)
@@ -933,13 +896,27 @@ class TvPlayerActivity : Activity() {
     //  Navigation Controls
     // ────────────────────────────────────────────────────────────────
     private fun playNext() {
-        if (playlist.isEmpty()) return
+        applyPendingPlaylistIfNeeded()
+        if (playlist.isEmpty()) {
+            showEmptyState(
+                "Waiting for Transformations",
+                "Add videos or Before & After photos from the Website Admin Dashboard."
+            )
+            return
+        }
         currentIndex = (currentIndex + 1) % playlist.size
         loadCurrentItem()
     }
 
     private fun playPrevious() {
-        if (playlist.isEmpty()) return
+        applyPendingPlaylistIfNeeded()
+        if (playlist.isEmpty()) {
+            showEmptyState(
+                "Waiting for Transformations",
+                "Add videos or Before & After photos from the Website Admin Dashboard."
+            )
+            return
+        }
         currentIndex = (currentIndex - 1 + playlist.size) % playlist.size
         loadCurrentItem()
     }

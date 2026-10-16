@@ -10,300 +10,7 @@ import VideoComparison from '../components/VideoComparison';
 import Reveal from '../components/Reveal';
 
 /* ─────────────── REAL INSTAGRAM SALON & CLINIC MEDIA ─────────────── */
-const defaultFallbackTransformations = [
-  {
-    id: 9100001,
-    clientName: 'Hair Transformation Reel',
-    treatment: 'Keratin Smoothening & Gloss Shine',
-    village: 'Sangamner, Maharashtra',
-    period: 'Instagram Reel • 48K Views',
-    video: '/instagram/reels/hair-transformation.mp4',
-    poster: '/instagram/hair-transformation-client.jpg',
-    category: 'Hair Transformation',
-    rating: 5,
-    likes: '2.8K',
-    comments: '94',
-    handle: '@wakale_dipali_',
-    testimonial: 'केसांचा पोत एकदम मऊ आणि शायनी झाला. Dipali didi यांचे काम अप्रतिम आहे!',
-    hashtags: '#dipaliwakale #hairtransformation #botoxhair #sangamner #salonlife',
-    duration: 15,
-  },
-  {
-    id: 9100002,
-    clientName: 'Hair Extensions Reel',
-    treatment: 'Seamless Length & Volume Blend',
-    village: 'Nashik, Maharashtra',
-    period: 'Instagram Reel • 36K Views',
-    video: '/instagram/reels/hair-extensions.mp4',
-    poster: '/instagram/long-hair-styling.jpg',
-    category: 'Hair Extensions',
-    rating: 5,
-    likes: '2.1K',
-    comments: '78',
-    handle: '@wakale_dipali_',
-    testimonial: 'Instant length and natural thickness with seamless blending. Truly amazed!',
-    hashtags: '#hairextensions #naturalvolume #hairgoals #dipaliwakale #nashik',
-    duration: 15,
-  },
-  {
-    id: 9100003,
-    clientName: 'Hair Styling Reel',
-    treatment: 'Professional Salon Blowdry & Curls',
-    village: 'Ghargaon, Sangamner',
-    period: 'Instagram Reel • 29K Views',
-    video: '/instagram/reels/hair-styling.mp4',
-    poster: '/instagram/salon-client.jpg',
-    category: 'Hair Styling',
-    rating: 5,
-    likes: '1.9K',
-    comments: '62',
-    handle: '@wakale_dipali_',
-    testimonial: 'Bouncy curls and salon finish that lasted through the entire family occasion.',
-    hashtags: '#blowout #saloncurls #hairstyling #dipaliwakalestudio',
-    duration: 15,
-  },
-  {
-    id: 9100004,
-    clientName: 'Pooja Kadam',
-    treatment: 'Full Volume Hair Extensions Makeover',
-    village: 'Akole',
-    period: 'Instagram Post • 1.4K Likes',
-    before: '/instagram/long-hair-styling.jpg',
-    after: '/instagram/hair-transformation-client.jpg',
-    category: 'Hair Extensions',
-    rating: 5,
-    likes: '1.4K',
-    comments: '43',
-    handle: '@wakale_dipali_',
-    testimonial: 'खूप सुंदर transformation! केसांची लांबी आणि घनता दोन्ही मनसोक्त वाढले.',
-    hashtags: '#beforeandafter #transformation #hairextensions #haircare',
-    duration: 10,
-  },
-  {
-    id: 9100005,
-    clientName: 'Dr. Dipali Wakale Clinic Consultation',
-    treatment: 'Trichological Scalp Root & Follicle Analysis',
-    village: 'Ghargaon Clinic',
-    period: 'Clinic Session • Social Spotlight',
-    image: '/instagram/dipali-wakale-hair-doctor-hero.png',
-    category: 'Hair Regrowth',
-    rating: 5,
-    likes: '3.4K',
-    comments: '112',
-    handle: '@wakale_dipali_',
-    testimonial: 'Comprehensive root analysis with personalized medicated lotion and shampoo regimen for hair fall reversal.',
-    hashtags: '#hairdoctor #trichology #scalpanalysis #hairfallcontrol #dipaliwakale',
-    duration: 10,
-  },
-  {
-    id: 9100006,
-    clientName: 'French Balayage & Caramel Melt',
-    treatment: 'Custom Dimensional Hair Color & Gloss',
-    village: 'Pune, Maharashtra',
-    period: 'Instagram Post • 2.6K Likes',
-    image: '/instagram/dipali-wakale-professional-solo-hero.png',
-    category: 'Hair Color',
-    rating: 5,
-    likes: '2.6K',
-    comments: '88',
-    handle: '@wakale_dipali_',
-    testimonial: 'Natural sun-kissed blending without brassiness. Hair feels super healthy and soft!',
-    hashtags: '#balayage #caramelhighlights #haircolor #glossyhair #trendinghair',
-    duration: 9,
-  },
-  {
-    id: 9100007,
-    clientName: 'Meera Deshmukh',
-    treatment: 'Nanoplastia Gold Mirror Shine Treatment',
-    village: 'Sangamner',
-    period: 'Instagram Post • 1.8K Likes',
-    image: '/instagram/hair-transformation-client.jpg',
-    category: 'Hair Transformation',
-    rating: 5,
-    likes: '1.8K',
-    comments: '56',
-    handle: '@wakale_dipali_',
-    testimonial: 'Nanoplastia treatment gave zero frizz and mirror-like gloss that lasts for months!',
-    hashtags: '#nanoplastia #straighthair #hairbotox #frizfreehair',
-    duration: 8,
-  },
-  {
-    id: 9100008,
-    clientName: 'Russian Manicure & Nail Art',
-    treatment: 'Precision Cuticle Care & Gel Extension Art',
-    village: 'Sangamner Studio',
-    period: 'Instagram Story & Post • 1.2K Likes',
-    image: '/instagram/dipali-wakale-about-professional.png',
-    category: 'Nail Art',
-    rating: 5,
-    likes: '1.2K',
-    comments: '39',
-    handle: '@wakale_dipali_',
-    testimonial: 'Flawless clean cuticle finish with durable nail extensions and bridal chrome shine.',
-    hashtags: '#russianmanicure #nailart #gelnails #bridalnails #dipaliwakale',
-    duration: 8,
-  },
-  {
-    id: 9100009,
-    clientName: 'Rutuja Jagtap',
-    treatment: 'Textured Blowout & Glass Hair Finish',
-    village: 'Pune',
-    period: 'Instagram Post • 1.5K Likes',
-    image: '/instagram/long-hair-styling.jpg',
-    category: 'Hair Styling',
-    rating: 5,
-    likes: '1.5K',
-    comments: '47',
-    handle: '@wakale_dipali_',
-    testimonial: 'Love the bouncy waves and shine! Dipali didi takes time to explain aftercare.',
-    hashtags: '#texturedblowout #glasshair #salonfinish #dipaliwakale',
-    duration: 8,
-  },
-  {
-    id: 9100010,
-    clientName: 'HydraFacial & Glass Skin Glow',
-    treatment: '7-Step Hydra Extraction & Serum Infusion',
-    village: 'Sangamner Clinic',
-    period: 'Instagram Reel • 32K Views',
-    image: '/instagram/dipali-wakale-hair-doctor-hero.png',
-    category: 'Skin Care',
-    rating: 5,
-    likes: '2.3K',
-    comments: '71',
-    handle: '@wakale_dipali_',
-    testimonial: 'Instant deep pore cleaning, intense hydration and spotless glowing skin!',
-    hashtags: '#hydrafacial #skinglow #glassskin #facialtreatment #dipaliwakale',
-    duration: 9,
-  },
-  {
-    id: 9100011,
-    clientName: 'Kavita Thorat',
-    treatment: 'Frizz-Control Keratin Therapy',
-    village: 'Sangamner',
-    period: 'Instagram Post • 1.6K Likes',
-    image: '/instagram/salon-client.jpg',
-    category: 'Hair Transformation',
-    rating: 5,
-    likes: '1.6K',
-    comments: '51',
-    handle: '@wakale_dipali_',
-    testimonial: 'Dipali Wakale salon is my go-to place for all hair and skin treatments.',
-    hashtags: '#keratintreatment #frizzfree #silkyhair #sangamner',
-    duration: 8,
-  },
-  {
-    id: 9100012,
-    clientName: 'Dipali Wakale Scalp Care Clinic',
-    treatment: 'Custom Scalp Rejuvenation & Density Support',
-    village: 'Ghargaon',
-    period: 'Clinic Care • Verified Results',
-    image: '/instagram/dipali-wakale-hair-doctor-about.png',
-    category: 'Hair Regrowth',
-    rating: 5,
-    likes: '3.1K',
-    comments: '98',
-    handle: '@wakale_dipali_',
-    testimonial: 'Targeted hair regrowth protocol supporting active follicles and healthy hair growth cycle.',
-    hashtags: '#hairregrowth #hairlossreversal #trichologist #hairclinic',
-    duration: 10,
-  },
-  {
-    id: 9100013,
-    clientName: 'Bridal Hair Artistry by Dipali',
-    treatment: 'Signature Bridal Hair Makeover & Floral Accessories',
-    village: 'Maharashtra',
-    period: 'Instagram Spotlight • 4.2K Likes',
-    image: '/instagram/dipali-wakale-professional-hero.png',
-    category: 'Bridal Styling',
-    rating: 5,
-    likes: '4.2K',
-    comments: '135',
-    handle: '@wakale_dipali_',
-    testimonial: 'Grand bridal styling with durable hold, traditional touch and glamorous finish.',
-    hashtags: '#bridalhair #marathibride #weddinglook #hairstylist #dipaliwakale',
-    duration: 8,
-  },
-  {
-    id: 9100014,
-    clientName: 'Pre-Bridal Skin & Hair Glow Protocol',
-    treatment: 'Complete Pre-Wedding Beauty & Scalp Makeover',
-    village: 'Sangamner',
-    period: 'Instagram Feature • 2.7K Likes',
-    image: '/instagram/dipali-wakale-about-professional-v2.png',
-    category: 'Full Makeover',
-    rating: 5,
-    likes: '2.7K',
-    comments: '82',
-    handle: '@wakale_dipali_',
-    testimonial: 'Customized 3-session program for radiant bridal skin and glossy, bouncy hair.',
-    hashtags: '#prebridal #bridalmakeover #weddingglow #skincareroutine',
-    duration: 9,
-  },
-  {
-    id: 9100015,
-    clientName: 'Anti-Dandruff Scalp Detox & High-Frequency',
-    treatment: 'Deep Scalp Clarifying & Ozone Therapy',
-    village: 'Ghargaon Clinic',
-    period: 'Instagram Post • 1.9K Likes',
-    image: '/instagram/dipali-wakale-professional-hero-v2.png',
-    category: 'Hair Care',
-    rating: 5,
-    likes: '1.9K',
-    comments: '64',
-    handle: '@wakale_dipali_',
-    testimonial: 'Cleared stubborn dandruff flakes and soothed itchy scalp in just two sessions.',
-    hashtags: '#antidandruff #scalpdetox #hairhealth #trichologycare',
-    duration: 8,
-  },
-  {
-    id: 9100016,
-    clientName: 'Dipali Wakale Trichology Masterclass',
-    treatment: 'Advanced Hair & Scalp Professional Training',
-    village: 'Sangamner & Pune',
-    period: 'Instagram Reel • 52K Views',
-    image: '/instagram/dipali-wakale-about-professional-v3.png',
-    category: 'Hair Doctor',
-    rating: 5,
-    likes: '3.9K',
-    comments: '124',
-    handle: '@wakale_dipali_',
-    testimonial: 'Empowering salon stylists and hair professionals with scientific trichology knowledge.',
-    hashtags: '#masterclass #hairacademy #hairdoctor #professionalhaircare',
-    duration: 9,
-  },
-  {
-    id: 9100017,
-    clientName: 'Dipali Wakale - Hair Doctor',
-    treatment: 'Certified Hair Specialist & Trichology Care',
-    village: 'Ghargaon, Sangamner',
-    period: 'Instagram Bio @wakale_dipali_',
-    image: '/instagram/dipali-wakale-portrait.jpg',
-    category: 'Full Makeover',
-    rating: 5,
-    likes: '5.1K',
-    comments: '180',
-    handle: '@wakale_dipali_',
-    testimonial: 'Dedicated to helping clients regain confidence with thick, healthy, nourished hair.',
-    hashtags: '#hairdoctor #dipaliwakale #sangamner #nashik #pune',
-    duration: 8,
-  },
-  {
-    id: 9100018,
-    clientName: 'Micro-Ring Hair Extensions Density',
-    treatment: '100% Remy Human Hair Extensions Integration',
-    village: 'Nashik',
-    period: 'Instagram Post • 2.2K Likes',
-    image: '/instagram/dipali-wakale-professional-hero-v2.png',
-    category: 'Hair Extensions',
-    rating: 5,
-    likes: '2.2K',
-    comments: '75',
-    handle: '@wakale_dipali_',
-    testimonial: 'Zero heat, zero glue application with seamless blend and natural hair movement.',
-    hashtags: '#microrings #humanhair #extensionsspecialist #dipaliwakale',
-    duration: 8,
-  },
-];
+const defaultFallbackTransformations = [];
 
 /* ─────────────── STAR RATING ─────────────── */
 const StarRating = ({ count }) => (
@@ -349,19 +56,27 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
   const nextBtnRef = useRef(null);
   const slideTimerRef = useRef(null);
 
-  // Load transformations & slideshow settings
+  // Load transformations & slideshow settings with 30s auto-sync
   useEffect(() => {
+    let isMounted = true;
     const loadData = async () => {
       try {
         const data = await fetchTransformations();
-        setTransformationsList(data && data.length > 0 ? data : defaultFallbackTransformations);
+        if (isMounted) {
+          setTransformationsList(Array.isArray(data) ? data : []);
+        }
       } catch (e) {
-        setTransformationsList(defaultFallbackTransformations);
+        console.warn('Failed to load transformations:', e.message);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     loadData();
+
+    // Auto-sync every 30 seconds with Admin Dashboard / Backend
+    const syncInterval = setInterval(loadData, 30000);
 
     const handleSettingsChanged = (e) => {
       if (e.detail) {
@@ -369,7 +84,11 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
       }
     };
     window.addEventListener('slideshow_settings_changed', handleSettingsChanged);
-    return () => window.removeEventListener('slideshow_settings_changed', handleSettingsChanged);
+    return () => {
+      isMounted = false;
+      clearInterval(syncInterval);
+      window.removeEventListener('slideshow_settings_changed', handleSettingsChanged);
+    };
   }, []);
 
   // Listen to fullscreen changes
