@@ -87,22 +87,17 @@ let didSeedTransformations = false;
 const seedInitialTransformationsIfEmpty = async () => {
   if (didSeedTransformations) return;
   try {
-    const countRes = await pool.query('SELECT COUNT(*) as count FROM transformations');
-    const count = parseInt(countRes.rows[0]?.count || '0', 10);
-    if (count === 0) {
-      for (const item of DEFAULT_REELS) {
-        await pool.query(`
-          INSERT INTO transformations (
-            id, client_name, village, treatment, period, rating, testimonial,
-            video, duration, category, display_order
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-          ON CONFLICT (id) DO NOTHING
-        `, [
-          item.id, item.client_name, item.village, item.treatment, item.period,
-          item.rating, item.testimonial, item.video, item.duration, item.category, item.display_order
-        ]);
-      }
-      console.log('Seeded initial transformation reels into database');
+    for (const item of DEFAULT_REELS) {
+      await pool.query(`
+        INSERT INTO transformations (
+          id, client_name, village, treatment, period, rating, testimonial,
+          video, duration, category, display_order
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (id) DO NOTHING
+      `, [
+        item.id, item.client_name, item.village, item.treatment, item.period,
+        item.rating, item.testimonial, item.video, item.duration, item.category, item.display_order
+      ]);
     }
     didSeedTransformations = true;
   } catch (err) {

@@ -14,6 +14,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Base64
 import android.util.Log
+import android.util.LruCache
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
@@ -126,6 +127,14 @@ class TvPlayerActivity : Activity() {
     private lateinit var rightSlotServices:    LinearLayout
     private lateinit var rightQrImage:         ImageView
 
+    // ── In-Memory Bitmap Cache & Async Request Token ──
+    private val memoryCache = object : LruCache<String, Bitmap>((Runtime.getRuntime().maxMemory() / 8).toInt()) {
+        override fun sizeOf(key: String, bitmap: Bitmap): Int {
+            return bitmap.byteCount
+        }
+    }
+    private var currentLoadId = 0L
+
     // ── State Handlers ──
     private val mainHandler = Handler(Looper.getMainLooper())
     private var controlsVisible = true
@@ -134,11 +143,12 @@ class TvPlayerActivity : Activity() {
     // Image countdown timer
     private var imageSlideshowRunnable: Runnable? = null
     private var imageRemainingMs = 0L
-    private var imagePauseTimestamp = 0L
+    private var imageStartTime = 0L
     private var imagePaused = false
 
-    // Auto-hide runnable (kept for backwards compatibility; controls remain visible at all times)
-    private val hideControlsRunnable = Runnable { /* controls stay visible */ }
+    // Inactivity Auto-hide (6 seconds)
+    private val CONTROLS_AUTOHIDE_MS = 6000L
+    private val hideControlsRunnable = Runnable { hideControls() }
 
     // Side panel rotation
     private var leftSlideIndex = 0
@@ -268,12 +278,63 @@ class TvPlayerActivity : Activity() {
         rightSlotInstagram     = findViewById(R.id.rightSlotInstagram)
         rightSlotServices      = findViewById(R.id.rightSlotServices)
         rightQrImage           = findViewById(R.id.rightQrImage)
+
+        // Tapping the TV screen / background restores controls
+        rootContainer.setOnClickListener { showControls() }
+        centerPanel.setOnClickListener   { showControls() }
     }
 
     private fun setupButtonClickListeners() {
-        btnPrevious.setOnClickListener  { playPrevious(); showControls() }
-        btnPlayPause.setOnClickListener { togglePlayPause(); showControls() }
-        btnNext.setOnClickListener      { playNext(); showControls() }
+        val onPrevClick = View.OnClickListener {
+            focusedButton = 0
+            updateButtonFocus()
+            playPrevious()
+            showControls()
+        }
+        val onPlayPauseClick = View.OnClickListener {
+            focusedButton = 1
+            updateButtonFocus()
+            togglePlayPause()
+            showControls()
+        }
+        val onNextClick = View.OnClickListener {
+            focusedButton = 2
+            updateButtonFocus()
+            playNext()
+            showControls()
+        }
+
+        btnPrevious.setOnClickListener(onPrevClick)
+        findViewById<View>(R.id.prevIcon)?.setOnClickListener(onPrevClick)
+
+        btnPlayPause.setOnClickListener(onPlayPauseClick)
+        playPauseIcon.setOnClickListener(onPlayPauseClick)
+
+        btnNext.setOnClickListener(onNextClick)
+        findViewById<View>(R.id.nextIcon)?.setOnClickListener(onNextClick)
+
+        // Keep focusedButton synced when D-Pad focus changes
+        btnPrevious.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                focusedButton = 0
+                updateButtonFocus()
+                showControls()
+            }
+        }
+        btnPlayPause.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                focusedButton = 1
+                updateButtonFocus()
+                showControls()
+            }
+        }
+        btnNext.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                focusedButton = 2
+                updateButtonFocus()
+                showControls()
+            }
+        }
     }
 
     private fun setupVideoView() {
@@ -549,9 +610,15 @@ class TvPlayerActivity : Activity() {
 
     private fun applyPendingPlaylistIfNeeded() {
         pendingPlaylist?.let { newItems ->
+            val oldCurrentId = playlist.getOrNull(currentIndex)?.id
             playlist.clear()
             playlist.addAll(newItems)
-            currentIndex = currentIndex.coerceIn(0, playlist.lastIndex)
+            if (oldCurrentId != null) {
+                val foundIdx = playlist.indexOfFirst { it.id == oldCurrentId }
+                currentIndex = if (foundIdx >= 0) foundIdx else currentIndex.coerceIn(0, playlist.lastIndex)
+            } else {
+                currentIndex = currentIndex.coerceIn(0, playlist.lastIndex)
+            }
             pendingPlaylist = null
             Log.d(TAG, "Applied updated playlist from Admin Dashboard (${playlist.size} items)")
         }
@@ -582,9 +649,16 @@ class TvPlayerActivity : Activity() {
     private fun cacheMediaFiles(items: List<PlaylistItem>) {
         Thread {
             for (item in items) {
-                if (item.type == MediaType.VIDEO && item.videoUrl.startsWith("http")) {
-                    downloadFileToCache(item.videoUrl, "vid_${item.id.hashCode()}.mp4")
-                }
+                try {
+                    if (item.type == MediaType.VIDEO && item.videoUrl.startsWith("http")) {
+                        downloadFileToCache(item.videoUrl, "vid_${item.id.hashCode()}.mp4")
+                    } else if (item.type == MediaType.IMAGE_BEFORE_AFTER) {
+                        getOrLoadBitmap(item.beforeUrl)
+                        getOrLoadBitmap(item.afterUrl)
+                    } else if (item.type == MediaType.IMAGE_SINGLE) {
+                        getOrLoadBitmap(item.singleImageUrl)
+                    }
+                } catch (_: Exception) {}
             }
         }.start()
     }
@@ -686,31 +760,78 @@ class TvPlayerActivity : Activity() {
     // ────────────────────────────────────────────────────────────────
     private fun loadCurrentItem() {
         if (playlist.isEmpty()) {
-            showEmptyState("No Transformations Added", "Waiting for content from Admin Dashboard.")
+            showEmptyState(
+                "Waiting for Transformations",
+                "Add videos or Before & After photos from the Website Admin Dashboard."
+            )
             return
         }
 
+        // Cancel previous timer and stop video playback immediately
+        cancelImageSlideshow()
+        try {
+            if (videoView.isPlaying) {
+                videoView.stopPlayback()
+            }
+        } catch (_: Exception) {}
+
         currentIndex = currentIndex.coerceIn(0, playlist.lastIndex)
         val item = playlist[currentIndex]
-        cancelImageSlideshow()
+
+        isPlaying = true
+        imagePaused = false
+        updatePlayPauseIcon()
 
         when (item.type) {
             MediaType.IMAGE_BEFORE_AFTER -> {
-                // ── 100% FULL-SCREEN BEFORE & AFTER (side panels hidden) ──
                 switchToModeFullScreen()
                 displayBeforeAfter(item)
             }
             MediaType.IMAGE_SINGLE -> {
-                // ── 100% FULL-SCREEN SINGLE IMAGE (side panels hidden) ──
                 switchToModeFullScreen()
                 displaySingleImage(item)
             }
             MediaType.VIDEO -> {
-                // ── VIDEO: Mode A initial layout; onPrepared switches to 100% Full Screen if horizontal ──
                 switchToModeA_Video()
                 displayVideo(item)
             }
         }
+        showControls()
+    }
+
+    private fun restartCurrentItem() {
+        val item = playlist.getOrNull(currentIndex) ?: return
+        cancelImageSlideshow()
+
+        isPlaying = true
+        imagePaused = false
+        updatePlayPauseIcon()
+
+        when (item.type) {
+            MediaType.VIDEO -> {
+                try {
+                    videoView.seekTo(0)
+                    videoView.start()
+                } catch (_: Exception) {
+                    displayVideo(item)
+                }
+            }
+            MediaType.IMAGE_BEFORE_AFTER -> {
+                pulseView(beforeAfterContainer)
+                startImageSlideshow(item.durationMs)
+            }
+            MediaType.IMAGE_SINGLE -> {
+                pulseView(imageView)
+                startImageSlideshow(item.durationMs)
+            }
+        }
+        showControls()
+    }
+
+    private fun pulseView(view: View) {
+        view.animate().alpha(0.45f).setDuration(120).withEndAction {
+            view.animate().alpha(1.0f).setDuration(180).start()
+        }.start()
     }
 
     /**
@@ -765,6 +886,7 @@ class TvPlayerActivity : Activity() {
 
     // ── Display VIDEO ──
     private fun displayVideo(item: PlaylistItem) {
+        val loadId = ++currentLoadId
         videoView.visibility            = View.VISIBLE
         imageView.visibility            = View.GONE
         imageBlurBg.visibility          = View.GONE
@@ -783,19 +905,33 @@ class TvPlayerActivity : Activity() {
 
     // ── Display BEFORE & AFTER (50% / 50%) ──
     private fun displayBeforeAfter(item: PlaylistItem) {
+        val loadId = ++currentLoadId
         videoView.visibility            = View.GONE
-        videoView.stopPlayback()
+        try { videoView.stopPlayback() } catch (_: Exception) {}
         imageView.visibility            = View.GONE
         imageBlurBg.visibility          = View.GONE
         beforeAfterContainer.visibility = View.VISIBLE
-        loadingSpinner.visibility       = View.VISIBLE
         errorText.visibility            = View.GONE
-        showControls()
 
+        val cachedBefore = memoryCache.get(item.beforeUrl)
+        val cachedAfter  = memoryCache.get(item.afterUrl)
+
+        if (cachedBefore != null && cachedAfter != null) {
+            loadingSpinner.visibility = View.GONE
+            imageBeforeView.setImageBitmap(cachedBefore)
+            imageAfterView.setImageBitmap(cachedAfter)
+            fadeIn(beforeAfterContainer)
+            showControls()
+            startImageSlideshow(item.durationMs)
+            return
+        }
+
+        loadingSpinner.visibility = View.VISIBLE
         Thread {
-            val beforeBmp = loadBitmapFlexible(item.beforeUrl)
-            val afterBmp  = loadBitmapFlexible(item.afterUrl)
+            val beforeBmp = getOrLoadBitmap(item.beforeUrl)
+            val afterBmp  = getOrLoadBitmap(item.afterUrl)
             mainHandler.post {
+                if (loadId != currentLoadId) return@post
                 loadingSpinner.visibility = View.GONE
                 if (beforeBmp == null || afterBmp == null) {
                     showError("Could not load image pair. Skipping…")
@@ -818,17 +954,34 @@ class TvPlayerActivity : Activity() {
 
     // ── Display SINGLE IMAGE ──
     private fun displaySingleImage(item: PlaylistItem) {
+        val loadId = ++currentLoadId
         videoView.visibility            = View.GONE
-        videoView.stopPlayback()
+        try { videoView.stopPlayback() } catch (_: Exception) {}
         beforeAfterContainer.visibility = View.GONE
-        loadingSpinner.visibility       = View.VISIBLE
         errorText.visibility            = View.GONE
-        showControls()
 
+        val cached = memoryCache.get(item.singleImageUrl)
+        if (cached != null) {
+            loadingSpinner.visibility = View.GONE
+            val dark = createDarkBackground(cached)
+            dark?.let {
+                imageBlurBg.setImageBitmap(it)
+                imageBlurBg.visibility = View.VISIBLE
+            }
+            imageView.setImageBitmap(cached)
+            imageView.visibility = View.VISIBLE
+            fadeIn(imageView)
+            showControls()
+            startImageSlideshow(item.durationMs)
+            return
+        }
+
+        loadingSpinner.visibility = View.VISIBLE
         Thread {
-            val bmp = loadBitmapFlexible(item.singleImageUrl)
+            val bmp = getOrLoadBitmap(item.singleImageUrl)
             val dark = bmp?.let { createDarkBackground(it) }
             mainHandler.post {
+                if (loadId != currentLoadId) return@post
                 loadingSpinner.visibility = View.GONE
                 if (bmp == null) {
                     showError("Could not load image. Skipping…")
@@ -859,6 +1012,7 @@ class TvPlayerActivity : Activity() {
     private fun startImageSlideshow(durationMs: Long) {
         cancelImageSlideshow()
         imageRemainingMs = durationMs
+        imageStartTime = System.currentTimeMillis()
         imagePaused = false
         val r = Runnable {
             applyPendingPlaylistIfNeeded()
@@ -870,16 +1024,16 @@ class TvPlayerActivity : Activity() {
 
     private fun pauseImageSlideshow() {
         if (!imagePaused && imageSlideshowRunnable != null) {
+            val elapsed = System.currentTimeMillis() - imageStartTime
+            imageRemainingMs = (imageRemainingMs - elapsed).coerceAtLeast(1000L)
             imagePaused = true
-            imagePauseTimestamp = System.currentTimeMillis()
             imageSlideshowRunnable?.let { mainHandler.removeCallbacks(it) }
         }
     }
 
     private fun resumeImageSlideshow() {
-        if (imagePaused && imageSlideshowRunnable != null) {
-            val elapsed = System.currentTimeMillis() - imagePauseTimestamp
-            imageRemainingMs = (imageRemainingMs - elapsed).coerceAtLeast(500L)
+        if (imagePaused) {
+            imageStartTime = System.currentTimeMillis()
             imagePaused = false
             val r = Runnable {
                 applyPendingPlaylistIfNeeded()
@@ -897,7 +1051,7 @@ class TvPlayerActivity : Activity() {
     }
 
     // ────────────────────────────────────────────────────────────────
-    //  Navigation Controls
+    //  Navigation Controls (Previous, Next, Play/Pause)
     // ────────────────────────────────────────────────────────────────
     private fun playNext() {
         applyPendingPlaylistIfNeeded()
@@ -908,6 +1062,23 @@ class TvPlayerActivity : Activity() {
             )
             return
         }
+
+        // Cancel running timer and stop video playback immediately
+        cancelImageSlideshow()
+        try {
+            if (videoView.isPlaying) {
+                videoView.stopPlayback()
+            }
+        } catch (_: Exception) {}
+
+        if (playlist.size == 1) {
+            // Requirement 10: Single transformation in playlist - restart from beginning
+            currentIndex = 0
+            restartCurrentItem()
+            return
+        }
+
+        // Circular playlist navigation (last -> first)
         currentIndex = (currentIndex + 1) % playlist.size
         loadCurrentItem()
     }
@@ -921,6 +1092,23 @@ class TvPlayerActivity : Activity() {
             )
             return
         }
+
+        // Cancel running timer and stop video playback immediately
+        cancelImageSlideshow()
+        try {
+            if (videoView.isPlaying) {
+                videoView.stopPlayback()
+            }
+        } catch (_: Exception) {}
+
+        if (playlist.size == 1) {
+            // Requirement 10: Single transformation in playlist - restart from beginning
+            currentIndex = 0
+            restartCurrentItem()
+            return
+        }
+
+        // Circular playlist navigation (first -> last)
         currentIndex = (currentIndex - 1 + playlist.size) % playlist.size
         loadCurrentItem()
     }
@@ -945,37 +1133,56 @@ class TvPlayerActivity : Activity() {
             }
         }
         updatePlayPauseIcon()
-    }
-
-    private fun updatePlayPauseIcon() {
-        playPauseIcon.text = if (isPlaying) "⏸" else "▶"
-    }
-
-    // ────────────────────────────────────────────────────────────────
-    //  Floating Controls (Always Visible per User Request)
-    // ────────────────────────────────────────────────────────────────
-    private fun showControls() {
-        controlsVisible = true
-        floatingControls.visibility = View.VISIBLE
-        floatingControls.alpha = 1f
-        floatingControls.bringToFront()
-        updateButtonFocus()
-    }
-
-    private fun hideControls() {
-        // Keep controls permanently visible on screen as requested by user
         showControls()
     }
 
-    private fun scheduleControlsAutoHide() {
-        // Disabled: User requested playback controls to remain visible at all times
+    private fun updatePlayPauseIcon() {
+        playPauseIcon.text = if (isPlaying && !imagePaused) "⏸" else "▶"
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  Floating Controls (Show / Hide, Inactivity Auto-hide & Focus)
+    // ────────────────────────────────────────────────────────────────
+    private fun showControls() {
+        controlsVisible = true
         mainHandler.removeCallbacks(hideControlsRunnable)
+        floatingControls.visibility = View.VISIBLE
+        floatingControls.animate().alpha(1f).setDuration(200).start()
+        floatingControls.bringToFront()
+        updateButtonFocus()
+        if (isPlaying && !imagePaused) {
+            scheduleControlsAutoHide()
+        }
+    }
+
+    private fun hideControls() {
+        if (!isPlaying || imagePaused) {
+            // Keep controls visible when paused
+            return
+        }
+        controlsVisible = false
+        floatingControls.animate().alpha(0f).setDuration(220).withEndAction {
+            floatingControls.visibility = View.GONE
+        }.start()
+        mainHandler.removeCallbacks(hideControlsRunnable)
+    }
+
+    private fun scheduleControlsAutoHide() {
+        mainHandler.removeCallbacks(hideControlsRunnable)
+        if (isPlaying && !imagePaused) {
+            mainHandler.postDelayed(hideControlsRunnable, CONTROLS_AUTOHIDE_MS)
+        }
     }
 
     private fun updateButtonFocus() {
         btnPrevious.isSelected  = (focusedButton == 0)
         btnPlayPause.isSelected = (focusedButton == 1)
         btnNext.isSelected      = (focusedButton == 2)
+
+        btnPrevious.animate().scaleX(if (focusedButton == 0) 1.18f else 1.0f).scaleY(if (focusedButton == 0) 1.18f else 1.0f).setDuration(150).start()
+        btnPlayPause.animate().scaleX(if (focusedButton == 1) 1.18f else 1.0f).scaleY(if (focusedButton == 1) 1.18f else 1.0f).setDuration(150).start()
+        btnNext.animate().scaleX(if (focusedButton == 2) 1.18f else 1.0f).scaleY(if (focusedButton == 2) 1.18f else 1.0f).setDuration(150).start()
+
         when (focusedButton) {
             0 -> btnPrevious.requestFocus()
             1 -> btnPlayPause.requestFocus()
@@ -993,11 +1200,40 @@ class TvPlayerActivity : Activity() {
     }
 
     // ────────────────────────────────────────────────────────────────
-    //  TV Remote D-Pad Navigation
+    //  TV Remote D-Pad Navigation & Shortcuts
     // ────────────────────────────────────────────────────────────────
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount != 0) {
             return super.dispatchKeyEvent(event)
+        }
+
+        // If controls were hidden, reveal them on remote input
+        if (!controlsVisible) {
+            showControls()
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_MEDIA_NEXT,
+                KeyEvent.KEYCODE_PAGE_DOWN,
+                KeyEvent.KEYCODE_CHANNEL_DOWN,
+                KeyEvent.KEYCODE_BUTTON_R1 -> {
+                    playNext()
+                    return true
+                }
+                KeyEvent.KEYCODE_MEDIA_PREVIOUS,
+                KeyEvent.KEYCODE_PAGE_UP,
+                KeyEvent.KEYCODE_CHANNEL_UP,
+                KeyEvent.KEYCODE_BUTTON_L1 -> {
+                    playPrevious()
+                    return true
+                }
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+                KeyEvent.KEYCODE_MEDIA_PLAY,
+                KeyEvent.KEYCODE_MEDIA_PAUSE,
+                KeyEvent.KEYCODE_SPACE -> {
+                    togglePlayPause()
+                    return true
+                }
+                else -> return true
+            }
         }
 
         return when (event.keyCode) {
@@ -1005,27 +1241,37 @@ class TvPlayerActivity : Activity() {
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                 activateFocusedButton()
+                showControls()
                 true
             }
 
             KeyEvent.KEYCODE_DPAD_LEFT -> {
-                focusedButton = (focusedButton - 1 + 3) % 3
-                updateButtonFocus()
+                if (focusedButton == 0) {
+                    playPrevious()
+                } else {
+                    focusedButton--
+                    updateButtonFocus()
+                }
                 showControls()
                 true
             }
 
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                focusedButton = (focusedButton + 1) % 3
-                updateButtonFocus()
+                if (focusedButton == 2) {
+                    playNext()
+                } else {
+                    focusedButton++
+                    updateButtonFocus()
+                }
                 showControls()
                 true
             }
 
             KeyEvent.KEYCODE_BACK,
             KeyEvent.KEYCODE_ESCAPE -> {
-                // Safe Android TV back: do not close kiosk player; keep controls visible
-                showControls()
+                if (controlsVisible && isPlaying && !imagePaused) {
+                    hideControls()
+                }
                 true
             }
 
@@ -1034,16 +1280,27 @@ class TvPlayerActivity : Activity() {
             KeyEvent.KEYCODE_MEDIA_PLAY,
             KeyEvent.KEYCODE_MEDIA_PAUSE,
             KeyEvent.KEYCODE_SPACE -> {
+                focusedButton = 1
                 togglePlayPause()
                 showControls()
                 true
             }
-            KeyEvent.KEYCODE_MEDIA_NEXT -> {
+            KeyEvent.KEYCODE_MEDIA_NEXT,
+            KeyEvent.KEYCODE_PAGE_DOWN,
+            KeyEvent.KEYCODE_CHANNEL_DOWN,
+            KeyEvent.KEYCODE_BUTTON_R1 -> {
+                focusedButton = 2
+                updateButtonFocus()
                 playNext()
                 showControls()
                 true
             }
-            KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+            KeyEvent.KEYCODE_MEDIA_PREVIOUS,
+            KeyEvent.KEYCODE_PAGE_UP,
+            KeyEvent.KEYCODE_CHANNEL_UP,
+            KeyEvent.KEYCODE_BUTTON_L1 -> {
+                focusedButton = 0
+                updateButtonFocus()
                 playPrevious()
                 showControls()
                 true
@@ -1085,8 +1342,20 @@ class TvPlayerActivity : Activity() {
     }
 
     // ────────────────────────────────────────────────────────────────
-    //  Image Loading Helpers (Base64 data URIs, HTTP URLs, Assets)
+    //  Image Loading Helpers (In-Memory Cache, Disk Cache, HTTP, Assets)
     // ────────────────────────────────────────────────────────────────
+    private fun getOrLoadBitmap(source: String): Bitmap? {
+        val trimmed = source.trim()
+        if (trimmed.isEmpty()) return null
+        memoryCache.get(trimmed)?.let { return it }
+
+        val bmp = loadBitmapFlexible(trimmed)
+        if (bmp != null) {
+            memoryCache.put(trimmed, bmp)
+        }
+        return bmp
+    }
+
     private fun loadBitmapFlexible(source: String): Bitmap? {
         val trimmed = source.trim()
         return try {
@@ -1098,10 +1367,23 @@ class TvPlayerActivity : Activity() {
                     BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
                 }
                 trimmed.startsWith("http://") || trimmed.startsWith("https://") -> {
+                    val cacheFile = File(getCacheDirFolder(), "img_${trimmed.hashCode().toLong().and(0xffffffffL)}.jpg")
+                    if (cacheFile.exists() && cacheFile.length() > 500L) {
+                        try {
+                            val cachedBmp = BitmapFactory.decodeFile(cacheFile.absolutePath)
+                            if (cachedBmp != null) return cachedBmp
+                        } catch (_: Exception) {}
+                    }
                     val conn = URL(trimmed).openConnection() as HttpURLConnection
                     conn.connectTimeout = 8000
                     conn.readTimeout = 12000
-                    conn.inputStream.use { BitmapFactory.decodeStream(it) }
+                    if (conn.responseCode == 200) {
+                        val bytes = conn.inputStream.use { it.readBytes() }
+                        try {
+                            cacheFile.writeBytes(bytes)
+                        } catch (_: Exception) {}
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    } else null
                 }
                 trimmed.startsWith("assets://") || !trimmed.contains("://") -> {
                     val path = trimmed.removePrefix("assets://").removePrefix("/")
