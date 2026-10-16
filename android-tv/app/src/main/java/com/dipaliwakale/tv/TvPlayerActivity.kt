@@ -307,14 +307,30 @@ class TvPlayerActivity : Activity() {
         videoView.setOnPreparedListener { mp ->
             loadingSpinner.visibility = View.GONE
             errorText.visibility      = View.GONE
-            resizeVideoView(mp)
+
+            val vw = mp.videoWidth
+            val vh = mp.videoHeight
+            // If horizontal/landscape video (width >= height), acquire 100% full screen
+            val isHorizontal = (vw > 0 && vh > 0) && (vw >= vh)
+
+            if (isHorizontal) {
+                switchToModeFullScreen()
+            } else {
+                switchToModeA_Video()
+            }
+
+            // Post resize after layout pass so centerPanel dimensions are fully updated
+            centerPanel.post {
+                resizeVideoView(mp)
+            }
+
             mp.isLooping = false
             mp.start()
             isPlaying   = true
             imagePaused = false
             updatePlayPauseIcon()
             scheduleControlsAutoHide()
-            Log.d(TAG, "Video started: ${playlist.getOrNull(currentIndex)?.clientName}")
+            Log.d(TAG, "Video started: ${playlist.getOrNull(currentIndex)?.clientName} (${vw}x${vh}, horizontal=$isHorizontal)")
         }
 
         videoView.setOnCompletionListener {
@@ -436,12 +452,22 @@ class TvPlayerActivity : Activity() {
 
     private fun parseTransformationsJson(jsonStr: String): List<PlaylistItem> {
         val list = mutableListOf<PlaylistItem>()
-        val root = JSONObject(jsonStr)
-        val dataArray = if (root.has("data") && root.get("data") is JSONArray) {
-            root.getJSONArray("data")
-        } else if (root.has("transformations") && root.get("transformations") is JSONArray) {
-            root.getJSONArray("transformations")
-        } else {
+        val trimmed = jsonStr.trim()
+        val dataArray: JSONArray = try {
+            if (trimmed.startsWith("[")) {
+                JSONArray(trimmed)
+            } else {
+                val root = JSONObject(trimmed)
+                if (root.has("data") && root.get("data") is JSONArray) {
+                    root.getJSONArray("data")
+                } else if (root.has("transformations") && root.get("transformations") is JSONArray) {
+                    root.getJSONArray("transformations")
+                } else {
+                    return list
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed parsing transformations JSON: ${e.message}")
             return list
         }
 
@@ -453,10 +479,10 @@ class TvPlayerActivity : Activity() {
             val village    = item.optString("village", "")
             val durationSec = item.optInt("duration", 10).takeIf { it > 0 } ?: 10
 
-            val video = item.optString("video", "")
-            val before = item.optString("before", item.optString("before_image", ""))
-            val after  = item.optString("after", item.optString("after_image", ""))
-            val singleImg = item.optString("image", "")
+            val video = item.optString("video", item.optString("videoUrl", item.optString("video_url", item.optString("beforeVideo", item.optString("afterVideo", "")))))
+            val before = item.optString("before", item.optString("before_image", item.optString("beforeImage", "")))
+            val after  = item.optString("after", item.optString("after_image", item.optString("afterImage", "")))
+            val singleImg = item.optString("image", item.optString("imageUrl", item.optString("image_url", item.optString("poster", ""))))
 
             val playlistItem = when {
                 before.isNotBlank() && after.isNotBlank() -> {
@@ -691,27 +717,27 @@ class TvPlayerActivity : Activity() {
 
         when (item.type) {
             MediaType.IMAGE_BEFORE_AFTER -> {
-                // ── MODE B: FULL-SCREEN BEFORE & AFTER (100% display, side panels hidden) ──
-                switchToModeB_BeforeAfter()
+                // ── 100% FULL-SCREEN BEFORE & AFTER (side panels hidden) ──
+                switchToModeFullScreen()
                 displayBeforeAfter(item)
             }
+            MediaType.IMAGE_SINGLE -> {
+                // ── 100% FULL-SCREEN SINGLE IMAGE (side panels hidden) ──
+                switchToModeFullScreen()
+                displaySingleImage(item)
+            }
             MediaType.VIDEO -> {
-                // ── MODE A: VIDEO TRANSFORMATION (20% / 60% / 20%) ──
+                // ── VIDEO: Mode A initial layout; onPrepared switches to 100% Full Screen if horizontal ──
                 switchToModeA_Video()
                 displayVideo(item)
-            }
-            MediaType.IMAGE_SINGLE -> {
-                // Single image in Center Panel
-                switchToModeA_Video()
-                displaySingleImage(item)
             }
         }
     }
 
     /**
-     * MODE A — VIDEO TRANSFORMATION:
+     * MODE A — 3-PANEL VIDEO LAYOUT (for vertical 9:16 reels):
      * Left Branding: 20%
-     * Center Video: 60% (maximized width)
+     * Center Video: 60%
      * Right QR Code: 20%
      */
     private fun switchToModeA_Video() {
@@ -722,6 +748,7 @@ class TvPlayerActivity : Activity() {
             weight = 60f
             width = 0
         }
+        centerPanel.setBackgroundResource(R.drawable.center_panel_bg)
         centerPanel.requestLayout()
 
         rootContainer.setPadding(
@@ -730,12 +757,16 @@ class TvPlayerActivity : Activity() {
     }
 
     /**
-     * MODE B — FULL-SCREEN BEFORE & AFTER IMAGE COMPARISON:
+     * FULL-SCREEN MODE (100% of TV display):
+     * Used for:
+     * 1. Single images & Before/After comparisons
+     * 2. Horizontal / Landscape (16:9) videos
+     *
      * Left Panel: GONE
      * Right Panel: GONE
-     * Center Panel: 100% of TV display (50% Before | 50% After)
+     * Center Panel: 100% width, zero root padding for edge-to-edge display
      */
-    private fun switchToModeB_BeforeAfter() {
+    private fun switchToModeFullScreen() {
         leftPanel.visibility  = View.GONE
         rightPanel.visibility = View.GONE
 
@@ -743,15 +774,15 @@ class TvPlayerActivity : Activity() {
             weight = 100f
             width = 0
         }
+        centerPanel.setBackgroundColor(Color.parseColor("#0D0807"))
         centerPanel.requestLayout()
 
         // Zero out padding for edge-to-edge cinematic TV display
         rootContainer.setPadding(0, 0, 0, 0)
-
-        // Hide floating controls and title overlay in Before/After mode
-        hideControls()
-        videoInfoOverlay.visibility = View.GONE
     }
+
+    // Keep alias for backwards compatibility
+    private fun switchToModeB_BeforeAfter() = switchToModeFullScreen()
 
     // ── Display VIDEO ──
     private fun displayVideo(item: PlaylistItem) {
@@ -788,6 +819,7 @@ class TvPlayerActivity : Activity() {
         loadingSpinner.visibility       = View.VISIBLE
         errorText.visibility            = View.GONE
         videoInfoOverlay.visibility     = View.GONE
+        hideControls()
 
         Thread {
             val beforeBmp = loadBitmapFlexible(item.beforeUrl)

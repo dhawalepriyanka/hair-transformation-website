@@ -154,6 +154,11 @@ class MainActivity : Activity() {
                 ) {
                     super.onReceivedError(view, request, error)
                     Log.e(TAG, "WebView error on ${request?.url}: ${error?.description} (${error?.errorCode})")
+                    // If online website fails to load, gracefully fallback to bundled assets kiosk
+                    if (request?.isForMainFrame == true && request.url?.host?.contains("dipaliwakale.in") == true) {
+                        Log.w(TAG, "Network unavailable, loading offline bundled kiosk")
+                        view?.loadUrl("https://appassets.androidplatform.net/index.html?tv=1")
+                    }
                 }
             }
 
@@ -171,8 +176,8 @@ class MainActivity : Activity() {
             // Safely hide system UI after layout is attached
             rootLayout.post { hideSystemUI() }
 
-            // Load offline kiosk directly
-            wv.loadUrl("https://appassets.androidplatform.net/index.html?tv=1")
+            // Connect to live website transformation page, falling back to offline kiosk
+            wv.loadUrl("https://www.dipaliwakale.in/transformations?tv=1")
             wv.requestFocus()
 
         } catch (t: Throwable) {
