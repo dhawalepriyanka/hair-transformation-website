@@ -128,7 +128,7 @@ class TvPlayerActivity : Activity() {
 
     // ── State Handlers ──
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var controlsVisible = false
+    private var controlsVisible = true
     private var focusedButton = 1 // 0=Prev, 1=Play/Pause, 2=Next
 
     // Image countdown timer
@@ -137,8 +137,8 @@ class TvPlayerActivity : Activity() {
     private var imagePauseTimestamp = 0L
     private var imagePaused = false
 
-    // Auto-hide runnable
-    private val hideControlsRunnable = Runnable { hideControls() }
+    // Auto-hide runnable (kept for backwards compatibility; controls remain visible at all times)
+    private val hideControlsRunnable = Runnable { /* controls stay visible */ }
 
     // Side panel rotation
     private var leftSlideIndex = 0
@@ -160,6 +160,7 @@ class TvPlayerActivity : Activity() {
         bindViews()
         setupVideoView()
         setupButtonClickListeners()
+        showControls()
         hideSystemUI()
 
         // Extract bundled reels from assets in background for instant local playback
@@ -270,9 +271,9 @@ class TvPlayerActivity : Activity() {
     }
 
     private fun setupButtonClickListeners() {
-        btnPrevious.setOnClickListener  { playPrevious(); scheduleControlsAutoHide() }
-        btnPlayPause.setOnClickListener { togglePlayPause(); scheduleControlsAutoHide() }
-        btnNext.setOnClickListener      { playNext(); scheduleControlsAutoHide() }
+        btnPrevious.setOnClickListener  { playPrevious(); showControls() }
+        btnPlayPause.setOnClickListener { togglePlayPause(); showControls() }
+        btnNext.setOnClickListener      { playNext(); showControls() }
     }
 
     private fun setupVideoView() {
@@ -301,7 +302,7 @@ class TvPlayerActivity : Activity() {
             isPlaying   = true
             imagePaused = false
             updatePlayPauseIcon()
-            scheduleControlsAutoHide()
+            showControls()
             Log.d(TAG, "Video started: ${playlist.getOrNull(currentIndex)?.clientName} (${vw}x${vh}, horizontal=$isHorizontal)")
         }
 
@@ -777,7 +778,7 @@ class TvPlayerActivity : Activity() {
         isPlaying = true
         imagePaused = false
         updatePlayPauseIcon()
-        scheduleControlsAutoHide()
+        showControls()
     }
 
     // ── Display BEFORE & AFTER (50% / 50%) ──
@@ -789,7 +790,7 @@ class TvPlayerActivity : Activity() {
         beforeAfterContainer.visibility = View.VISIBLE
         loadingSpinner.visibility       = View.VISIBLE
         errorText.visibility            = View.GONE
-        hideControls()
+        showControls()
 
         Thread {
             val beforeBmp = loadBitmapFlexible(item.beforeUrl)
@@ -804,6 +805,7 @@ class TvPlayerActivity : Activity() {
                 imageBeforeView.setImageBitmap(beforeBmp)
                 imageAfterView.setImageBitmap(afterBmp)
                 fadeIn(beforeAfterContainer)
+                showControls()
 
                 isPlaying = true
                 imagePaused = false
@@ -821,6 +823,7 @@ class TvPlayerActivity : Activity() {
         beforeAfterContainer.visibility = View.GONE
         loadingSpinner.visibility       = View.VISIBLE
         errorText.visibility            = View.GONE
+        showControls()
 
         Thread {
             val bmp = loadBitmapFlexible(item.singleImageUrl)
@@ -839,6 +842,7 @@ class TvPlayerActivity : Activity() {
                 imageView.setImageBitmap(bmp)
                 imageView.visibility = View.VISIBLE
                 fadeIn(imageView)
+                showControls()
 
                 isPlaying = true
                 imagePaused = false
@@ -948,27 +952,24 @@ class TvPlayerActivity : Activity() {
     }
 
     // ────────────────────────────────────────────────────────────────
-    //  Floating Controls (Show / Hide & Auto-hide)
+    //  Floating Controls (Always Visible per User Request)
     // ────────────────────────────────────────────────────────────────
     private fun showControls() {
         controlsVisible = true
         floatingControls.visibility = View.VISIBLE
-        floatingControls.animate().alpha(1f).setDuration(200).start()
+        floatingControls.alpha = 1f
+        floatingControls.bringToFront()
         updateButtonFocus()
-        scheduleControlsAutoHide()
     }
 
     private fun hideControls() {
-        controlsVisible = false
-        floatingControls.animate().alpha(0f).setDuration(180).withEndAction {
-            floatingControls.visibility = View.GONE
-        }.start()
-        mainHandler.removeCallbacks(hideControlsRunnable)
+        // Keep controls permanently visible on screen as requested by user
+        showControls()
     }
 
     private fun scheduleControlsAutoHide() {
+        // Disabled: User requested playback controls to remain visible at all times
         mainHandler.removeCallbacks(hideControlsRunnable)
-        mainHandler.postDelayed(hideControlsRunnable, CONTROLS_AUTOHIDE_MS)
     }
 
     private fun updateButtonFocus() {
@@ -988,7 +989,7 @@ class TvPlayerActivity : Activity() {
             1 -> togglePlayPause()
             2 -> playNext()
         }
-        scheduleControlsAutoHide()
+        showControls()
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -1003,45 +1004,29 @@ class TvPlayerActivity : Activity() {
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                if (!controlsVisible) {
-                    showControls()
-                } else {
-                    activateFocusedButton()
-                }
+                activateFocusedButton()
                 true
             }
 
             KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (!controlsVisible) {
-                    showControls()
-                } else {
-                    focusedButton = (focusedButton - 1 + 3) % 3
-                    updateButtonFocus()
-                    scheduleControlsAutoHide()
-                }
+                focusedButton = (focusedButton - 1 + 3) % 3
+                updateButtonFocus()
+                showControls()
                 true
             }
 
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                if (!controlsVisible) {
-                    showControls()
-                } else {
-                    focusedButton = (focusedButton + 1) % 3
-                    updateButtonFocus()
-                    scheduleControlsAutoHide()
-                }
+                focusedButton = (focusedButton + 1) % 3
+                updateButtonFocus()
+                showControls()
                 true
             }
 
             KeyEvent.KEYCODE_BACK,
             KeyEvent.KEYCODE_ESCAPE -> {
-                if (controlsVisible) {
-                    hideControls()
-                    true
-                } else {
-                    // Safe Android TV back: do not close kiosk player
-                    true
-                }
+                // Safe Android TV back: do not close kiosk player; keep controls visible
+                showControls()
+                true
             }
 
             // Media hardware remote buttons

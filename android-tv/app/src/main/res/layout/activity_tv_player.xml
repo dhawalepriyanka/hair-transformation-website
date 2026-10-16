@@ -395,12 +395,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|center_horizontal"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="24dp"
             android:orientation="horizontal"
             android:background="@drawable/control_panel_bg"
             android:gravity="center_vertical"
             android:padding="6dp"
-            android:elevation="14dp"
+            android:elevation="20dp"
             android:visibility="visible">
 
             <!-- ⏮ Previous — 42×42 dp circle -->
