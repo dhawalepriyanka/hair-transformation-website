@@ -41,6 +41,48 @@ const rowToItem = (row) => {
   };
 };
 
+const DEFAULT_REELS = [
+  {
+    id: '9100001',
+    client_name: 'Hair Transformation Reel',
+    treatment: 'Keratin Smoothening & Gloss Shine',
+    village: 'Sangamner, Maharashtra',
+    period: 'Instagram Reel • 48K Views',
+    video: '/instagram/reels/hair-transformation.mp4',
+    category: 'Hair Transformation',
+    rating: 5,
+    testimonial: 'केसांचा पोत एकदम मऊ आणि शायनी झाला. Dipali didi यांचे काम अप्रतिम आहे!',
+    duration: 15,
+    display_order: 1
+  },
+  {
+    id: '9100002',
+    client_name: 'Hair Extensions Reel',
+    treatment: 'Seamless Length & Volume Blend',
+    village: 'Nashik, Maharashtra',
+    period: 'Instagram Reel • 36K Views',
+    video: '/instagram/reels/hair-extensions.mp4',
+    category: 'Hair Extensions',
+    rating: 5,
+    testimonial: 'Instant length and natural thickness with seamless blending. Truly amazed!',
+    duration: 15,
+    display_order: 2
+  },
+  {
+    id: '9100003',
+    client_name: 'Hair Styling Reel',
+    treatment: 'Professional Salon Blowdry & Curls',
+    village: 'Ghargaon, Sangamner',
+    period: 'Instagram Reel • 29K Views',
+    video: '/instagram/reels/hair-styling.mp4',
+    category: 'Hair Styling',
+    rating: 5,
+    testimonial: 'Bouncy curls and salon finish that lasted through the entire family occasion.',
+    duration: 15,
+    display_order: 3
+  }
+];
+
 // @desc    Get all transformations (Admin dashboard + TV APK)
 // @route   GET /api/transformations
 // @access  Public
@@ -52,7 +94,12 @@ const getTransformations = async (req, res, next) => {
         ORDER BY display_order ASC, created_at DESC
       `;
       const result = await pool.query(query);
-      const items = result.rows.map(rowToItem);
+      let items = result.rows.map(rowToItem);
+      const itemIds = new Set(items.map(t => String(t.id)));
+      const missing = DEFAULT_REELS.filter(r => !itemIds.has(r.id)).map(rowToItem);
+      if (missing.length > 0) {
+        items = [...missing, ...items];
+      }
       return res.status(200).json({
         success: true,
         count: items.length,
@@ -60,10 +107,13 @@ const getTransformations = async (req, res, next) => {
       });
     } catch (dbErr) {
       console.warn('DB transformations query fallback:', dbErr.message);
+      const fallbackIds = new Set(inMemoryTransformations.map(t => String(t.id)));
+      const missingFallback = DEFAULT_REELS.filter(r => !fallbackIds.has(r.id)).map(rowToItem);
+      const allFallback = [...missingFallback, ...inMemoryTransformations];
       return res.status(200).json({
         success: true,
-        count: inMemoryTransformations.length,
-        data: inMemoryTransformations
+        count: allFallback.length,
+        data: allFallback
       });
     }
   } catch (error) {
