@@ -1,6 +1,11 @@
 export const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/ogg'];
 const MB = 1024 * 1024;
 
+export function isInstagramUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:p|reel|tv|share)\/[A-Za-z0-9_-]+/i.test(url.trim());
+}
+
 export function validateMediaFile(file, field) {
   const video = ['video', 'beforeVideo', 'afterVideo'].includes(field);
   if (video ? !VIDEO_TYPES.includes(file.type) : !file.type.startsWith('image/')) {

@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { normalizeTransformation } from './transformationMedia.js';
 import { getStaffSession, setAdminSession } from './adminSession.js';
+import { compressImageFile, fileToOptimizedDataUri } from './imageOptimizer.js';
+import { saveToIndexedDb, getFromIndexedDb, safeSaveLocalStorage, safeGetLocalStorage } from './transformationStorage.js';
 
 const runtimeEnv = import.meta.env || {};
 const configuredApiUrl = runtimeEnv.VITE_API_URL?.trim();
@@ -647,11 +649,41 @@ export const saveSlideshowSettings = (newSettings) => {
 };
 
 /* ─────────────── TRANSFORMATIONS API ─────────────── */
+
+/**
+ * Uploads media file to Cloudinary / Backend Storage or compresses for storage
+ */
+export const uploadTransformationMediaFile = async (file, field = 'media') => {
+  try {
+    let uploadFile = file;
+    if (file instanceof Blob && file.type.startsWith('image/')) {
+      uploadFile = await compressImageFile(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
+    }
+    const formData = new FormData();
+    formData.append('file', uploadFile);
+    formData.append('field', field);
+    const response = await apiClient.post('/transformations/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000
+    });
+    if (response.data && response.data.success && response.data.url) {
+      return response.data.url;
+    }
+  } catch (err) {
+    console.warn('[Upload] Media upload failed, falling back to local optimized data URI:', err.message);
+  }
+  // Offline or direct upload fallback: return optimized data URI
+  if (file instanceof Blob) {
+    return await fileToOptimizedDataUri(file);
+  }
+  return file;
+};
+
 const getStoredTransformations = () => {
   try {
-    const saved = localStorage.getItem('admin_transformations');
+    const saved = safeGetLocalStorage('admin_transformations') || (typeof localStorage !== 'undefined' ? localStorage.getItem('admin_transformations') : null);
     if (saved) {
-      const list = JSON.parse(saved);
+      const list = typeof saved === 'string' ? JSON.parse(saved) : saved;
       if (!Array.isArray(list)) throw new Error('Invalid saved transformations');
       return list;
     }
@@ -663,27 +695,91 @@ const getStoredTransformations = () => {
 
 const saveStoredTransformations = (list) => {
   try {
-    localStorage.setItem('admin_transformations', JSON.stringify(list));
+    safeSaveLocalStorage('admin_transformations', list);
+    if (typeof localStorage !== 'undefined') {
+      // In case safeSaveLocalStorage caught error, test if native setItem throws
+      localStorage.setItem('admin_transformations', JSON.stringify(list));
+    }
   } catch (e) {
     throw new Error('Could not save transformations. Browser storage may be full or unavailable. Remove unused media or use a direct video URL, then try again.');
   }
 };
 
 export const fetchTransformations = async () => {
+  let backendItems = null;
+  try {
+    const response = await apiClient.get('/transformations');
+    if (response.data && response.data.success && Array.isArray(response.data.data)) {
+      backendItems = response.data.data;
+    }
+  } catch (err) {
+    console.warn('Backend /api/transformations fetch failed, falling back to cached storage:', err.message);
+  }
+
+  // If backend returned items:
+  if (backendItems) {
+    // Check if there are local-only items that need migration into the persistent database
+    try {
+      const localList = getStoredTransformations();
+      const backendIdSet = new Set(backendItems.map(item => String(item.id)));
+      const defaultIdSet = new Set(defaultTransformations.map(item => String(item.id)));
+      const legacyIds = new Set(['1', '2', '3', '4', '5', '6', '9000001', '9000002']);
+
+      const itemsToMigrate = localList.filter(item => {
+        const idStr = String(item.id);
+        return !backendIdSet.has(idStr) && !defaultIdSet.has(idStr) && !legacyIds.has(idStr);
+      });
+
+      if (itemsToMigrate.length > 0) {
+        console.log(`[Migration] Migrating ${itemsToMigrate.length} local transformations to persistent database...`);
+        try {
+          const migrateRes = await apiClient.post('/transformations/migrate', itemsToMigrate);
+          if (migrateRes.data && migrateRes.data.success && Array.isArray(migrateRes.data.data)) {
+            backendItems = [...backendItems, ...migrateRes.data.data];
+          }
+        } catch (migErr) {
+          console.warn('[Migration] Batch sync note:', migErr.message);
+        }
+      }
+    } catch (migCheckErr) {
+      console.warn('[Migration] Check error:', migCheckErr.message);
+    }
+
+    try {
+      safeSaveLocalStorage('admin_transformations', backendItems);
+    } catch (e) {}
+    return backendItems;
+  }
+
+  // Fallback to local storage
   let list = getStoredTransformations();
-  // Automatically migrate legacy IDs if stored items contain old demo/stock entries
   const legacyIds = new Set([1, 2, 3, 4, 5, 6, 9000001, 9000002]);
   const hasLegacy = list.some(item => legacyIds.has(Number(item.id)));
   if (hasLegacy) {
     const customItems = list.filter(item => !legacyIds.has(Number(item.id)) && !(item.id >= 9100001 && item.id <= 9100050));
     list = [...defaultTransformations, ...customItems];
-    saveStoredTransformations(list);
+    try { saveStoredTransformations(list); } catch (e) {}
   }
   return list;
 };
 
 export const createTransformation = async (itemData) => {
   itemData = normalizeTransformation(itemData);
+  try {
+    const response = await apiClient.post('/transformations', itemData);
+    if (response.data && response.data.success && response.data.data) {
+      const savedItem = response.data.data;
+      try {
+        const list = getStoredTransformations();
+        safeSaveLocalStorage('admin_transformations', [savedItem, ...list.filter(i => String(i.id) !== String(savedItem.id))]);
+      } catch (storageErr) {
+        console.warn('Local storage cache update warning (data safely saved in backend database):', storageErr.message);
+      }
+      return savedItem;
+    }
+  } catch (err) {
+    console.warn('Backend /api/transformations create failed, using local storage fallback:', err.message);
+  }
   const list = getStoredTransformations();
   const newItem = {
     id: Date.now(),
@@ -709,6 +805,21 @@ export const createTransformation = async (itemData) => {
 
 export const updateTransformation = async (id, itemData) => {
   itemData = normalizeTransformation(itemData);
+  try {
+    const response = await apiClient.put(`/transformations/${id}`, itemData);
+    if (response.data && response.data.success) {
+      try {
+        const list = getStoredTransformations();
+        const updated = list.map(item => String(item.id) === String(id) ? { ...item, ...itemData } : item);
+        safeSaveLocalStorage('admin_transformations', updated);
+      } catch (storageErr) {
+        console.warn('Local storage cache update warning (data safely saved in backend database):', storageErr.message);
+      }
+      return { success: true };
+    }
+  } catch (err) {
+    console.warn('Backend /api/transformations update failed, using local storage fallback:', err.message);
+  }
   const list = getStoredTransformations();
   const numericId = Number(id);
   if (!list.some(item => Number(item.id) === numericId || String(item.id) === String(id))) {
@@ -724,9 +835,23 @@ export const updateTransformation = async (id, itemData) => {
 };
 
 export const deleteTransformation = async (id) => {
+  let backendSuccess = false;
+  try {
+    const response = await apiClient.delete(`/transformations/${id}`);
+    if (response.data && response.data.success) {
+      backendSuccess = true;
+    }
+  } catch (err) {
+    console.warn('Backend /api/transformations delete failed, using local storage fallback:', err.message);
+  }
   const list = getStoredTransformations();
   const numericId = Number(id);
   const updated = list.filter(item => Number(item.id) !== numericId && String(item.id) !== String(id));
-  saveStoredTransformations(updated);
+  try {
+    saveStoredTransformations(updated);
+  } catch (storageErr) {
+    if (!backendSuccess) throw storageErr;
+    console.warn('Local storage cache update warning:', storageErr.message);
+  }
   return { success: true };
 };

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Focused button: rose-gold border glow effect -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#33D9AD98" />
+    <stroke android:width="2dp" android:color="#D9AD98" />
+    <corners android:radius="16dp" />
+</shape>

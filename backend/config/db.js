@@ -68,6 +68,29 @@ const ensureDatabase = () => {
           await client.query(schema);
           await client.query('INSERT INTO clinic_schema_migrations (version) VALUES ($1)', ['clinic-v1']);
         }
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS transformations (
+            id VARCHAR(100) PRIMARY KEY,
+            client_name VARCHAR(150) NOT NULL DEFAULT '',
+            village VARCHAR(150) DEFAULT '',
+            treatment VARCHAR(150) DEFAULT '',
+            period VARCHAR(100) DEFAULT '',
+            rating INTEGER DEFAULT 5,
+            testimonial TEXT DEFAULT '',
+            before_image TEXT DEFAULT '',
+            after_image TEXT DEFAULT '',
+            image TEXT DEFAULT '',
+            video TEXT DEFAULT '',
+            before_video TEXT DEFAULT '',
+            after_video TEXT DEFAULT '',
+            duration INTEGER DEFAULT 10,
+            category VARCHAR(100) DEFAULT 'Hair Transformation',
+            display_order INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE INDEX IF NOT EXISTS idx_transformations_display_order ON transformations(display_order ASC, created_at DESC);
+        `);
         await client.query('COMMIT');
       } catch (error) {
         await client.query('ROLLBACK');

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MapPin, Clock, Star, ChevronLeft, ChevronRight,
   Play, Pause, Maximize2, Minimize2, Eye, EyeOff, Volume2, VolumeX,
-  Instagram, Heart, MessageCircle, ExternalLink, Sparkles
+  Instagram, Heart, MessageCircle, ExternalLink, Sparkles,
+  SkipBack, SkipForward
 } from 'lucide-react';
 import { fetchTransformations, fetchSlideshowSettings } from '../services/api';
 import VideoComparison from '../components/VideoComparison';
@@ -318,7 +319,8 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
   const isTvMode = isTvModeProp || (typeof window !== 'undefined' && (
     window.location.search.includes('tv=1') ||
     window.location.pathname === '/tv' ||
-    window.location.hash.includes('tv')
+    window.location.hash.includes('tv') ||
+    Boolean(window.AndroidBridge)
   ));
 
   const [transformationsList, setTransformationsList] = useState([]);
@@ -332,6 +334,8 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
   const [userSpeedOption, setUserSpeedOption] = useState('auto'); // 'auto' | '5' | '8' | '12' | '15' | '20' | '30' | 'end'
   const [cursorVisible, setCursorVisible] = useState(true);
   const cursorTimerRef = useRef(null);
+  const [tvPanelVisible, setTvPanelVisible] = useState(false);
+  const [focusedButton, setFocusedButton] = useState(1); // 0: Previous, 1: Play/Pause, 2: Next
 
   // Countdown timer state
   const [timeLeft, setTimeLeft] = useState(8);
@@ -339,6 +343,10 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
 
   const showcaseRef = useRef(null);
   const videoRef = useRef(null);
+  const ambientVideoRef = useRef(null);
+  const prevBtnRef = useRef(null);
+  const playBtnRef = useRef(null);
+  const nextBtnRef = useRef(null);
   const slideTimerRef = useRef(null);
 
   // Load transformations & slideshow settings
@@ -468,18 +476,53 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
     };
   }, [activeSlide, isPlaying, transformationsList.length, calculateSlideDuration, changeSlide, activeItem, slideshowSettings.autoSwitch]);
 
+  // Real Play/Pause toggle
+  const togglePlayPause = useCallback(() => {
+    setIsPlaying((prev) => !prev);
+  }, []);
+
+  // Synchronize actual video playback with isPlaying state
+  useEffect(() => {
+    if (videoRef.current && isVideo) {
+      if (isPlaying) {
+        videoRef.current.play().catch(() => {});
+      } else {
+        videoRef.current.pause();
+      }
+    }
+    if (ambientVideoRef.current && activeItem?.video) {
+      if (isPlaying) {
+        ambientVideoRef.current.play().catch(() => {});
+      } else {
+        ambientVideoRef.current.pause();
+      }
+    }
+  }, [isPlaying, isVideo, activeItem]);
+
   // Ensure video playback starts smoothly on active slide change
   useEffect(() => {
     if (videoRef.current && isVideo) {
       videoRef.current.currentTime = 0;
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          if (videoRef.current) {
-            videoRef.current.muted = true;
-            videoRef.current.play().catch(() => {});
-          }
-        });
+      if (isPlaying) {
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              videoRef.current.play().catch(() => {});
+            }
+          });
+        }
+      } else {
+        videoRef.current.pause();
+      }
+    }
+    if (ambientVideoRef.current && activeItem?.video) {
+      ambientVideoRef.current.currentTime = 0;
+      if (isPlaying) {
+        ambientVideoRef.current.play().catch(() => {});
+      } else {
+        ambientVideoRef.current.pause();
       }
     }
   }, [activeSlide, isVideo]);
@@ -507,27 +550,6 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
     }
   };
 
-  // TV Remote navigation keys (D-Pad Left, Right, OK, Back, etc.)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'ArrowLeft' || e.key === 'MediaTrackPrevious') {
-        changeSlide(-1);
-      } else if (e.key === 'ArrowRight' || e.key === 'MediaTrackNext') {
-        changeSlide(1);
-      } else if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space' || e.key === 'MediaPlayPause') {
-        setIsPlaying((prev) => !prev);
-      } else if (e.key === 'm' || e.key === 'M') {
-        setIsMuted((prev) => !prev);
-      } else if (e.key === 't' || e.key === 'T' || e.key === 'ArrowDown') {
-        setHideDetails((prev) => !prev);
-      } else if (e.key === 'f' || e.key === 'F') {
-        toggleFullscreen();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [changeSlide]);
-
   // TV Inactivity cursor auto-hide
   useEffect(() => {
     if (!isTvMode) return;
@@ -547,6 +569,150 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
       if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
     };
   }, [isTvMode]);
+
+  // Helper functions to show and hide control panel
+  const showControlPanel = useCallback(() => {
+    if (!isTvMode) return;
+    setTvPanelVisible(true);
+    setFocusedButton(1); // Middle button receives initial focus
+    try {
+      window.AndroidBridge?.setPanelVisibility(true);
+    } catch (e) {}
+  }, [isTvMode]);
+
+  const hideControlPanel = useCallback(() => {
+    if (!isTvMode) return;
+    setTvPanelVisible(false);
+    try {
+      window.AndroidBridge?.setPanelVisibility(false);
+    } catch (e) {}
+  }, [isTvMode]);
+
+  // TV Remote navigation actions: LEFT, RIGHT, OK, BACK
+  const handleTvAction = useCallback((action) => {
+    if (!isTvMode) return;
+
+    if (action === 'ok') {
+      if (!tvPanelVisible) {
+        // When panel is hidden: pressing OK shows all three buttons and focuses middle button
+        // Do not pause the video when showing the panel!
+        showControlPanel();
+      } else {
+        // When panel is visible: pressing OK activates the focused button
+        if (focusedButton === 0) {
+          // Previous button: wrap from first to last, keep panel visible
+          changeSlide(-1);
+        } else if (focusedButton === 1) {
+          // Play/Pause button: toggle playback, keep panel visible
+          togglePlayPause();
+        } else if (focusedButton === 2) {
+          // Next button: wrap from last to first, keep panel visible
+          changeSlide(1);
+        }
+      }
+    } else if (action === 'left') {
+      if (tvPanelVisible) {
+        // Move focus to previous button (clamped to 0)
+        setFocusedButton((prev) => Math.max(0, prev - 1));
+      }
+    } else if (action === 'right') {
+      if (tvPanelVisible) {
+        // Move focus to next button (clamped to 2)
+        setFocusedButton((prev) => Math.min(2, prev + 1));
+      }
+    } else if (action === 'back' || action === 'escape') {
+      if (tvPanelVisible) {
+        hideControlPanel();
+      }
+    } else if (action === 'down') {
+      if (tvPanelVisible) {
+        hideControlPanel();
+      }
+    } else if (action === 'up') {
+      if (!tvPanelVisible) {
+        showControlPanel();
+      }
+    } else if (action === 'play_pause') {
+      togglePlayPause();
+    }
+  }, [isTvMode, tvPanelVisible, focusedButton, showControlPanel, hideControlPanel, changeSlide, togglePlayPause]);
+
+  // Synchronize DOM focus to the active button when panel is visible
+  useEffect(() => {
+    if (!isTvMode || !tvPanelVisible) return;
+    if (focusedButton === 0) {
+      prevBtnRef.current?.focus();
+    } else if (focusedButton === 1) {
+      playBtnRef.current?.focus();
+    } else if (focusedButton === 2) {
+      nextBtnRef.current?.focus();
+    }
+  }, [isTvMode, tvPanelVisible, focusedButton]);
+
+  // Expose global TV controls to Android WebView layer
+  useEffect(() => {
+    if (!isTvMode) return;
+    window.onTvRemoteKey = (action) => {
+      handleTvAction(action);
+    };
+    window.hideTvControlPanel = hideControlPanel;
+    window.showTvControlPanel = showControlPanel;
+    return () => {
+      delete window.onTvRemoteKey;
+      delete window.hideTvControlPanel;
+      delete window.showTvControlPanel;
+    };
+  }, [isTvMode, handleTvAction, hideControlPanel, showControlPanel]);
+
+  // TV Remote & Keyboard navigation event listener
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (isTvMode) {
+        // Prevent default browser scrolling on arrow keys and space
+        if (e.key === 'ArrowLeft') {
+          handleTvAction('left');
+          e.preventDefault();
+        } else if (e.key === 'ArrowRight') {
+          handleTvAction('right');
+          e.preventDefault();
+        } else if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') {
+          handleTvAction('ok');
+          e.preventDefault();
+        } else if (e.key === 'Escape' || e.key === 'Back' || e.key === 'BrowserBack') {
+          if (tvPanelVisible) {
+            handleTvAction('back');
+            e.preventDefault();
+          }
+        } else if (e.key === 'ArrowUp') {
+          handleTvAction('up');
+          e.preventDefault();
+        } else if (e.key === 'ArrowDown') {
+          if (tvPanelVisible) {
+            handleTvAction('down');
+            e.preventDefault();
+          }
+        }
+        return;
+      }
+
+      // Non-TV keyboard shortcuts (unchanged)
+      if (e.key === 'ArrowLeft' || e.key === 'MediaTrackPrevious') {
+        changeSlide(-1);
+      } else if (e.key === 'ArrowRight' || e.key === 'MediaTrackNext') {
+        changeSlide(1);
+      } else if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space' || e.key === 'MediaPlayPause') {
+        setIsPlaying((prev) => !prev);
+      } else if (e.key === 'm' || e.key === 'M') {
+        setIsMuted((prev) => !prev);
+      } else if (e.key === 't' || e.key === 'T' || e.key === 'ArrowDown') {
+        setHideDetails((prev) => !prev);
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [changeSlide, isTvMode, handleTvAction, tvPanelVisible]);
 
   const progressPercent = totalSlideDuration > 0
     ? Math.max(0, Math.min(100, ((totalSlideDuration - timeLeft) / totalSlideDuration) * 100))
@@ -591,7 +757,7 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
               style={{ marginBottom: isTvMode ? 0 : '1rem' }}
             >
               {/* Top Countdown Progress Line */}
-              {isPlaying && (
+              {isPlaying && !isTvMode && (
                 <div className="tv-progress-line">
                   <div className="tv-progress-fill" style={{ width: `${progressPercent}%` }} />
                 </div>
@@ -601,80 +767,82 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
               <div className="tv-showcase-glow" />
 
               {/* Top Corner TV Bar */}
-              <div className="tv-top-bar">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  {/* Auto-Switch Countdown Indicator */}
-                  <span className="tv-timer-pill" title="Auto-advance countdown">
-                    <Clock size={14} color="#F5A58D" />
-                    {userSpeedOption === 'end' ? 'Full Video' : `${timeLeft}s`}
-                  </span>
+              {!isTvMode && (
+                <div className="tv-top-bar">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {/* Auto-Switch Countdown Indicator */}
+                    <span className="tv-timer-pill" title="Auto-advance countdown">
+                      <Clock size={14} color="#F5A58D" />
+                      {userSpeedOption === 'end' ? 'Full Video' : `${timeLeft}s`}
+                    </span>
+                  </div>
+
+                  {/* Top Right Quick Controls */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Switch Speed Selector for salon staff */}
+                    <select
+                      className="tv-speed-dropdown"
+                      value={userSpeedOption}
+                      onChange={(e) => setUserSpeedOption(e.target.value)}
+                      aria-label="Set slide switch time"
+                      title="Change automatic switch timing"
+                    >
+                      <option value="auto">Time: Auto (Admin Timing)</option>
+                      <option value="5">5s (Quick Switch)</option>
+                      <option value="8">8s (Standard Photo)</option>
+                      <option value="12">12s (Medium Reel)</option>
+                      <option value="15">15s (Standard Reel)</option>
+                      <option value="20">20s (Extended Reel)</option>
+                      <option value="30">30s (Slow Switch)</option>
+                      <option value="end">Full Video End</option>
+                    </select>
+
+                    {/* Toggle Side Text Button */}
+                    <button
+                      type="button"
+                      onClick={() => setHideDetails((prev) => !prev)}
+                      className="tv-quick-btn"
+                      style={{
+                        background: 'rgba(20, 14, 12, 0.75)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        color: '#fff',
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        fontSize: '0.76rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                      title={hideDetails ? 'Show client text' : 'Remove right side text for clean 55" TV screen'}
+                    >
+                      {hideDetails ? <Eye size={14} /> : <EyeOff size={14} />}
+                      {hideDetails ? 'Show Text' : 'Hide Text'}
+                    </button>
+
+                    {/* Fullscreen Button */}
+                    <button
+                      type="button"
+                      onClick={toggleFullscreen}
+                      style={{
+                        background: 'rgba(200, 138, 117, 0.85)',
+                        border: 'none',
+                        color: '#fff',
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        display: 'grid',
+                        placeItems: 'center'
+                      }}
+                      title={isFullscreen ? 'Exit Fullscreen' : 'Enter 55″ Fullscreen'}
+                    >
+                      {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                    </button>
+                  </div>
                 </div>
-
-                {/* Top Right Quick Controls */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {/* Switch Speed Selector for salon staff */}
-                  <select
-                    className="tv-speed-dropdown"
-                    value={userSpeedOption}
-                    onChange={(e) => setUserSpeedOption(e.target.value)}
-                    aria-label="Set slide switch time"
-                    title="Change automatic switch timing"
-                  >
-                    <option value="auto">Time: Auto (Admin Timing)</option>
-                    <option value="5">5s (Quick Switch)</option>
-                    <option value="8">8s (Standard Photo)</option>
-                    <option value="12">12s (Medium Reel)</option>
-                    <option value="15">15s (Standard Reel)</option>
-                    <option value="20">20s (Extended Reel)</option>
-                    <option value="30">30s (Slow Switch)</option>
-                    <option value="end">Full Video End</option>
-                  </select>
-
-                  {/* Toggle Side Text Button */}
-                  <button
-                    type="button"
-                    onClick={() => setHideDetails((prev) => !prev)}
-                    className="tv-quick-btn"
-                    style={{
-                      background: 'rgba(20, 14, 12, 0.75)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      color: '#fff',
-                      padding: '6px 12px',
-                      borderRadius: '20px',
-                      fontSize: '0.76rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px'
-                    }}
-                    title={hideDetails ? 'Show client text' : 'Remove right side text for clean 55" TV screen'}
-                  >
-                    {hideDetails ? <Eye size={14} /> : <EyeOff size={14} />}
-                    {hideDetails ? 'Show Text' : 'Hide Text'}
-                  </button>
-
-                  {/* Fullscreen Button */}
-                  <button
-                    type="button"
-                    onClick={toggleFullscreen}
-                    style={{
-                      background: 'rgba(200, 138, 117, 0.85)',
-                      border: 'none',
-                      color: '#fff',
-                      width: '34px',
-                      height: '34px',
-                      borderRadius: '50%',
-                      cursor: 'pointer',
-                      display: 'grid',
-                      placeItems: 'center'
-                    }}
-                    title={isFullscreen ? 'Exit Fullscreen' : 'Enter 55″ Fullscreen'}
-                  >
-                    {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                  </button>
-                </div>
-              </div>
+              )}
 
               {/* ── SLIDE CONTENT ── */}
               <div className="tv-slide" key={activeItem.id}>
@@ -682,41 +850,44 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
                 {/* Left/Main Media Visual (Expands to 100% when right text is hidden) */}
                 <div className={`tv-visual ${isVideo ? 'tv-video-visual' : ''}`}>
                   {/* Floating Social Media Handle Watermark */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '16px',
-                    left: '16px',
-                    zIndex: 14,
-                    background: 'rgba(15, 10, 8, 0.72)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '30px',
-                    padding: '4px 12px 4px 6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    color: '#FFF',
-                    fontSize: '0.75rem',
-                    fontWeight: '700',
-                    pointerEvents: 'none'
-                  }}>
-                    <span style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
+                  {!isTvMode && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '16px',
+                      left: '16px',
+                      zIndex: 14,
+                      background: 'rgba(15, 10, 8, 0.72)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      borderRadius: '30px',
+                      padding: '4px 12px 4px 6px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      gap: '6px',
+                      color: '#FFF',
+                      fontSize: '0.75rem',
+                      fontWeight: '700',
+                      pointerEvents: 'none'
                     }}>
-                      <Instagram size={11} color="#FFF" />
-                    </span>
-                    <span>{activeItem.handle || '@wakale_dipali_'}</span>
-                  </div>
+                      <span style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Instagram size={11} color="#FFF" />
+                      </span>
+                      <span>{activeItem.handle || '@wakale_dipali_'}</span>
+                    </div>
+                  )}
 
                   {/* Ambient Backdrop for Vertical Reels on 55" screen */}
                   {activeItem.video && (
                     <video
+                      ref={ambientVideoRef}
                       className="tv-ambient-backdrop"
                       src={activeItem.video}
                       muted
@@ -735,11 +906,13 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
                       className="tv-transformation-video"
                       src={activeItem.video}
                       poster={activeItem.poster || activeItem.after || activeItem.image}
-                      controls
+                      controls={!isTvMode}
                       autoPlay
                       muted={isMuted}
                       loop={calculateSlideDuration() !== 'end'}
                       playsInline
+                      onPlay={() => setIsPlaying(true)}
+                      onPause={() => setIsPlaying(false)}
                       onEnded={handleVideoEnded}
                     >
                       Your browser does not support video playback.
@@ -762,7 +935,7 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
                   ) : null}
 
                   {/* Floating minimalist badge when right-side text is hidden (for 55" TV) */}
-                  {hideDetails && (
+                  {hideDetails && !isTvMode && (
                     <div className="tv-floating-tag">
                       <span className="tag-badge">{activeItem.category}</span>
                       <span className="tag-title">{activeItem.clientName}</span>
@@ -879,54 +1052,126 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
               </div>
 
               {/* ── BOTTOM CONTROLS BAR ── */}
-              <div className="tv-controls">
-                <button type="button" onClick={() => changeSlide(-1)} aria-label="Previous transformation" title="Previous Slide">
-                  <ChevronLeft />
-                </button>
+              {!isTvMode && (
+                <div className="tv-controls">
+                  <button type="button" onClick={() => changeSlide(-1)} aria-label="Previous transformation" title="Previous Slide">
+                    <ChevronLeft />
+                  </button>
 
-                <div className="tv-dots">
-                  {transformationsList.map((item, index) => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      className={index === activeSlide ? 'active' : ''}
-                      onClick={() => setActiveSlide(index)}
-                      aria-label={`Show transformation ${index + 1}`}
-                      title={`${item.clientName} (${index + 1}/${transformationsList.length})`}
-                    />
-                  ))}
-                </div>
+                  <div className="tv-dots">
+                    {transformationsList.map((item, index) => (
+                      <button
+                        type="button"
+                        key={item.id}
+                        className={index === activeSlide ? 'active' : ''}
+                        onClick={() => setActiveSlide(index)}
+                        aria-label={`Show transformation ${index + 1}`}
+                        title={`${item.clientName} (${index + 1}/${transformationsList.length})`}
+                      />
+                    ))}
+                  </div>
 
-                {/* Play / Pause Auto-Switch */}
-                <button
-                  type="button"
-                  onClick={() => setIsPlaying((playing) => !playing)}
-                  aria-label={isPlaying ? 'Pause slideshow' : 'Play slideshow'}
-                  title={isPlaying ? 'Pause Auto-Switch' : 'Start Auto-Switch'}
-                >
-                  {isPlaying ? <Pause /> : <Play />}
-                </button>
-
-                {/* Audio Mute/Unmute for video reels */}
-                {isVideo && (
+                  {/* Play / Pause Auto-Switch */}
                   <button
                     type="button"
-                    onClick={() => setIsMuted((m) => !m)}
-                    aria-label={isMuted ? 'Unmute video audio' : 'Mute video audio'}
-                    title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+                    onClick={() => setIsPlaying((playing) => !playing)}
+                    aria-label={isPlaying ? 'Pause slideshow' : 'Play slideshow'}
+                    title={isPlaying ? 'Pause Auto-Switch' : 'Start Auto-Switch'}
                   >
-                    {isMuted ? <VolumeX /> : <Volume2 />}
+                    {isPlaying ? <Pause /> : <Play />}
                   </button>
-                )}
 
-                <button type="button" onClick={() => changeSlide(1)} aria-label="Next transformation" title="Next Slide">
-                  <ChevronRight />
-                </button>
+                  {/* Audio Mute/Unmute for video reels */}
+                  {isVideo && (
+                    <button
+                      type="button"
+                      onClick={() => setIsMuted((m) => !m)}
+                      aria-label={isMuted ? 'Unmute video audio' : 'Mute video audio'}
+                      title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+                    >
+                      {isMuted ? <VolumeX /> : <Volume2 />}
+                    </button>
+                  )}
 
-                <button type="button" onClick={toggleFullscreen} aria-label="Toggle 55″ Fullscreen" title="Toggle 55″ Fullscreen">
-                  {isFullscreen ? <Minimize2 /> : <Maximize2 />}
-                </button>
-              </div>
+                  <button type="button" onClick={() => changeSlide(1)} aria-label="Next transformation" title="Next Slide">
+                    <ChevronRight />
+                  </button>
+
+                  <button type="button" onClick={toggleFullscreen} aria-label="Toggle 55″ Fullscreen" title="Toggle 55″ Fullscreen">
+                    {isFullscreen ? <Minimize2 /> : <Maximize2 />}
+                  </button>
+                </div>
+              )}
+
+              {/* ── ANDROID TV TOGGLE CONTROL PANEL ── */}
+              {isTvMode && (
+                <div
+                  className={`tv-toggle-control-panel ${tvPanelVisible ? 'tv-panel-visible' : ''}`}
+                  role="toolbar"
+                  aria-label="Android TV Playback Controls"
+                >
+                  {/* Previous Button */}
+                  <button
+                    type="button"
+                    ref={prevBtnRef}
+                    className={`tv-panel-btn ${focusedButton === 0 ? 'tv-panel-btn-focused' : ''}`}
+                    onClick={() => {
+                      changeSlide(-1);
+                      setFocusedButton(0);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+                    }}
+                    tabIndex={tvPanelVisible ? 0 : -1}
+                    aria-label="Previous transformation video"
+                  >
+                    <SkipBack size={38} strokeWidth={2.4} />
+                    <span className="tv-panel-btn-label">Previous</span>
+                  </button>
+
+                  {/* Play / Pause Toggle Button */}
+                  <button
+                    type="button"
+                    ref={playBtnRef}
+                    className={`tv-panel-btn tv-panel-btn-main ${focusedButton === 1 ? 'tv-panel-btn-focused' : ''}`}
+                    onClick={() => {
+                      togglePlayPause();
+                      setFocusedButton(1);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+                    }}
+                    tabIndex={tvPanelVisible ? 0 : -1}
+                    aria-label={isPlaying ? 'Pause video' : 'Play video'}
+                  >
+                    {isPlaying ? (
+                      <Pause size={44} strokeWidth={2.4} />
+                    ) : (
+                      <Play size={44} strokeWidth={2.4} style={{ marginLeft: '4px' }} />
+                    )}
+                    <span className="tv-panel-btn-label">{isPlaying ? 'Pause' : 'Play'}</span>
+                  </button>
+
+                  {/* Next Button */}
+                  <button
+                    type="button"
+                    ref={nextBtnRef}
+                    className={`tv-panel-btn ${focusedButton === 2 ? 'tv-panel-btn-focused' : ''}`}
+                    onClick={() => {
+                      changeSlide(1);
+                      setFocusedButton(2);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
+                    }}
+                    tabIndex={tvPanelVisible ? 0 : -1}
+                    aria-label="Next transformation video"
+                  >
+                    <SkipForward size={38} strokeWidth={2.4} />
+                    <span className="tv-panel-btn-label">Next</span>
+                  </button>
+                </div>
+              )}
             </div>
           </Reveal>
         ) : <p style={{ textAlign: 'center' }}>No transformations available.</p>}

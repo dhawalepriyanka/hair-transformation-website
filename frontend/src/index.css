@@ -2543,3 +2543,255 @@ html { scroll-behavior: smooth; }
   width: 100% !important;
   height: 100% !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ANDROID TV DIGITAL SIGNAGE — REMOTE OVERLAY & PREMIUM SALON THEME
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── ANDROID TV FLOATING TOGGLE CONTROL PANEL ── */
+/* Positioned at bottom center, respecting Android TV safe areas (overscan) */
+.tv-toggle-control-panel {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%) translateY(24px);
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 14px 28px;
+  background: rgba(18, 12, 10, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1.5px solid rgba(200, 138, 117, 0.35);
+  border-radius: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75), 0 0 28px rgba(200, 138, 117, 0.18);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tv-toggle-control-panel.tv-panel-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Individual large rounded control buttons */
+.tv-panel-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100px;
+  height: 96px;
+  border-radius: 26px;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  background: rgba(34, 22, 18, 0.75);
+  color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  outline: none;
+}
+
+/* Middle Play/Pause button - slightly prominent */
+.tv-panel-btn-main {
+  width: 120px;
+  height: 106px;
+  border-radius: 30px;
+  border: 2px solid rgba(200, 138, 117, 0.45);
+  background: linear-gradient(145deg, rgba(200, 138, 117, 0.22), rgba(38, 24, 18, 0.92));
+}
+
+/* Rose-Gold Active Focus Indicator */
+.tv-panel-btn:focus,
+.tv-panel-btn:focus-visible,
+.tv-panel-btn-focused {
+  border: 3.5px solid #F5B5A1 !important;
+  background: linear-gradient(145deg, rgba(216, 148, 126, 0.6), rgba(58, 36, 28, 0.98)) !important;
+  color: #FFFFFF !important;
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px rgba(245, 181, 161, 0.35),
+              0 0 36px rgba(232, 165, 144, 0.85),
+              0 14px 36px rgba(0, 0, 0, 0.75) !important;
+  outline: none !important;
+  z-index: 2;
+}
+
+.tv-panel-btn:active {
+  transform: scale(1.05);
+}
+
+/* Button text labels */
+.tv-panel-btn-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  transition: color 0.2s ease;
+}
+
+.tv-panel-btn:focus .tv-panel-btn-label,
+.tv-panel-btn-focused .tv-panel-btn-label {
+  color: #FFE6DE;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* TV Kiosk wrapper enhancements for signage mode */
+.tv-kiosk-wrapper .tv-kiosk-inner {
+  width: 100%;
+  height: 100%;
+}
+
+/* Hide scrollbars in TV kiosk mode */
+.tv-kiosk-wrapper,
+.tv-kiosk-wrapper * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tv-kiosk-wrapper::-webkit-scrollbar,
+.tv-kiosk-wrapper *::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ensure video fills properly in kiosk mode */
+.tv-kiosk-wrapper .tv-visual {
+  width: 100% !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+}
+
+.tv-kiosk-wrapper .tv-slide {
+  grid-template-columns: 1fr !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+}
+
+.tv-kiosk-wrapper .tv-story {
+  display: none !important;
+}
+
+/* TV Loading Indicator */
+.tv-kiosk-wrapper .tv-loading-signage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  background: #0d0807;
+  color: #fff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  z-index: 200;
+}
+
+.tv-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(200, 138, 117, 0.2);
+  border-top-color: #C88A75;
+  border-radius: 50%;
+  animation: tvSpin 0.8s linear infinite;
+}
+
+@keyframes tvSpin {
+  to { transform: rotate(360deg); }
+}
+
+.tv-loading-text {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.03em;
+}
+
+/* Slide counter badge for TV overlay */
+.tv-remote-overlay .tv-slide-counter {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.1em;
+  background: rgba(13, 8, 7, 0.6);
+  padding: 8px 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive adjustments for different TV resolutions */
+@media (max-height: 720px) {
+  .tv-toggle-control-panel {
+    bottom: 24px;
+    gap: 16px;
+    padding: 10px 20px;
+    border-radius: 32px;
+  }
+  .tv-panel-btn {
+    width: 82px;
+    height: 80px;
+    border-radius: 20px;
+    gap: 6px;
+  }
+  .tv-panel-btn svg {
+    width: 30px;
+    height: 30px;
+  }
+  .tv-panel-btn-main {
+    width: 98px;
+    height: 88px;
+    border-radius: 24px;
+  }
+  .tv-panel-btn-main svg {
+    width: 36px;
+    height: 36px;
+  }
+  .tv-panel-btn-label {
+    font-size: 0.68rem;
+  }
+}
+
+@media (min-height: 2000px) {
+  .tv-toggle-control-panel {
+    bottom: 72px;
+    gap: 36px;
+    padding: 20px 40px;
+    border-radius: 56px;
+  }
+  .tv-panel-btn {
+    width: 140px;
+    height: 136px;
+    border-radius: 36px;
+    gap: 12px;
+  }
+  .tv-panel-btn svg {
+    width: 52px;
+    height: 52px;
+  }
+  .tv-panel-btn-main {
+    width: 170px;
+    height: 150px;
+    border-radius: 42px;
+  }
+  .tv-panel-btn-main svg {
+    width: 60px;
+    height: 60px;
+  }
+  .tv-panel-btn-label {
+    font-size: 0.95rem;
+  }
+}

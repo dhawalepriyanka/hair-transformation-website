@@ -33,3 +33,7 @@ android-tv/*/build/
 android-tv/local.properties
 android-tv/.cxx/
 
+# Uploaded local files
+backend/uploads/*
+!backend/uploads/.gitkeep
+

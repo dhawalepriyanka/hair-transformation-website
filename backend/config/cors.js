@@ -1,6 +1,10 @@
 const createCorsOptions = (env = process.env) => {
   const allowedOrigins = new Set((env.CORS_ORIGINS || 'http://localhost:3000')
     .split(',').map(origin => origin.trim()).filter(Boolean));
+  allowedOrigins.add('https://www.dipaliwakale.in');
+  allowedOrigins.add('https://dipaliwakale.in');
+  allowedOrigins.add('http://localhost:5173');
+  allowedOrigins.add('http://localhost:3000');
   allowedOrigins.add('https://hair-transformation-website.vercel.app');
   allowedOrigins.add('https://hair-transformation-website-git-main-dhawalepriyankas-projects.vercel.app');
 

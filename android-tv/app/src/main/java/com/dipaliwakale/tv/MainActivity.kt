@@ -26,11 +26,23 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import java.io.RandomAccessFile
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
 
 class MainActivity : Activity() {
 
     private var webView: WebView? = null
     private val TAG = "DipaliTV"
+    @Volatile private var isTvPanelOpen = false
+
+    inner class AndroidBridge {
+        @android.webkit.JavascriptInterface
+        fun setPanelVisibility(visible: Boolean) {
+            isTvPanelOpen = visible
+            Log.d(TAG, "Panel visibility updated from JS: $visible")
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,6 +79,8 @@ class MainActivity : Activity() {
                     loadWithOverviewMode = true
                     useWideViewPort = true
                 }
+
+                addJavascriptInterface(AndroidBridge(), "AndroidBridge")
 
                 webChromeClient = object : WebChromeClient() {
                     override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
@@ -355,40 +369,141 @@ class MainActivity : Activity() {
         }
     }
 
-    // Hardware TV Remote & Keyboard Navigation
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        val wv = webView ?: return super.onKeyDown(keyCode, event)
-        when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_LEFT -> {
-                wv.evaluateJavascript("window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));", null)
-                return true
-            }
-            KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                wv.evaluateJavascript("window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));", null)
-                return true
-            }
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                wv.evaluateJavascript("window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));", null)
-                return true
-            }
-            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_SPACE -> {
-                wv.evaluateJavascript("window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));", null)
-                return true
-            }
-            KeyEvent.KEYCODE_DPAD_DOWN -> {
-                wv.evaluateJavascript("window.dispatchEvent(new KeyboardEvent('keydown', { key: 't' }));", null)
-                return true
-            }
-        }
-        return super.onKeyDown(keyCode, event)
+    override fun onResume() {
+        super.onResume()
+        hideSystemUI()
     }
 
+    // Hardware TV Remote & Keyboard Navigation with double-key prevention
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val wv = webView ?: return super.dispatchKeyEvent(event)
+        val keyCode = event.keyCode
+        val action = event.action
+
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    wv.evaluateJavascript(
+                        "window.onTvRemoteKey ? window.onTvRemoteKey('ok') : window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));",
+                        null
+                    )
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    wv.evaluateJavascript(
+                        "window.onTvRemoteKey ? window.onTvRemoteKey('left') : window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));",
+                        null
+                    )
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    wv.evaluateJavascript(
+                        "window.onTvRemoteKey ? window.onTvRemoteKey('right') : window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));",
+                        null
+                    )
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_DPAD_UP -> {
+                if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    wv.evaluateJavascript(
+                        "window.onTvRemoteKey ? window.onTvRemoteKey('up') : window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));",
+                        null
+                    )
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    wv.evaluateJavascript(
+                        "window.onTvRemoteKey ? window.onTvRemoteKey('down') : window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));",
+                        null
+                    )
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+            KeyEvent.KEYCODE_MEDIA_PLAY,
+            KeyEvent.KEYCODE_MEDIA_PAUSE,
+            KeyEvent.KEYCODE_SPACE -> {
+                if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    wv.evaluateJavascript(
+                        "window.onTvRemoteKey ? window.onTvRemoteKey('play_pause') : window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));",
+                        null
+                    )
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    wv.evaluateJavascript("window.onTvRemoteKey ? window.onTvRemoteKey('left') : null;", null)
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_MEDIA_NEXT -> {
+                if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    wv.evaluateJavascript("window.onTvRemoteKey ? window.onTvRemoteKey('right') : null;", null)
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
+                if (isTvPanelOpen) {
+                    if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                        wv.evaluateJavascript("window.onTvRemoteKey ? window.onTvRemoteKey('back') : null;", null)
+                    }
+                    return true
+                }
+                return super.dispatchKeyEvent(event)
+            }
+        }
+
+        return super.dispatchKeyEvent(event)
+    }
+
+    @Suppress("DEPRECATION")
     override fun onBackPressed() {
         val wv = webView
+        if (isTvPanelOpen) {
+            wv?.evaluateJavascript("window.onTvRemoteKey ? window.onTvRemoteKey('back') : null;", null)
+            return
+        }
         if (wv != null && wv.canGoBack()) {
             wv.goBack()
-        } else {
-            super.onBackPressed()
+            return
+        }
+        super.onBackPressed()
+    }
+}
+
+/**
+ * Auto-launch Dipali Wakale TV on device boot.
+ * Requires RECEIVE_BOOT_COMPLETED permission in AndroidManifest.
+ */
+class BootReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            val launchIntent = Intent(context, TvPlayerActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            try {
+                context.startActivity(launchIntent)
+            } catch (e: Exception) {
+                Log.e("DipaliTV", "Boot auto-launch failed", e)
+            }
         }
     }
 }

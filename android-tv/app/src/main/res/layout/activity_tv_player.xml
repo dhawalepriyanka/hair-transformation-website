@@ -1,0 +1,682 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Dipali Wakale TV — Transformation Signage Player
+    MODE A (Video / Single Image):
+      LEFT (20%): Salon Branding + Website QR (rotating)
+      CENTER (60%): Enlarged Transformation Video + Floating Overlay Controls
+      RIGHT (20%): Instagram Promo + Salon Services (rotating)
+    MODE B (Before & After Images):
+      LEFT: GONE
+      RIGHT: GONE
+      CENTER (100%): Full-Screen Comparison (50% Before | 50% After)
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootContainer"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#151313"
+    android:keepScreenOn="true"
+    android:orientation="horizontal"
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <!-- ════════════════════════════════════════════
+         LEFT PANEL — Salon Branding & Website QR (20%)
+         ════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/leftPanel"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="20"
+        android:layout_marginEnd="5dp"
+        android:background="@drawable/panel_rounded_bg"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="12dp">
+
+        <!-- ── SLIDE A: Salon Branding ── -->
+        <LinearLayout
+            android:id="@+id/leftSlotBranding"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="visible">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✂"
+                android:textSize="32sp"
+                android:textColor="#E4B49F"
+                android:layout_marginBottom="10dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DIPALI\nWAKALE"
+                android:textSize="21sp"
+                android:textStyle="bold"
+                android:textColor="#F2C9B6"
+                android:gravity="center"
+                android:letterSpacing="0.12"
+                android:lineSpacingMultiplier="1.15"
+                android:layout_marginBottom="6dp" />
+
+            <View
+                android:layout_width="44dp"
+                android:layout_height="1dp"
+                android:background="#E4B49F"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HAIR &amp; SKIN CARE\nCLINIC"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#D9AD98"
+                android:gravity="center"
+                android:letterSpacing="0.08"
+                android:lineSpacingMultiplier="1.2"
+                android:layout_marginBottom="14dp" />
+
+            <View
+                android:layout_width="32dp"
+                android:layout_height="1dp"
+                android:background="#55E4B49F"
+                android:layout_marginBottom="10dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Your Hair, Our Art"
+                android:textSize="12sp"
+                android:textStyle="italic"
+                android:textColor="#E4B49F"
+                android:gravity="center"
+                android:letterSpacing="0.04"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✦  ✦  ✦"
+                android:textSize="8sp"
+                android:textColor="#66E4B49F"
+                android:letterSpacing="0.16" />
+
+        </LinearLayout>
+
+        <!-- ── SLIDE B: Website QR Code ── -->
+        <LinearLayout
+            android:id="@+id/leftSlotQr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SCAN TO VISIT"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#E4B49F"
+                android:letterSpacing="0.10"
+                android:gravity="center"
+                android:layout_marginBottom="2dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="OUR WEBSITE"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#F2C9B6"
+                android:letterSpacing="0.10"
+                android:gravity="center"
+                android:layout_marginBottom="10dp" />
+
+            <ImageView
+                android:id="@+id/leftQrImage"
+                android:layout_width="125dp"
+                android:layout_height="125dp"
+                android:background="#FFFFFF"
+                android:padding="5dp"
+                android:scaleType="fitXY"
+                android:layout_marginBottom="10dp" />
+
+            <View
+                android:layout_width="34dp"
+                android:layout_height="1dp"
+                android:background="#55E4B49F"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="www.dipaliwakale.in"
+                android:textSize="9sp"
+                android:textColor="#D9AD98"
+                android:gravity="center"
+                android:letterSpacing="0.02" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ════════════════════════════════════════════
+         CENTER PANEL — Transformation Media
+         Video Mode: 60% width
+         Before/After Mode: 100% full screen
+         ════════════════════════════════════════════ -->
+    <FrameLayout
+        android:id="@+id/centerPanel"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="60"
+        android:background="@drawable/center_panel_bg"
+        android:clipChildren="true"
+        android:clipToPadding="true">
+
+        <!-- Darkened blur background for single images -->
+        <ImageView
+            android:id="@+id/imageBlurBg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+
+        <!-- VideoView — maximized inside 60% center section -->
+        <VideoView
+            android:id="@+id/videoView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="visible" />
+
+        <!-- Single image view (aspect-fit) -->
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true"
+            android:visibility="gone" />
+
+        <!-- ── FULL-SCREEN BEFORE & AFTER IMAGE COMPARISON (50% / 50%) ── -->
+        <LinearLayout
+            android:id="@+id/beforeAfterContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:background="#0D0807"
+            android:visibility="gone">
+
+            <!-- BEFORE Container (50%) -->
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="4dp">
+                <ImageView
+                    android:id="@+id/imageBeforeView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:scaleType="fitCenter"
+                    android:adjustViewBounds="true" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|center_horizontal"
+                    android:layout_marginTop="16dp"
+                    android:text="BEFORE"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:background="#CC8B251C"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:letterSpacing="0.12"
+                    android:elevation="6dp" />
+            </FrameLayout>
+
+            <!-- Elegant vertical divider line -->
+            <View
+                android:layout_width="2.5dp"
+                android:layout_height="match_parent"
+                android:background="#E4B49F" />
+
+            <!-- AFTER Container (50%) -->
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:padding="4dp">
+                <ImageView
+                    android:id="@+id/imageAfterView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:scaleType="fitCenter"
+                    android:adjustViewBounds="true" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|center_horizontal"
+                    android:layout_marginTop="16dp"
+                    android:text="AFTER"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:background="#CC1C6B38"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:letterSpacing="0.12"
+                    android:elevation="6dp" />
+            </FrameLayout>
+
+        </LinearLayout>
+
+        <!-- ── EMPTY STATE (When no transformations added in Admin Dashboard) ── -->
+        <LinearLayout
+            android:id="@+id/emptyStateContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✂"
+                android:textSize="48sp"
+                android:textColor="#E4B49F"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DIPALI WAKALE"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:textColor="#F2C9B6"
+                android:letterSpacing="0.14"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HAIR &amp; SKIN CARE CLINIC"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#D9AD98"
+                android:letterSpacing="0.10"
+                android:layout_marginBottom="24dp" />
+
+            <View
+                android:layout_width="60dp"
+                android:layout_height="1dp"
+                android:background="#E4B49F"
+                android:layout_marginBottom="20dp" />
+
+            <TextView
+                android:id="@+id/emptyStateTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Waiting for Transformations"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#F2C9B6"
+                android:gravity="center"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/emptyStateSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Add videos or Before &amp; After photos from the Website Admin Dashboard."
+                android:textSize="12sp"
+                android:textColor="#AAECE0DB"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.2"
+                android:layout_marginBottom="20dp" />
+
+            <TextView
+                android:id="@+id/emptyStateStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Live Sync Connected • www.dipaliwakale.in"
+                android:textSize="10sp"
+                android:textColor="#88E4B49F"
+                android:letterSpacing="0.05" />
+
+        </LinearLayout>
+
+        <!-- Loading spinner -->
+        <ProgressBar
+            android:id="@+id/loadingSpinner"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="#E4B49F"
+            android:visibility="visible" />
+
+        <!-- Status / error text -->
+        <TextView
+            android:id="@+id/errorText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textColor="#88E4B49F"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:padding="10dp"
+            android:visibility="gone" />
+
+        <!-- ── Elegant Transformation Title Overlay on Video ── -->
+        <LinearLayout
+            android:id="@+id/videoInfoOverlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/control_panel_bg"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:paddingTop="7dp"
+            android:paddingBottom="7dp"
+            android:elevation="12dp"
+            android:visibility="visible">
+
+            <TextView
+                android:id="@+id/videoClientTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hair Transformation Reel"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#F2C9B6"
+                android:letterSpacing="0.04" />
+
+            <TextView
+                android:id="@+id/videoTreatmentSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Keratin Smoothening &amp; Gloss Shine • Sangamner, Maharashtra"
+                android:textSize="10sp"
+                android:textColor="#C88A75"
+                android:letterSpacing="0.02" />
+        </LinearLayout>
+
+        <!-- ══════════════════════════════════════════════
+             SMALL FLOATING CONTROLS — overlaid near bottom of video
+             Auto-hides after 4s; reappears on remote interaction
+             ══════════════════════════════════════════════ -->
+        <LinearLayout
+            android:id="@+id/floatingControls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:orientation="horizontal"
+            android:background="@drawable/control_panel_bg"
+            android:gravity="center_vertical"
+            android:padding="6dp"
+            android:elevation="14dp"
+            android:visibility="visible">
+
+            <!-- ⏮ Previous — 42×42 dp circle -->
+            <LinearLayout
+                android:id="@+id/btnPrevious"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/control_btn_circle_selector"
+                android:gravity="center"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:clickable="true"
+                android:layout_marginEnd="8dp"
+                android:nextFocusRight="@id/btnPlayPause">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏮"
+                    android:textSize="16sp"
+                    android:textColor="#F2C9B6" />
+            </LinearLayout>
+
+            <!-- ⏯ Play/Pause — 48×48 dp circle (default focus) -->
+            <LinearLayout
+                android:id="@+id/btnPlayPause"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/control_btn_circle_selector"
+                android:gravity="center"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:clickable="true"
+                android:layout_marginEnd="8dp"
+                android:nextFocusLeft="@id/btnPrevious"
+                android:nextFocusRight="@id/btnNext">
+                <TextView
+                    android:id="@+id/playPauseIcon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏸"
+                    android:textSize="19sp"
+                    android:textColor="#F2C9B6" />
+            </LinearLayout>
+
+            <!-- ⏭ Next — 42×42 dp circle -->
+            <LinearLayout
+                android:id="@+id/btnNext"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/control_btn_circle_selector"
+                android:gravity="center"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:clickable="true"
+                android:nextFocusLeft="@id/btnPlayPause">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏭"
+                    android:textSize="16sp"
+                    android:textColor="#F2C9B6" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+    <!-- ════════════════════════════════════════════
+         RIGHT PANEL — Instagram Promo / Services (20%)
+         ════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/rightPanel"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="20"
+        android:layout_marginStart="5dp"
+        android:background="@drawable/panel_rounded_bg"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="12dp">
+
+        <!-- ── SLIDE A: Instagram QR ── -->
+        <LinearLayout
+            android:id="@+id/rightSlotInstagram"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="visible">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📸"
+                android:textSize="26sp"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="FOLLOW OUR"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#E4B49F"
+                android:letterSpacing="0.10"
+                android:gravity="center"
+                android:layout_marginBottom="2dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TRANSFORMATIONS"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="#F2C9B6"
+                android:letterSpacing="0.08"
+                android:gravity="center"
+                android:layout_marginBottom="10dp" />
+
+            <ImageView
+                android:id="@+id/rightQrImage"
+                android:layout_width="125dp"
+                android:layout_height="125dp"
+                android:background="#FFFFFF"
+                android:padding="5dp"
+                android:scaleType="fitXY"
+                android:layout_marginBottom="8dp" />
+
+            <View
+                android:layout_width="34dp"
+                android:layout_height="1dp"
+                android:background="#55E4B49F"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@wakale_dipali_"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#E4B49F"
+                android:gravity="center"
+                android:layout_marginBottom="3dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Scan to Follow"
+                android:textSize="9sp"
+                android:textColor="#99D9AD98"
+                android:gravity="center"
+                android:letterSpacing="0.04" />
+
+        </LinearLayout>
+
+        <!-- ── SLIDE B: Our Services ── -->
+        <LinearLayout
+            android:id="@+id/rightSlotServices"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✨"
+                android:textSize="26sp"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="OUR SERVICES"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="#F2C9B6"
+                android:letterSpacing="0.12"
+                android:gravity="center"
+                android:layout_marginBottom="8dp" />
+
+            <View
+                android:layout_width="40dp"
+                android:layout_height="1dp"
+                android:background="#E4B49F"
+                android:layout_marginBottom="12dp" />
+
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="◆" android:textSize="7sp" android:textColor="#E4B49F" android:layout_marginEnd="7dp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Hair Styling" android:textSize="12sp" android:textColor="#D9AD98" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="◆" android:textSize="7sp" android:textColor="#E4B49F" android:layout_marginEnd="7dp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Hair Treatment" android:textSize="12sp" android:textColor="#D9AD98" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="◆" android:textSize="7sp" android:textColor="#E4B49F" android:layout_marginEnd="7dp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Hair Extensions" android:textSize="12sp" android:textColor="#D9AD98" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="◆" android:textSize="7sp" android:textColor="#E4B49F" android:layout_marginEnd="7dp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Scalp Treatment" android:textSize="12sp" android:textColor="#D9AD98" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="◆" android:textSize="7sp" android:textColor="#E4B49F" android:layout_marginEnd="7dp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Skin Care" android:textSize="12sp" android:textColor="#D9AD98" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✦  ✦  ✦"
+                android:textSize="8sp"
+                android:textColor="#44E4B49F"
+                android:layout_marginTop="12dp"
+                android:letterSpacing="0.16" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

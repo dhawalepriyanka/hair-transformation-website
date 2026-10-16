@@ -9,13 +9,14 @@ android {
         applicationId = "com.dipaliwakale.tv"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "3.1"
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -49,4 +50,5 @@ dependencies {
   implementation("androidx.core:core-ktx:1.13.1")
   implementation("androidx.appcompat:appcompat:1.7.0")
   implementation("androidx.webkit:webkit:1.11.0")
+  implementation("com.google.zxing:core:3.5.3")
 }

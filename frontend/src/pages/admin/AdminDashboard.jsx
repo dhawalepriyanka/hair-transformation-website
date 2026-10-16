@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { validateMediaFile, validateVideoSource } from '../../services/transformationMedia.js';
+import { validateMediaFile, validateVideoSource, isInstagramUrl } from '../../services/transformationMedia.js';
 import { setAdminSession, getStaffSession } from '../../services/adminSession';
 import { Link, useNavigate } from 'react-router-dom';
+import { compressImageFile, fileToOptimizedDataUri } from '../../services/imageOptimizer.js';
 import {
   fetchProducts, deleteProduct, updateProduct,
   fetchTransformations, createTransformation, updateTransformation, deleteTransformation,
-  fetchSlideshowSettings, saveSlideshowSettings, DEFAULT_SLIDESHOW_SETTINGS
+  fetchSlideshowSettings, saveSlideshowSettings, DEFAULT_SLIDESHOW_SETTINGS,
+  uploadTransformationMediaFile
 } from '../../services/api';
 import {
   Plus, Edit, Trash2, Search, LogOut, Eye, EyeOff,
@@ -50,6 +52,7 @@ const AdminDashboard = () => {
   const [savingTransformation, setSavingTransformation] = useState(false);
   const [videoError, setVideoError] = useState('');
   const [pairErrors, setPairErrors] = useState({});
+  const [uploadStatus, setUploadStatus] = useState({});
   const mediaReader = useRef(null);
   const [formData, setFormData] = useState({
     clientName: '',
@@ -68,7 +71,7 @@ const AdminDashboard = () => {
 
   const navigate = useNavigate();
 
-  const handleFileUpload = (e, field) => {
+  const handleFileUpload = async (e, field) => {
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!file) return;
@@ -79,22 +82,52 @@ const AdminDashboard = () => {
       return;
     }
     mediaReader.current?.abort();
-    const reader = new FileReader();
-    mediaReader.current = reader;
     setReadingMedia(true);
-    reader.onload = () => {
-      setFormData((prev) => ({ ...prev, [field]: reader.result }));
-      if (field === 'video') setVideoError('');
-      setPairErrors(prev => ({ ...prev, [field]: '' }));
-    };
-    reader.onerror = () => alert('Could not read this file. Please choose it again.');
-    reader.onloadend = () => {
-      if (mediaReader.current === reader) {
-        mediaReader.current = null;
-        setReadingMedia(false);
+    setUploadStatus(prev => ({ ...prev, [field]: 'optimizing' }));
+
+    try {
+      if (file.type.startsWith('image/')) {
+        // 1. Optimize & compress image in browser (reduces 8MB to ~150KB)
+        const compressed = await compressImageFile(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
+        const localPreview = await fileToOptimizedDataUri(compressed);
+        setFormData(prev => ({ ...prev, [field]: localPreview }));
+        if (field === 'video') setVideoError('');
+        setPairErrors(prev => ({ ...prev, [field]: '' }));
+
+        // 2. Upload to Cloud / Persistent Storage
+        setUploadStatus(prev => ({ ...prev, [field]: 'uploading' }));
+        const uploadedUrl = await uploadTransformationMediaFile(compressed, field);
+        if (uploadedUrl && typeof uploadedUrl === 'string') {
+          setFormData(prev => ({ ...prev, [field]: uploadedUrl }));
+        }
+      } else {
+        // Video file
+        setUploadStatus(prev => ({ ...prev, [field]: 'reading' }));
+        const reader = new FileReader();
+        mediaReader.current = reader;
+        const base64Promise = new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const rawBase64 = await base64Promise;
+        setFormData(prev => ({ ...prev, [field]: rawBase64 }));
+        if (field === 'video') setVideoError('');
+        setPairErrors(prev => ({ ...prev, [field]: '' }));
+
+        // Upload video to Cloud / Backend
+        setUploadStatus(prev => ({ ...prev, [field]: 'uploading' }));
+        const uploadedUrl = await uploadTransformationMediaFile(file, field);
+        if (uploadedUrl && typeof uploadedUrl === 'string') {
+          setFormData(prev => ({ ...prev, [field]: uploadedUrl }));
+        }
       }
-    };
-    reader.readAsDataURL(file);
+      setUploadStatus(prev => ({ ...prev, [field]: 'ready' }));
+    } catch (err) {
+      console.warn('File processing note:', err.message);
+    } finally {
+      setReadingMedia(false);
+    }
   };
 
   useEffect(() => () => mediaReader.current?.abort(), []);
@@ -265,8 +298,12 @@ const AdminDashboard = () => {
 
     try {
       if (mediaType === 'video') {
-        mediaData.video = validateVideoSource(mediaData.video);
-        if (videoError) throw new Error(videoError);
+        if (!isInstagramUrl(mediaData.video)) {
+          mediaData.video = validateVideoSource(mediaData.video);
+          if (videoError) throw new Error(videoError);
+        } else {
+          mediaData.video = mediaData.video.trim();
+        }
       }
       if (mediaType === 'videos') {
         if (!mediaData.beforeVideo || !mediaData.afterVideo) throw new Error('Please add both Before and After videos.');
@@ -1077,7 +1114,18 @@ const AdminDashboard = () => {
                       style={{ width: '100%', padding: '0.55rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.82rem' }}
                     />
 
-                    {formData.image && (
+                    {formData.image && isInstagramUrl(formData.image) ? (
+                      <div style={{ marginTop: '0.6rem', padding: '0.75rem', background: '#FFF5F2', border: '1.5px solid #F2C8BD', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)', display: 'grid', placeItems: 'center', color: '#FFF', fontSize: '12px' }}>📸</span>
+                          <div>
+                            <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#9A5F4D' }}>Instagram Post Connected</div>
+                            <a href={formData.image} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', color: '#666', textDecoration: 'underline' }}>{formData.image}</a>
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => setFormData({ ...formData, image: '' })} style={{ background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>Remove</button>
+                      </div>
+                    ) : formData.image ? (
                       <div style={{ marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <img
                           src={formData.image}
@@ -1093,7 +1141,7 @@ const AdminDashboard = () => {
                           Remove
                         </button>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 )}
 
@@ -1128,18 +1176,29 @@ const AdminDashboard = () => {
                     </label>
                     <input id="video-file-upload" type="file" accept="video/mp4,video/webm,video/ogg" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'video')} />
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '0.4rem' }}>— or paste direct video URL —</div>
-                  <input type="url" aria-label="Direct video URL" placeholder="https://example.com/video.mp4" disabled={readingMedia} value={formData.video.startsWith('data:') ? '' : formData.video} onChange={(e) => { setVideoError(''); setFormData({ ...formData, video: e.target.value }); }} style={{ width: '100%', padding: '0.55rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.82rem' }} />
-                  <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.4rem' }}>MP4, WebM or Ogg · Files up to 3MB. Links must point directly to a playable video.</p>
-                  {readingMedia && <p role="status">Reading media…</p>}
+                  <div style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '0.4rem' }}>— or paste direct video / Instagram Reel URL —</div>
+                  <input type="url" aria-label="Direct video URL" placeholder="https://example.com/video.mp4 or Instagram Reel URL" disabled={readingMedia} value={formData.video.startsWith('data:') ? '' : formData.video} onChange={(e) => { setVideoError(''); setFormData({ ...formData, video: e.target.value }); }} style={{ width: '100%', padding: '0.55rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.82rem' }} />
+                  <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.4rem' }}>MP4, WebM, Ogg, or public Instagram Reel links (@wakale_dipali_).</p>
+                  {readingMedia && <p role="status">Processing media…</p>}
                   {formData.video.startsWith('data:') && <p role="status">Local video selected</p>}
-                  {videoError && <p role="alert" style={{ color: '#C62828' }}>{videoError}</p>}
-                  {formData.video && (
+                  {videoError && !isInstagramUrl(formData.video) && <p role="alert" style={{ color: '#C62828' }}>{videoError}</p>}
+                  {formData.video && isInstagramUrl(formData.video) ? (
+                    <div style={{ marginTop: '0.75rem', padding: '0.85rem', background: '#FFF5F2', border: '1.5px solid #F2C8BD', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)', display: 'grid', placeItems: 'center', color: '#FFF', fontSize: '13px' }}>📸</span>
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#9A5F4D' }}>Instagram Reel Connected</div>
+                          <a href={formData.video} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#666', textDecoration: 'underline' }}>{formData.video}</a>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => { setVideoError(''); setFormData({ ...formData, video: '' }); }} style={{ background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>Remove Video</button>
+                    </div>
+                  ) : formData.video ? (
                     <div style={{ marginTop: '0.75rem' }}>
-                      <video key={formData.video} src={formData.video} controls muted playsInline preload="metadata" onLoadedMetadata={() => setVideoError('')} onError={() => setVideoError('This video could not be played. Choose a supported file or check the direct video URL.')} style={{ width: '100%', maxHeight: '220px', borderRadius: '8px', background: '#111' }} />
+                      <video key={formData.video} src={formData.video} controls muted playsInline preload="metadata" onLoadedMetadata={() => setVideoError('')} onError={() => { if (!isInstagramUrl(formData.video)) setVideoError('This video could not be played. Choose a supported file or check the direct video URL.'); }} style={{ width: '100%', maxHeight: '220px', borderRadius: '8px', background: '#111' }} />
                       <button type="button" onClick={() => { mediaReader.current?.abort(); setVideoError(''); setFormData({ ...formData, video: '' }); }} style={{ marginTop: '0.5rem', background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>Remove Video</button>
                     </div>
-                  )}
+                  ) : null}
                 </div>}
 
                 <div style={{ marginBottom: '1.5rem' }}>
@@ -1166,10 +1225,10 @@ const AdminDashboard = () => {
 
                   <button
                     type="submit"
-                    disabled={readingMedia || savingTransformation || (mediaType === 'video' && !!videoError) || (mediaType === 'videos' && !!(pairErrors.beforeVideo || pairErrors.afterVideo))}
+                    disabled={readingMedia || savingTransformation || (mediaType === 'video' && !!videoError && !isInstagramUrl(formData.video)) || (mediaType === 'videos' && !!(pairErrors.beforeVideo || pairErrors.afterVideo))}
                     style={{ padding: '0.7rem 1.6rem', borderRadius: '25px', border: 'none', backgroundColor: '#C88A75', color: '#FFF', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <Check size={16} /> {readingMedia ? 'Reading Media…' : savingTransformation ? 'Saving…' : editingItem ? 'Update Transformation' : 'Save Transformation'}
+                    <Check size={16} /> {readingMedia ? 'Processing Media…' : savingTransformation ? 'Saving to Database…' : editingItem ? 'Update Transformation' : 'Save Transformation'}
                   </button>
                 </div>
               </form>

@@ -24,31 +24,85 @@ const RoleRoute = ({ role, children }) => {
   return session?.user?.role === role ? children : <Navigate to="/admin/login" replace />;
 };
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          backgroundColor: '#0D0807',
+          color: '#F5B5A1',
+          padding: '40px',
+          fontFamily: 'sans-serif',
+          minHeight: '100vh',
+          boxSizing: 'border-box'
+        }}>
+          <h2>Dipali Wakale TV - Error</h2>
+          <pre style={{ color: '#fff', background: 'rgba(255,255,255,0.1)', padding: '16px', borderRadius: '8px', overflow: 'auto' }}>
+            {String(this.state.error?.stack || this.state.error?.message || this.state.error)}
+          </pre>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: '20px',
+              padding: '12px 24px',
+              borderRadius: '20px',
+              border: 'none',
+              background: '#C88A75',
+              color: '#fff',
+              fontSize: '1rem',
+              cursor: 'pointer'
+            }}
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   const isTv = typeof window !== 'undefined' && (
     window.location.pathname === '/tv' ||
+    window.location.pathname === '/index.html' ||
     window.location.search.includes('tv=1') ||
-    window.location.hash.includes('tv')
+    window.location.hash.includes('tv') ||
+    Boolean(window.AndroidBridge)
   );
 
   if (isTv) {
     return (
-      <SelectionProvider>
-        <TransformationsPage isTvMode={true} />
-      </SelectionProvider>
+      <ErrorBoundary>
+        <SelectionProvider>
+          <TransformationsPage isTvMode={true} />
+        </SelectionProvider>
+      </ErrorBoundary>
     );
   }
 
   return (
-    <SelectionProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <ScrollToTop />
-        <div className="app-wrapper">
-          <Navbar />
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/tv" element={<TransformationsPage isTvMode={true} />} />
+    <ErrorBoundary>
+      <SelectionProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <ScrollToTop />
+          <div className="app-wrapper">
+            <Navbar />
+            <main className="main-content">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/index.html" element={<TransformationsPage isTvMode={true} />} />
+                <Route path="/tv" element={<TransformationsPage isTvMode={true} />} />
               <Route path="/hair-styles" element={<ProductsPage />} />
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/selected-styles" element={<Navigate to="/admin/patients" replace />} />
@@ -77,6 +131,7 @@ function App() {
         </div>
       </Router>
     </SelectionProvider>
+  </ErrorBoundary>
   );
 }
 
