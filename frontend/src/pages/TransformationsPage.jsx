@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ArrowLeft, Maximize } from 'lucide-react';
 import { fetchTransformations, fetchSlideshowSettings } from '../services/api';
 import VideoComparison from '../components/VideoComparison';
 
@@ -16,10 +16,51 @@ import VideoComparison from '../components/VideoComparison';
        • Center panel expands to 100% full screen (50% Before | 50% After), aspect-ratio preserved
        • Side panels automatically RESTORE when next item is a video
    - Remote Controls: Exactly 3 buttons (Previous, Play/Pause, Next) with 4s auto-hide & D-pad focus
+   - Monitor Fullscreen: Automatically expands to hardware full screen of monitor on load/gesture;
+                         Back button / Escape cleanly exits to windowed view or home.
    - Data Sync: Automatically syncs with Admin Dashboard transformations & app resume
    ═══════════════════════════════════════════════════════════════════ */
 
 const AUTOHIDE_DELAY_MS = 4000;     // auto-hide remote controls after 4s
+
+// Cross-browser Fullscreen Helpers
+const isDocumentFullscreen = () => {
+  return typeof document !== 'undefined' && Boolean(
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement ||
+    document.msFullscreenElement
+  );
+};
+
+const requestFullscreenOnElement = async (el) => {
+  if (!el) return;
+  if (el.requestFullscreen) {
+    return el.requestFullscreen();
+  } else if (el.webkitRequestFullscreen) {
+    return el.webkitRequestFullscreen();
+  } else if (el.mozRequestFullScreen) {
+    return el.mozRequestFullScreen();
+  } else if (el.msRequestFullscreen) {
+    return el.msRequestFullscreen();
+  }
+};
+
+const exitFullscreenOnDoc = async () => {
+  try {
+    if (document.exitFullscreen) {
+      await document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      await document.webkitExitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+      await document.mozCancelFullScreen();
+    } else if (document.msExitFullscreen) {
+      await document.msExitFullscreen();
+    }
+  } catch (err) {
+    console.warn('Exit fullscreen failed:', err);
+  }
+};
 
 const TransformationsPage = () => {
   const [transformationsList, setTransformationsList] = useState([]);
@@ -31,6 +72,11 @@ const TransformationsPage = () => {
   const [cursorVisible, setCursorVisible] = useState(true);
   const [focusedButton, setFocusedButton] = useState(1); // 0: Prev, 1: Play/Pause, 2: Next
   const [progressPercent, setProgressPercent] = useState(0);
+
+  // Hardware Monitor Fullscreen state
+  const [isMonitorFullscreen, setIsMonitorFullscreen] = useState(() => isDocumentFullscreen());
+  const hasUserExitedFullscreenRef = useRef(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
   // Horizontal (16:9 landscape) video detection to acquire 100% full screen
   const [isVideoHorizontal, setIsVideoHorizontal] = useState(false);
@@ -330,6 +376,111 @@ const TransformationsPage = () => {
     wakeControls();
   }, [wakeControls]);
 
+  // Enter hardware monitor fullscreen
+  const enterMonitorFullscreen = useCallback(async () => {
+    try {
+      hasUserExitedFullscreenRef.current = false;
+      setHasUserInteracted(true);
+      if (!isDocumentFullscreen()) {
+        await requestFullscreenOnElement(document.documentElement);
+        try {
+          if (!window.history.state?.tvFullscreen) {
+            window.history.pushState({ tvFullscreen: true }, '');
+          }
+        } catch (_) {}
+      }
+    } catch (err) {
+      console.warn('Monitor fullscreen request requires user interaction:', err?.message);
+    }
+  }, []);
+
+  // Back action: if in monitor fullscreen -> exit to windowed screenshot page; otherwise navigate back
+  const handleBackAction = useCallback((e) => {
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
+    setHasUserInteracted(true);
+
+    if (isDocumentFullscreen()) {
+      hasUserExitedFullscreenRef.current = true;
+      exitFullscreenOnDoc();
+      if (window.history.state?.tvFullscreen) {
+        window.history.back();
+      }
+      return;
+    }
+
+    // Not in monitor fullscreen, navigate back to salon website or home
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = '/';
+    }
+  }, []);
+
+  // Monitor fullscreen synchronization & auto-fullscreen attempt on load
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isFs = isDocumentFullscreen();
+      setIsMonitorFullscreen(isFs);
+      if (!isFs) {
+        hasUserExitedFullscreenRef.current = true;
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    const handlePopState = () => {
+      if (isDocumentFullscreen()) {
+        hasUserExitedFullscreenRef.current = true;
+        exitFullscreenOnDoc();
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    // 1. Attempt silent fullscreen immediately on mount (works when navigated from a click)
+    if (!hasUserExitedFullscreenRef.current && !isDocumentFullscreen()) {
+      requestFullscreenOnElement(document.documentElement)
+        .then(() => {
+          try {
+            if (!window.history.state?.tvFullscreen) {
+              window.history.pushState({ tvFullscreen: true }, '');
+            }
+          } catch (_) {}
+        })
+        .catch(() => {
+          // Expected in Chrome/Edge if URL was entered directly without prior click
+        });
+    }
+
+    // 2. Fallback: on the very first user interaction anywhere on the page, enter monitor fullscreen
+    const handleFirstActivation = (e) => {
+      // Don't auto-fullscreen if user specifically clicked the Back button
+      if (e?.target?.closest && e.target.closest('.tv-apk-back-btn')) {
+        return;
+      }
+      if (!hasUserExitedFullscreenRef.current && !isDocumentFullscreen()) {
+        enterMonitorFullscreen();
+      }
+    };
+
+    window.addEventListener('pointerdown', handleFirstActivation, { once: true });
+    window.addEventListener('keydown', handleFirstActivation, { once: true });
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('pointerdown', handleFirstActivation);
+      window.removeEventListener('keydown', handleFirstActivation);
+    };
+  }, [enterMonitorFullscreen]);
+
   // Synchronize actual video playback with isPlaying state
   useEffect(() => {
     if (videoRef.current && isVideo) {
@@ -495,17 +646,25 @@ const TransformationsPage = () => {
         setFocusedButton(1);
         setControlsVisible(true);
       }
-      // 7. BACK / ESCAPE
-      else if (e.key === 'Escape' || e.key === 'Back' || e.key === 'BrowserBack') {
-        if (window.history.length > 1) {
-          window.history.back();
+      // 7. BACK / ESCAPE / REMOTE BACK (Code 4 / 27 / 10009)
+      else if (e.key === 'Escape' || e.key === 'Back' || e.key === 'BrowserBack' || e.keyCode === 10009 || e.keyCode === 27 || e.keyCode === 4) {
+        e.preventDefault();
+        handleBackAction(e);
+      }
+      // 8. F KEY / F11: Fullscreen Toggle
+      else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        if (isDocumentFullscreen()) {
+          handleBackAction(e);
+        } else {
+          enterMonitorFullscreen();
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [controlsVisible, focusedButton, handlePrevious, handleNext, handleTogglePlayPause, wakeControls]);
+  }, [controlsVisible, focusedButton, handlePrevious, handleNext, handleTogglePlayPause, handleBackAction, enterMonitorFullscreen, wakeControls]);
 
   // Sync DOM focus to active button for native Android TV webview D-pad
   useEffect(() => {
@@ -534,12 +693,14 @@ const TransformationsPage = () => {
       } else if (action === 'up' || action === 'down') {
         setFocusedButton(1);
         setControlsVisible(true);
+      } else if (action === 'back' || action === 'escape') {
+        handleBackAction();
       }
     };
     return () => {
       delete window.onTvRemoteKey;
     };
-  }, [handlePrevious, handleNext, handleTogglePlayPause, wakeControls]);
+  }, [handlePrevious, handleNext, handleTogglePlayPause, handleBackAction, wakeControls]);
 
   // Mouse activity listener to show controls and auto-hide
   useEffect(() => {
@@ -629,6 +790,55 @@ const TransformationsPage = () => {
                Transformation Media + Floating Overlay Controls
              ══════════════════════════════════════════════════════ */}
           <div className={`tv-apk-center-panel ${isFullScreen ? 'tv-fullscreen-mode' : ''}`}>
+            {/* Top Bar Navigation: Back & Fullscreen buttons (fades smoothly with remote controls) */}
+            <div className={`tv-apk-top-bar ${controlsVisible ? 'visible' : 'hidden'}`}>
+              <button
+                type="button"
+                className="tv-apk-nav-btn tv-apk-back-btn"
+                onClick={handleBackAction}
+                title={isMonitorFullscreen ? "Exit Fullscreen (Back to Window)" : "Back to Website"}
+                aria-label="Back"
+              >
+                <ArrowLeft size={18} strokeWidth={2.4} />
+                <span className="tv-apk-nav-label">
+                  {isMonitorFullscreen ? 'Exit Fullscreen' : 'Back'}
+                </span>
+              </button>
+
+              {!isMonitorFullscreen && (
+                <button
+                  type="button"
+                  className="tv-apk-nav-btn tv-apk-fullscreen-btn"
+                  onClick={(e) => {
+                    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+                    enterMonitorFullscreen();
+                  }}
+                  title="Enter Fullscreen TV Mode (F)"
+                  aria-label="Full Screen"
+                >
+                  <Maximize size={16} strokeWidth={2.2} />
+                  <span className="tv-apk-nav-label">Full Screen</span>
+                </button>
+              )}
+            </div>
+
+            {/* Subtle One-Time Prompt for 1-Click Monitor Fullscreen */}
+            {!isMonitorFullscreen && !hasUserExitedFullscreenRef.current && !hasUserInteracted && (
+              <button
+                type="button"
+                className="tv-apk-fullscreen-prompt"
+                onClick={(e) => {
+                  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+                  enterMonitorFullscreen();
+                }}
+                aria-label="Click to Enter Fullscreen Mode"
+              >
+                <span className="tv-apk-prompt-sparkle">✨</span>
+                <span>Click anywhere to Enter Full Screen</span>
+                <Maximize size={15} strokeWidth={2.2} style={{ marginLeft: '4px' }} />
+              </button>
+            )}
+
             {/* Compact Service Title Overlay at Top */}
             {treatmentTitle && (
               <div className="tv-apk-treatment-overlay tv-apk-fade-in" key={`badge-${activeSlide}`}>
@@ -826,6 +1036,16 @@ const TransformationsPage = () => {
           <h2>DIPALI WAKALE CLINIC</h2>
           <p className="tv-apk-empty-sub">Connecting to Transformation Display...</p>
           <p className="tv-apk-empty-hint">Publish transformations from the Admin Dashboard to showcase on this TV.</p>
+          <button
+            type="button"
+            className="tv-apk-nav-btn tv-apk-back-btn"
+            style={{ marginTop: '22px' }}
+            onClick={handleBackAction}
+            aria-label="Back"
+          >
+            <ArrowLeft size={18} strokeWidth={2.4} />
+            <span>Back to Website</span>
+          </button>
         </div>
       )}
     </div>

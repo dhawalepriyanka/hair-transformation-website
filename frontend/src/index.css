@@ -3483,6 +3483,120 @@ html { scroll-behavior: smooth; }
   margin: 0;
 }
 
+/* ── TOP BAR (Back & Fullscreen Navigation) ── */
+.tv-apk-top-bar {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  right: 20px;
+  z-index: 55;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.tv-apk-top-bar.visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) !important;
+}
+
+.tv-apk-top-bar.hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(-10px) !important;
+}
+
+.tv-apk-nav-btn {
+  pointer-events: auto !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(20, 6, 11, 0.85);
+  color: #F2C9B6;
+  border: 1.5px solid rgba(228, 180, 159, 0.35);
+  border-radius: 9999px;
+  padding: 8px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  cursor: pointer !important;
+  user-select: none;
+  outline: none;
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+.tv-apk-nav-btn:hover,
+.tv-apk-nav-btn:focus,
+.tv-apk-nav-btn:focus-visible {
+  background: rgba(45, 12, 22, 0.95);
+  color: #FFF2C9;
+  border-color: #FFF2C9;
+  transform: scale(1.05);
+  box-shadow: 0 0 16px rgba(242, 201, 182, 0.6);
+}
+
+.tv-apk-nav-btn:active {
+  transform: scale(0.98);
+}
+
+/* ── Golden Fullscreen Prompt for Instant First-Click Activation ── */
+.tv-apk-fullscreen-prompt {
+  position: absolute;
+  bottom: 86px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 48;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(20, 6, 11, 0.92);
+  color: #FFF2C9;
+  border: 1.5px solid rgba(242, 201, 182, 0.6);
+  border-radius: 9999px;
+  padding: 10px 22px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.65), 0 0 20px rgba(200, 138, 117, 0.25);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  cursor: pointer;
+  animation: tvPromptPulse 2.6s infinite ease-in-out;
+  transition: transform 0.2s ease, opacity 0.3s ease;
+}
+
+.tv-apk-fullscreen-prompt:hover {
+  transform: translateX(-50%) scale(1.05);
+  border-color: #FFF2C9;
+}
+
+@keyframes tvPromptPulse {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.65), 0 0 16px rgba(200, 138, 117, 0.2);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.04);
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.8), 0 0 30px rgba(242, 201, 182, 0.45);
+  }
+}
+
+@media (max-width: 640px) {
+  .tv-apk-nav-label {
+    display: none;
+  }
+  .tv-apk-nav-btn {
+    padding: 8px 10px;
+  }
+}
+
 /* Hide comparison controls in TV clinic mode */
 .tv-apk-root .video-comparison-controls {
   display: none !important;
