@@ -52,8 +52,8 @@ const Navbar = () => {
             </li>}
             {!staffSession && <li>
               <Link
-                to="/transformations"
-                className={`nav-link ${isActive('/transformations') ? 'active' : ''}`}
+                to="/tv"
+                className={`nav-link ${isActive('/tv') || isActive('/transformations') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Transformations

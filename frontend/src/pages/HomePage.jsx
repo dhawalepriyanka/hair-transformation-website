@@ -65,7 +65,7 @@ const HomePage = () => {
                   Explore Products <ArrowRight size={18} />
                 </Link>
                 <Link
-                  to="/transformations"
+                  to="/tv"
                   className="hero-secondary-button"
                 >
                   View Transformations

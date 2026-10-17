@@ -10,7 +10,7 @@
           "destination": "/index.html"
         },
         {
-          "source": "/(products|selected-styles|selected-products|transformations)(/)?",
+          "source": "/(products|selected-styles|selected-products|transformations|tv)(/)?",
           "destination": "/index.html"
         }
       ]

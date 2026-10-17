@@ -73,6 +73,11 @@ class ErrorBoundary extends React.Component {
 }
 
 function App() {
+  // If user visits /transformations, update URL in browser address bar to /tv
+  if (typeof window !== 'undefined' && window.location.pathname === '/transformations') {
+    window.history.replaceState(null, '', '/tv' + window.location.search + window.location.hash);
+  }
+
   const isTv = typeof window !== 'undefined' && (
     window.location.pathname === '/tv' ||
     window.location.pathname === '/transformations' ||
@@ -108,7 +113,7 @@ function App() {
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/selected-styles" element={<Navigate to="/admin/patients" replace />} />
               <Route path="/selected-products" element={<Navigate to="/admin/patients" replace />} />
-              <Route path="/transformations" element={<TransformationsPage />} />
+              <Route path="/transformations" element={<Navigate to="/tv" replace />} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLogin />} />

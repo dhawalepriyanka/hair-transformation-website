@@ -1482,7 +1482,7 @@ const AdminDashboard = () => {
                 {/* Actions */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                   <a
-                    href="/transformations"
+                    href="/tv"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{

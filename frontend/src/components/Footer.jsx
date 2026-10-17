@@ -130,7 +130,7 @@ const Footer = () => {
             <ul style={{ listStyle: 'none', lineHeight: '2.2', fontSize: '0.9rem', color: '#CCC' }}>
               <li><FooterLink to="/">Home</FooterLink></li>
               <li><FooterLink to="/hair-styles">Products Catalogue</FooterLink></li>
-              <li><FooterLink to="/transformations">Real Transformations</FooterLink></li>
+              <li><FooterLink to="/tv">Real Transformations</FooterLink></li>
               {isAdmin && <li><FooterLink to="/selected-styles">Selected Products</FooterLink></li>}
             </ul>
             <FooterLink to="/admin/login" className="footer-admin-button">Admin Login</FooterLink>
@@ -139,8 +139,8 @@ const Footer = () => {
           <div>
             <h4 className="footer-title">Specialized Services</h4>
             <ul style={{ listStyle: 'none', lineHeight: '2.2', fontSize: '0.9rem', color: '#CCC' }}>
-              <li><FooterLink to="/transformations">Hair &amp; Scalp Consultation</FooterLink></li>
-              <li><FooterLink to="/transformations">Hair Regrowth Care</FooterLink></li>
+              <li><FooterLink to="/tv">Hair &amp; Scalp Consultation</FooterLink></li>
+              <li><FooterLink to="/tv">Hair Regrowth Care</FooterLink></li>
               <li><FooterLink to="/hair-styles">Product Guidance</FooterLink></li>
               <li><FooterLink to="/hair-styles">Skin Care &amp; Wellness</FooterLink></li>
             </ul>
