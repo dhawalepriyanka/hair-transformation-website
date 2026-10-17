@@ -146,10 +146,14 @@ const uploadTransformationMedia = async (req, res, next) => {
     let mimetype = 'image/jpeg';
     const field = req.body?.field || 'media';
 
-    if (req.file) {
-      buffer = req.file.buffer;
-      originalname = req.file.originalname || 'upload';
-      mimetype = req.file.mimetype || 'image/jpeg';
+    const uploadedFile = req.file || (Array.isArray(req.files) && req.files.length > 0 ? req.files[0] : null);
+    if (uploadedFile) {
+      buffer = uploadedFile.buffer;
+      originalname = uploadedFile.originalname || 'upload';
+      mimetype = uploadedFile.mimetype || 'image/jpeg';
+      if (mimetype === 'application/octet-stream' && /\.(mp4|m4v|mov)$/i.test(originalname)) {
+        mimetype = 'video/mp4';
+      }
     } else if (req.body?.data && typeof req.body.data === 'string') {
       const dataStr = req.body.data.trim();
       if (dataStr.startsWith('data:')) {

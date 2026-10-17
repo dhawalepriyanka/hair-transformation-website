@@ -1,34 +1,48 @@
 export const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/ogg'];
 const MB = 1024 * 1024;
+export const MAX_VIDEO_SIZE_MB = 100;
+export const MAX_IMAGE_SIZE_MB = 15;
 
 export function isInstagramUrl(url) {
   if (!url || typeof url !== 'string') return false;
   return /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:p|reel|tv|share)\/[A-Za-z0-9_-]+/i.test(url.trim());
 }
 
-export function validateMediaFile(file, field) {
+export function validateMediaFile(file, field, customMaxMb) {
   const video = ['video', 'beforeVideo', 'afterVideo'].includes(field);
   if (video ? !VIDEO_TYPES.includes(file.type) : !file.type.startsWith('image/')) {
     throw new Error(video ? 'Choose an MP4, WebM, or Ogg video.' : 'Choose an image file.');
   }
-  const limit = video ? 3 : 8;
+  const limit = customMaxMb !== undefined ? customMaxMb : (video ? MAX_VIDEO_SIZE_MB : MAX_IMAGE_SIZE_MB);
   if (!file.size || file.size > limit * MB) {
     throw new Error(`Choose a non-empty ${video ? 'video' : 'image'} file no larger than ${limit}MB.`);
   }
 }
 
-export function validateVideoSource(source) {
+export function validateVideoSource(source, customMaxMb) {
   if (typeof source !== 'string' || !source.trim()) {
     throw new Error('Choose a video file or paste a direct video URL.');
   }
   source = source.trim();
+  if (isInstagramUrl(source)) {
+    return source;
+  }
+  if (source.startsWith('/')) {
+    if (!/\.(mp4|webm|ogg)(\?.*)?$/i.test(source) && !source.startsWith('/uploads/') && !source.startsWith('/api/')) {
+      throw new Error('Choose a valid MP4, WebM, or Ogg video path.');
+    }
+    return source;
+  }
+  if (source.startsWith('blob:')) {
+    return source;
+  }
   if (source.startsWith('data:')) {
     const match = /^data:(video\/(?:mp4|webm|ogg));base64,([A-Za-z0-9+/]+={0,2})$/.exec(source);
     if (!match || match[2].length % 4 !== 0) {
       throw new Error('Choose a valid MP4, WebM, or Ogg video file.');
     }
     const bytes = match[2].length * 3 / 4 - (match[2].endsWith('==') ? 2 : match[2].endsWith('=') ? 1 : 0);
-    validateMediaFile({ type: match[1], size: bytes }, 'video');
+    validateMediaFile({ type: match[1], size: bytes }, 'video', customMaxMb);
   } else {
     let url;
     try { url = new URL(source); } catch { /* Report the same useful error for invalid URLs. */ }

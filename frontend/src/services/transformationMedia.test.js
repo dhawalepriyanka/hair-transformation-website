@@ -16,12 +16,12 @@ beforeEach(() => {
 
 test('accepts supported video types at the limit and rejects wrong, empty and oversized files', () => {
   for (const type of ['video/mp4', 'video/webm', 'video/ogg']) {
-    assert.doesNotThrow(() => validateMediaFile({ type, size: 3 * 1024 * 1024 }, 'video'));
+    assert.doesNotThrow(() => validateMediaFile({ type, size: 100 * 1024 * 1024 }, 'video'));
   }
-  for (const file of [{ type: 'image/png', size: 10 }, { type: 'video/mp4', size: 0 }, { type: 'video/mp4', size: 3 * 1024 * 1024 + 1 }]) {
+  for (const file of [{ type: 'image/png', size: 10 }, { type: 'video/mp4', size: 0 }, { type: 'video/mp4', size: 100 * 1024 * 1024 + 1 }]) {
     assert.throws(() => validateMediaFile(file, 'video'));
   }
-  assert.doesNotThrow(() => validateMediaFile({ type: 'image/jpeg', size: 8 * 1024 * 1024 }, 'before'));
+  assert.doesNotThrow(() => validateMediaFile({ type: 'image/jpeg', size: 15 * 1024 * 1024 }, 'before'));
 });
 
 test('validates local data and direct URLs, including signed URLs', () => {
@@ -30,7 +30,7 @@ test('validates local data and direct URLs, including signed URLs', () => {
   for (const source of ['', 'bad-url', 'javascript:alert(1)', 'data:text/html;base64,AAAA', 'data:video/mp4;base64,A', 'file:///video.mp4']) {
     assert.throws(() => validateVideoSource(source));
   }
-  assert.throws(() => validateVideoSource('data:video/mp4;base64,' + 'AAAA'.repeat(1024 * 1024 + 1)));
+  assert.throws(() => validateVideoSource('data:video/mp4;base64,' + 'AAAA'.repeat(1024 * 1024 + 1), 3));
 });
 
 test('requires details, valid rating and an image pair or video', () => {
@@ -72,7 +72,7 @@ test('before/after videos require a complete pair and apply video file limits', 
   assert.throws(() => normalizeTransformation({ ...details, beforeVideo: video }), /both Before and After/);
   for (const field of ['beforeVideo', 'afterVideo']) {
     assert.throws(() => validateMediaFile({ type: 'image/png', size: 100 }, field));
-    assert.throws(() => validateMediaFile({ type: 'video/mp4', size: 3 * 1024 * 1024 + 1 }, field));
+    assert.throws(() => validateMediaFile({ type: 'video/mp4', size: 100 * 1024 * 1024 + 1 }, field));
   }
 });
 

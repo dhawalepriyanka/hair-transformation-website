@@ -241,7 +241,7 @@ const defaultTransformations = [
     id: 9100004,
     clientName: 'Pooja Kadam',
     treatment: 'Full Volume Hair Extensions Makeover',
-    village: 'Akole',
+    village: 'Akole, Maharashtra',
     period: 'Instagram Post • 1.4K Likes',
     before: '/instagram/long-hair-styling.jpg',
     after: '/instagram/hair-transformation-client.jpg',
@@ -251,14 +251,14 @@ const defaultTransformations = [
     comments: '43',
     handle: '@wakale_dipali_',
     testimonial: 'खूप सुंदर transformation! केसांची लांबी आणि घनता दोन्ही मनसोक्त वाढले.',
-    hashtags: '#beforeandafter #transformation #hairextensions #haircare',
+    hashtags: '#beforeandafter #transformation #hairextensions #haircare #wakale_dipali_',
     duration: 10,
   },
   {
     id: 9100005,
     clientName: 'Dr. Dipali Wakale Clinic Consultation',
     treatment: 'Trichological Scalp Root & Follicle Analysis',
-    village: 'Ghargaon Clinic',
+    village: 'Ghargaon Clinic (Pune-Nashik Hwy)',
     period: 'Clinic Session • Social Spotlight',
     image: '/instagram/dipali-wakale-hair-doctor-hero.png',
     category: 'Hair Regrowth',
@@ -285,6 +285,72 @@ const defaultTransformations = [
     testimonial: 'Natural sun-kissed blending without brassiness. Hair feels super healthy and soft!',
     hashtags: '#balayage #caramelhighlights #haircolor #glossyhair #trendinghair',
     duration: 9,
+  },
+  {
+    id: 9100021,
+    clientName: 'Nanoplastia Gold Mirror Shine Reel',
+    treatment: 'Nanoplastia Organic Straightening & Gloss',
+    village: 'Ghargaon Clinic (Pune-Nashik Hwy)',
+    period: 'Instagram Reel • 56K Views',
+    video: '/instagram/reels/nanoplastia-shine.mp4',
+    category: 'Hair Transformation',
+    rating: 5,
+    likes: '3.2K',
+    comments: '108',
+    handle: '@wakale_dipali_',
+    testimonial: 'शून्य फ्रिझ आणि काचेसारखी चमक! 4 ते 6 महिने केस एकदम सिल्की राहतात.',
+    hashtags: '#nanoplastia #mirrorhair #organicstraightening #hairbotox #dipaliwakale',
+    duration: 15,
+  },
+  {
+    id: 9100022,
+    clientName: 'Signature Bridal Hair Artistry Reel',
+    treatment: 'Traditional Maharashtrian Bridal Makeover & Styling',
+    village: 'Maharashtra Bridal Special',
+    period: 'Instagram Reel • 64K Views',
+    video: '/instagram/reels/bridal-styling.mp4',
+    category: 'Bridal Styling',
+    rating: 5,
+    likes: '4.8K',
+    comments: '142',
+    handle: '@wakale_dipali_',
+    testimonial: 'लग्न समारंभासाठी परिपूर्ण हेअरस्टाईल! नऊवारी साडीवर फुलांची सजावट अप्रतिम दिसली.',
+    hashtags: '#marathibride #bridalmakeover #weddinghair #floralstyling #wakale_dipali_',
+    duration: 15,
+  },
+  {
+    id: 9100019,
+    clientName: 'Kavita Thorat',
+    treatment: 'Frizz-Control Nanoplastia & Mirror Shine',
+    village: 'Sangamner, Maharashtra',
+    period: 'Instagram Post • 2.1K Likes',
+    before: '/instagram/salon-client.jpg',
+    after: '/instagram/hair-transformation-client.jpg',
+    category: 'Hair Transformation',
+    rating: 5,
+    likes: '2.1K',
+    comments: '68',
+    handle: '@wakale_dipali_',
+    testimonial: 'केसांचा फ्रिझ पूर्णपणे गेला आणि एकदम रेशमी, चमकदार पोत मिळाला. थँक्यू दिपाली दीदी!',
+    hashtags: '#beforeandafter #nanoplastia #hairbotox #frizzfree #dipaliwakale',
+    duration: 10,
+  },
+  {
+    id: 9100020,
+    clientName: 'Rutuja Jagtap',
+    treatment: 'Micro-Ring Hair Extensions Length & Density',
+    village: 'Pune, Maharashtra',
+    period: 'Instagram Post • 1.9K Likes',
+    before: '/instagram/salon-client.jpg',
+    after: '/instagram/long-hair-styling.jpg',
+    category: 'Hair Extensions',
+    rating: 5,
+    likes: '1.9K',
+    comments: '54',
+    handle: '@wakale_dipali_',
+    testimonial: 'Zero damage hair extensions with natural bounce. Absolutely seamless blending!',
+    hashtags: '#hairextensions #naturalvolume #punehair #dipaliwakale',
+    duration: 10,
   },
   {
     id: 9100007,
@@ -744,71 +810,91 @@ export const fetchTransformations = async () => {
     console.warn('Backend /api/transformations fetch failed, falling back to cached storage:', err.message);
   }
 
+  // Load existing local/cached transformations (from IndexedDB or localStorage)
+  let localList = [];
+  try {
+    localList = (await getFromIndexedDb()) || getStoredTransformations() || [];
+  } catch (e) {
+    localList = getStoredTransformations() || [];
+  }
+  if (!Array.isArray(localList)) localList = [];
+
+  const defaultIdSet = new Set(defaultTransformations.map(item => String(item.id)));
+  const legacyIds = new Set(['1', '2', '3', '4', '5', '6', '9000001', '9000002']);
+
   // If backend returned items:
   if (backendItems) {
-    // Check if there are local-only items that need migration into the persistent database
-    try {
-      const localList = getStoredTransformations();
-      const defaultIdSet = new Set(defaultTransformations.map(item => String(item.id)));
-      const legacyIds = new Set(['1', '2', '3', '4', '5', '6', '9000001', '9000002']);
+    const backendIdSet = new Set(backendItems.map(item => String(item.id)));
 
-      const itemsToMigrate = localList.filter(item => {
-        const idStr = String(item.id);
-        return !backendIdSet.has(idStr) && !defaultIdSet.has(idStr) && !legacyIds.has(idStr);
-      });
+    // Attempt to migrate any unsynced local custom items to the database
+    const itemsToMigrate = localList.filter(item => {
+      const idStr = String(item.id);
+      return !backendIdSet.has(idStr) && !defaultIdSet.has(idStr) && !legacyIds.has(idStr);
+    });
 
-      if (itemsToMigrate.length > 0) {
-        console.log(`[Migration] Migrating ${itemsToMigrate.length} local transformations to persistent database...`);
-        try {
-          const migrateRes = await apiClient.post('/transformations/migrate', itemsToMigrate);
-          if (migrateRes.data && migrateRes.data.success && Array.isArray(migrateRes.data.data)) {
-            backendItems = [...backendItems, ...migrateRes.data.data];
-          }
-        } catch (migErr) {
-          console.warn('[Migration] Batch sync note:', migErr.message);
+    if (itemsToMigrate.length > 0) {
+      console.log(`[Migration] Migrating ${itemsToMigrate.length} local transformations to persistent database...`);
+      try {
+        const migrateRes = await apiClient.post('/transformations/migrate', itemsToMigrate);
+        if (migrateRes.data && migrateRes.data.success && Array.isArray(migrateRes.data.data)) {
+          backendItems = [...backendItems, ...migrateRes.data.data];
         }
+      } catch (migErr) {
+        console.warn('[Migration] Batch sync note:', migErr.message);
       }
-    } catch (migCheckErr) {
-      console.warn('[Migration] Check error:', migCheckErr.message);
     }
 
+    // Crucial: Keep any custom transformations created locally that aren't yet in backend
+    const currentBackendIdSet = new Set(backendItems.map(item => String(item.id)));
+    const unmergedLocal = localList.filter(item => {
+      const idStr = String(item.id);
+      return !currentBackendIdSet.has(idStr) && !defaultIdSet.has(idStr) && !legacyIds.has(idStr);
+    });
+
+    const merged = [...unmergedLocal, ...backendItems];
+
     try {
-      safeSaveLocalStorage('admin_transformations', backendItems);
+      safeSaveLocalStorage('admin_transformations', merged);
+      saveToIndexedDb(merged);
     } catch (e) {}
-    return backendItems;
+    return merged;
   }
 
-  // Fallback to local storage
-  let list = getStoredTransformations();
-  const legacyIds = new Set([1, 2, 3, 4, 5, 6, 9000001, 9000002]);
-  const hasLegacy = list.some(item => legacyIds.has(Number(item.id)));
+  // Fallback to local storage when backend is unreachable
+  let list = localList.length > 0 ? localList : getStoredTransformations();
+  const hasLegacy = Array.isArray(list) && list.some(item => legacyIds.has(String(item.id)) || legacyIds.has(Number(item.id)));
   if (hasLegacy) {
-    const customItems = list.filter(item => !legacyIds.has(Number(item.id)) && !(item.id >= 9100001 && item.id <= 9100050));
+    const customItems = list.filter(item => !legacyIds.has(String(item.id)) && !legacyIds.has(Number(item.id)) && !(Number(item.id) >= 9100001 && Number(item.id) <= 9100099));
     list = [...defaultTransformations, ...customItems];
-    try { saveStoredTransformations(list); } catch (e) {}
+    try {
+      saveStoredTransformations(list);
+      saveToIndexedDb(list);
+    } catch (e) {}
   }
   return list;
 };
 
 export const createTransformation = async (itemData) => {
   itemData = normalizeTransformation(itemData);
+  let savedItem = null;
   try {
     const response = await apiClient.post('/transformations', itemData);
     if (response.data && response.data.success && response.data.data) {
-      const savedItem = response.data.data;
-      try {
-        const list = getStoredTransformations();
-        safeSaveLocalStorage('admin_transformations', [savedItem, ...list.filter(i => String(i.id) !== String(savedItem.id))]);
-      } catch (storageErr) {
-        console.warn('Local storage cache update warning (data safely saved in backend database):', storageErr.message);
-      }
-      return savedItem;
+      savedItem = response.data.data;
     }
   } catch (err) {
     console.warn('Backend /api/transformations create failed, using local storage fallback:', err.message);
   }
-  const list = getStoredTransformations();
-  const newItem = {
+
+  let list = [];
+  try {
+    list = (await getFromIndexedDb()) || getStoredTransformations() || [];
+  } catch (e) {
+    list = getStoredTransformations() || [];
+  }
+  if (!Array.isArray(list)) list = [];
+
+  const newItem = savedItem || {
     id: Date.now(),
     clientName: itemData.clientName || 'Client',
     village: itemData.village || 'Maharashtra',
@@ -825,39 +911,59 @@ export const createTransformation = async (itemData) => {
     duration: itemData.duration ? parseInt(itemData.duration, 10) : undefined,
     category: itemData.category || 'Hair Transformation',
   };
-  const updated = [newItem, ...list];
-  saveStoredTransformations(updated);
+
+  const updated = [newItem, ...list.filter(i => String(i.id) !== String(newItem.id))];
+  try {
+    saveStoredTransformations(updated);
+    safeSaveLocalStorage('admin_transformations', updated);
+    await saveToIndexedDb(updated);
+  } catch (storageErr) {
+    if (typeof window === 'undefined' && !savedItem) throw storageErr;
+    console.warn('Local storage cache update warning:', storageErr.message);
+  }
   return newItem;
 };
 
 export const updateTransformation = async (id, itemData) => {
   itemData = normalizeTransformation(itemData);
+  let backendSuccess = false;
   try {
     const response = await apiClient.put(`/transformations/${id}`, itemData);
     if (response.data && response.data.success) {
-      try {
-        const list = getStoredTransformations();
-        const updated = list.map(item => String(item.id) === String(id) ? { ...item, ...itemData } : item);
-        safeSaveLocalStorage('admin_transformations', updated);
-      } catch (storageErr) {
-        console.warn('Local storage cache update warning (data safely saved in backend database):', storageErr.message);
-      }
-      return { success: true };
+      backendSuccess = true;
     }
   } catch (err) {
     console.warn('Backend /api/transformations update failed, using local storage fallback:', err.message);
   }
-  const list = getStoredTransformations();
+
+  let list = [];
+  try {
+    list = (await getFromIndexedDb()) || getStoredTransformations() || [];
+  } catch (e) {
+    list = getStoredTransformations() || [];
+  }
+  if (!Array.isArray(list)) list = [];
+
   const numericId = Number(id);
   if (!list.some(item => Number(item.id) === numericId || String(item.id) === String(id))) {
-    throw new Error('Transformation not found. Refresh the list and try again.');
+    if (!backendSuccess) {
+      throw new Error('Transformation not found. Refresh the list and try again.');
+    }
   }
   const updated = list.map(item => (Number(item.id) === numericId || String(item.id) === String(id)) ? {
     ...item,
     ...itemData,
     duration: itemData.duration ? parseInt(itemData.duration, 10) : undefined,
   } : item);
-  saveStoredTransformations(updated);
+
+  try {
+    saveStoredTransformations(updated);
+    safeSaveLocalStorage('admin_transformations', updated);
+    await saveToIndexedDb(updated);
+  } catch (storageErr) {
+    if (!backendSuccess) throw storageErr;
+    console.warn('Local storage cache update warning:', storageErr.message);
+  }
   return { success: true };
 };
 
@@ -871,11 +977,22 @@ export const deleteTransformation = async (id) => {
   } catch (err) {
     console.warn('Backend /api/transformations delete failed, using local storage fallback:', err.message);
   }
-  const list = getStoredTransformations();
+
+  let list = [];
+  try {
+    list = (await getFromIndexedDb()) || getStoredTransformations() || [];
+  } catch (e) {
+    list = getStoredTransformations() || [];
+  }
+  if (!Array.isArray(list)) list = [];
+
   const numericId = Number(id);
   const updated = list.filter(item => Number(item.id) !== numericId && String(item.id) !== String(id));
+
   try {
     saveStoredTransformations(updated);
+    safeSaveLocalStorage('admin_transformations', updated);
+    await saveToIndexedDb(updated);
   } catch (storageErr) {
     if (!backendSuccess) throw storageErr;
     console.warn('Local storage cache update warning:', storageErr.message);

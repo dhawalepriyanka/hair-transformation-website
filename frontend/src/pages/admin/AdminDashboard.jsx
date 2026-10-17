@@ -326,7 +326,7 @@ const AdminDashboard = () => {
         await createTransformation(mediaData);
       }
       setModalOpen(false);
-      loadAllTransformations();
+      await loadAllTransformations();
     } catch (err) {
       alert('Failed to save transformation: ' + err.message);
     } finally {
@@ -338,7 +338,7 @@ const AdminDashboard = () => {
     if (window.confirm(`Are you sure you want to delete transformation for "${name}"?`)) {
       try {
         await deleteTransformation(id);
-        loadAllTransformations();
+        await loadAllTransformations();
       } catch (err) {
         alert('Failed to delete transformation: ' + err.message);
       }
@@ -1158,7 +1158,7 @@ const AdminDashboard = () => {
                     <div key={field} style={{ background: '#FAF8F6', padding: '1rem', borderRadius: '12px', border: '1px solid #EBE5E0' }}>
                       <label htmlFor={field + '-file'} style={{ display: 'block', fontWeight: '700', marginBottom: '0.6rem' }}>{label} *</label>
                       <label htmlFor={field + '-file'} style={{ display: 'block', textAlign: 'center', padding: '0.8rem', border: '1.5px dashed #C88A75', borderRadius: '8px', color: '#9A5F4D', background: '#FFF', cursor: 'pointer' }}>
-                        <Video size={16} /> Choose {label} (max 3MB)
+                        <Video size={16} /> Choose {label} (max 100MB)
                       </label>
                       <input id={field + '-file'} type="file" accept="video/mp4,video/webm,video/ogg" disabled={readingMedia} style={{ display: 'none' }} onChange={e => handleFileUpload(e, field)} />
                       <p style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center' }}>— or paste direct video URL —</p>
@@ -1171,7 +1171,7 @@ const AdminDashboard = () => {
                       </>}
                     </div>
                   ))}
-                  <p role="status" style={{ gridColumn: '1 / -1', fontSize: '0.8rem', color: '#777' }}>{readingMedia ? 'Reading media…' : 'MP4, WebM or Ogg · Up to 3MB per video. Both videos are required.'}</p>
+                  <p role="status" style={{ gridColumn: '1 / -1', fontSize: '0.8rem', color: '#777' }}>{readingMedia ? 'Reading media…' : 'MP4, WebM or Ogg · Up to 100MB per video. Both videos are required.'}</p>
                 </div>}
 
                 {mediaType === 'video' && <div style={{ background: '#FAF8F6', padding: '1rem', borderRadius: '12px', border: '1px solid #EBE5E0', marginBottom: '1.25rem' }}>
@@ -1180,7 +1180,7 @@ const AdminDashboard = () => {
                   </label>
                   <div style={{ marginBottom: '0.6rem' }}>
                     <label htmlFor="video-file-upload" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: '#FFF', border: '1.5px dashed #C88A75', color: '#C88A75', padding: '0.65rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' }}>
-                      <Video size={16} /> Choose Video from PC / Gallery (max 3MB)
+                      <Video size={16} /> Choose Video from PC / Gallery (max 100MB)
                     </label>
                     <input id="video-file-upload" type="file" accept="video/mp4,video/webm,video/ogg" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'video')} />
                   </div>

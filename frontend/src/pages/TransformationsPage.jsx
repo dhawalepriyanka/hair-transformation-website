@@ -1,82 +1,151 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  MapPin, Clock, Star, ChevronLeft, ChevronRight,
-  Play, Pause, Maximize2, Minimize2, Eye, EyeOff, Volume2, VolumeX,
-  Instagram, Heart, MessageCircle, ExternalLink, Sparkles,
-  SkipBack, SkipForward
-} from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import { fetchTransformations, fetchSlideshowSettings } from '../services/api';
 import VideoComparison from '../components/VideoComparison';
-import Reveal from '../components/Reveal';
 
-/* ─────────────── REAL INSTAGRAM SALON & CLINIC MEDIA ─────────────── */
-const defaultFallbackTransformations = [];
+/* ═══════════════════════════════════════════════════════════════════
+   DIPALI WAKALE TV — LUXURY SALON DIGITAL SIGNAGE SHOWCASE (16:9 1080p)
+   ═══════════════════════════════════════════════════════════════════
+   - Color Scheme: Dark Burgundy (#0A0305, #18080E), Black & Champagne Gold (#F2C9B6, #FFF2C9)
+   - MODE A (Video / Single Media):
+       • LEFT (20%): Clinic Branding + Scannable Website QR (https://www.dipaliwakale.in/)
+       • CENTER (60%): Centered 9:16 Media + Compact Service Title Overlay + 3 Remote Controls
+       • RIGHT (20%): Instagram Promo (@wakale_dipali_) + Scannable QR + Salon Contact Details
+   - MODE B (Before & After Images/Videos):
+       • Side panels automatically HIDE
+       • Center panel expands to 100% full screen (50% Before | 50% After), aspect-ratio preserved
+       • Side panels automatically RESTORE when next item is a video
+   - Remote Controls: Exactly 3 buttons (Previous, Play/Pause, Next) with 4s auto-hide & D-pad focus
+   - Data Sync: Automatically syncs with Admin Dashboard transformations & app resume
+   ═══════════════════════════════════════════════════════════════════ */
 
-/* ─────────────── STAR RATING ─────────────── */
-const StarRating = ({ count }) => (
-  <div style={{ display: 'flex', gap: '2px' }}>
-    {[1, 2, 3, 4, 5].map((s) => (
-      <Star key={s} size={14} fill={s <= count ? '#C88A75' : 'none'} color={s <= count ? '#C88A75' : '#ccc'} />
-    ))}
-  </div>
-);
+const AUTOHIDE_DELAY_MS = 4000;     // auto-hide remote controls after 4s
 
-/* ─────────────── MAIN TRANSFORMATIONS PAGE ─────────────── */
-const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
-  const isTvMode = isTvModeProp || (typeof window !== 'undefined' && (
-    window.location.search.includes('tv=1') ||
-    window.location.pathname === '/tv' ||
-    window.location.hash.includes('tv') ||
-    Boolean(window.AndroidBridge)
-  ));
-
+const TransformationsPage = () => {
   const [transformationsList, setTransformationsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [slideshowSettings, setSlideshowSettings] = useState(fetchSlideshowSettings());
+  const [slideshowSettings, setSlideshowSettings] = useState(() => fetchSlideshowSettings());
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(isTvMode);
-  const [hideDetails, setHideDetails] = useState(isTvMode);
-  const [isMuted, setIsMuted] = useState(true);
-  const [userSpeedOption, setUserSpeedOption] = useState('auto'); // 'auto' | '5' | '8' | '12' | '15' | '20' | '30' | 'end'
+  const [controlsVisible, setControlsVisible] = useState(true);
   const [cursorVisible, setCursorVisible] = useState(true);
-  const cursorTimerRef = useRef(null);
-  const [tvPanelVisible, setTvPanelVisible] = useState(false);
-  const [focusedButton, setFocusedButton] = useState(1); // 0: Previous, 1: Play/Pause, 2: Next
+  const [focusedButton, setFocusedButton] = useState(1); // 0: Prev, 1: Play/Pause, 2: Next
+  const [progressPercent, setProgressPercent] = useState(0);
 
-  // Countdown timer state
-  const [timeLeft, setTimeLeft] = useState(8);
-  const [totalSlideDuration, setTotalSlideDuration] = useState(8);
+  // Horizontal (16:9 landscape) video detection to acquire 100% full screen
+  const [isVideoHorizontal, setIsVideoHorizontal] = useState(false);
+  const videoOrientationCacheRef = useRef({});
+  const activeSlideRef = useRef(0);
 
-  const showcaseRef = useRef(null);
+  // Live Clinic Clock & Date for digital signage header
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
   const videoRef = useRef(null);
   const ambientVideoRef = useRef(null);
   const prevBtnRef = useRef(null);
   const playBtnRef = useRef(null);
   const nextBtnRef = useRef(null);
   const slideTimerRef = useRef(null);
+  const controlsTimerRef = useRef(null);
+  const cursorTimerRef = useRef(null);
+  const transformationsListRef = useRef([]);
 
-  // Load transformations & slideshow settings with 30s auto-sync
+  // Keep refs synchronized with state for callback access
   useEffect(() => {
-    let isMounted = true;
-    const loadData = async () => {
-      try {
-        const data = await fetchTransformations();
-        if (isMounted) {
-          setTransformationsList(Array.isArray(data) ? data : []);
+    activeSlideRef.current = activeSlide;
+  }, [activeSlide]);
+
+  useEffect(() => {
+    transformationsListRef.current = transformationsList;
+  }, [transformationsList]);
+
+  // Live clinic clock (ticks every second)
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedTime = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  const formattedDate = currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
+
+  // 1. Data Synchronization with Admin Dashboard (Periodical + App Resume)
+  const syncTransformations = useCallback(async () => {
+    try {
+      const data = await fetchTransformations();
+      const rawList = Array.isArray(data) ? data : [];
+
+      // 1. Filter out obsolete/legacy demo placeholders (flower photos and generic test IDs)
+      const legacyDemoIds = new Set(['1', '2', '3', '4', '5', '6', '9000001', '9000002']);
+
+      const published = rawList.filter((item) => {
+        if (!item) return false;
+        if (legacyDemoIds.has(String(item.id))) return false;
+        if (item.is_published === false || item.status === 'draft' || item.published === false) {
+          return false;
         }
-      } catch (e) {
-        console.warn('Failed to load transformations:', e.message);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
+        return Boolean(
+          item.video ||
+          item.image ||
+          (item.before && item.after) ||
+          (item.beforeVideo && item.afterVideo)
+        );
+      });
+
+      // 2. Deduplicate items by ID
+      const seenIds = new Set();
+      const uniqueItems = [];
+      for (const item of published) {
+        const idStr = String(item.id);
+        if (!seenIds.has(idStr)) {
+          seenIds.add(idStr);
+          uniqueItems.push(item);
         }
       }
-    };
-    loadData();
 
-    // Auto-sync every 30 seconds with Admin Dashboard / Backend
-    const syncInterval = setInterval(loadData, 30000);
+      // 3. Put custom admin uploads first, followed by all clinic published reels and transformations
+      const sortedItems = [...uniqueItems].sort((a, b) => {
+        const aIsCustom = !(Number(a.id) >= 9100001 && Number(a.id) <= 9100099);
+        const bIsCustom = !(Number(b.id) >= 9100001 && Number(b.id) <= 9100099);
+        if (aIsCustom && !bIsCustom) return -1;
+        if (!aIsCustom && bIsCustom) return 1;
+        return (a.displayOrder || 0) - (b.displayOrder || 0);
+      });
+
+      setTransformationsList(sortedItems);
+
+      // Preserve active transformation if it still exists after reload/sync
+      setActiveSlide((currSlide) => {
+        if (sortedItems.length === 0) return 0;
+        const currentPlayingItem = transformationsListRef.current[currSlide];
+        if (currentPlayingItem) {
+          const matchingIdx = sortedItems.findIndex((i) => String(i.id) === String(currentPlayingItem.id));
+          if (matchingIdx !== -1) return matchingIdx;
+        }
+        return currSlide >= sortedItems.length ? 0 : currSlide;
+      });
+    } catch (e) {
+      console.warn('Failed to sync transformations:', e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial load, 30s auto-sync, and settings listener
+  useEffect(() => {
+    syncTransformations();
+
+    // 30s background sync with database/admin dashboard
+    const syncInterval = setInterval(syncTransformations, 30000);
+
+    // App Resume listeners: visibilitychange, window focus, online
+    const handleResume = () => {
+      if (document.visibilityState === 'visible') {
+        syncTransformations();
+      }
+    };
+    document.addEventListener('visibilitychange', handleResume);
+    window.addEventListener('focus', syncTransformations);
+    window.addEventListener('online', syncTransformations);
 
     const handleSettingsChanged = (e) => {
       if (e.detail) {
@@ -84,47 +153,109 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
       }
     };
     window.addEventListener('slideshow_settings_changed', handleSettingsChanged);
+
     return () => {
-      isMounted = false;
       clearInterval(syncInterval);
+      document.removeEventListener('visibilitychange', handleResume);
+      window.removeEventListener('focus', syncTransformations);
+      window.removeEventListener('online', syncTransformations);
       window.removeEventListener('slideshow_settings_changed', handleSettingsChanged);
     };
-  }, []);
-
-  // Listen to fullscreen changes
-  useEffect(() => {
-    const handleFsChange = () => {
-      const fsActive = document.fullscreenElement === showcaseRef.current;
-      setIsFullscreen(fsActive);
-      // "remove right side text if click on full screen"
-      if (fsActive && slideshowSettings.hideTextInFullscreen !== false) {
-        setHideDetails(true);
-      }
-    };
-    document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
-  }, [slideshowSettings.hideTextInFullscreen]);
+  }, [syncTransformations]);
 
   const activeItem = transformationsList[activeSlide];
   const isVideo = Boolean(activeItem?.video || activeItem?.beforeVideo);
 
-  // Calculate current duration for the active slide
+  // Automatically detect Before & After mode (hides side panels and expands to 100% full screen)
+  const isBeforeAfter = Boolean(
+    (activeItem?.before && activeItem?.after) ||
+    (activeItem?.beforeVideo && activeItem?.afterVideo)
+  );
+
+  // Pre-probe orientation of all video items to eliminate layout shifts
+  useEffect(() => {
+    transformationsList.forEach((item) => {
+      const src = item?.video;
+      if (src && videoOrientationCacheRef.current[src] === undefined) {
+        if (src.includes('/instagram/reels/')) {
+          videoOrientationCacheRef.current[src] = false;
+        } else {
+          const probe = document.createElement('video');
+          probe.preload = 'metadata';
+          probe.src = src;
+          probe.onloadedmetadata = () => {
+            if (probe.videoWidth && probe.videoHeight) {
+              const isH = probe.videoWidth > probe.videoHeight;
+              videoOrientationCacheRef.current[src] = isH;
+              const currentActive = transformationsListRef.current[activeSlideRef.current];
+              if (currentActive?.video === src) {
+                setIsVideoHorizontal(isH);
+              }
+            }
+          };
+        }
+      }
+    });
+  }, [transformationsList]);
+
+  // Update horizontal video state when active item/slide changes
+  useEffect(() => {
+    if (!activeItem) return;
+    const currentVideo = activeItem.video;
+    if (currentVideo) {
+      if (videoOrientationCacheRef.current[currentVideo] !== undefined) {
+        setIsVideoHorizontal(videoOrientationCacheRef.current[currentVideo]);
+      } else if (currentVideo.includes('/instagram/reels/')) {
+        videoOrientationCacheRef.current[currentVideo] = false;
+        setIsVideoHorizontal(false);
+      } else if (videoRef.current && videoRef.current.videoWidth && videoRef.current.videoHeight) {
+        const isH = videoRef.current.videoWidth > videoRef.current.videoHeight;
+        videoOrientationCacheRef.current[currentVideo] = isH;
+        setIsVideoHorizontal(isH);
+      }
+    } else {
+      setIsVideoHorizontal(false);
+    }
+  }, [activeSlide, activeItem]);
+
+  const handleVideoLoadedMetadata = (e) => {
+    const v = e.target;
+    if (v && v.videoWidth && v.videoHeight) {
+      const isH = v.videoWidth > v.videoHeight;
+      if (activeItem?.video) {
+        videoOrientationCacheRef.current[activeItem.video] = isH;
+      }
+      setIsVideoHorizontal(isH);
+    }
+  };
+
+  // Full-screen mode:
+  // 1. Before & After comparison (Images or Videos)
+  // 2. Horizontal / Landscape video (acquires 100% full screen width, hiding side panels)
+  const isFullScreen = Boolean(
+    isBeforeAfter ||
+    (isVideo && isVideoHorizontal)
+  );
+
+  const treatmentTitle = activeItem?.treatment || activeItem?.clientName || activeItem?.category || 'Hair & Skin Transformation';
+  const treatmentSubtitle = activeItem?.treatment && activeItem?.clientName && activeItem.treatment !== activeItem.clientName
+    ? activeItem.clientName
+    : (activeItem?.category || (activeItem?.village ? `Clinic • ${activeItem.village}` : null));
+
+  // Preload next video/image for seamless flicker-free transitions
+  const nextSlideIndex = transformationsList.length > 0 ? (activeSlide + 1) % transformationsList.length : 0;
+  const nextItem = transformationsList[nextSlideIndex];
+
+  // Timing calculation driven 100% by Admin Settings
   const calculateSlideDuration = useCallback(() => {
     if (!activeItem) return 8;
 
-    // 1. If user selected a specific on-screen override
-    if (userSpeedOption !== 'auto') {
-      if (userSpeedOption === 'end') return 'end';
-      const parsed = parseInt(userSpeedOption, 10);
-      if (!isNaN(parsed) && parsed > 0) return parsed;
-    }
-
-    // 2. If item has individual custom duration set by admin
+    // Individual item custom duration (set by Admin in dashboard)
     if (activeItem.duration && !isNaN(activeItem.duration) && activeItem.duration > 0) {
       return parseInt(activeItem.duration, 10);
     }
 
-    // 3. Global admin settings
+    // Global Admin Settings
     if (isVideo) {
       if (slideshowSettings.videoDurationMode === 'end') {
         return 'end';
@@ -133,72 +264,71 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
     }
 
     return parseInt(slideshowSettings.imageDuration, 10) || 8;
-  }, [activeItem, isVideo, userSpeedOption, slideshowSettings]);
+  }, [activeItem, isVideo, slideshowSettings]);
 
-  // Slide navigation
+  // Slide navigation with infinite wrap (always references latest transformations list)
   const changeSlide = useCallback((direction) => {
-    if (!transformationsList.length) return;
-    setActiveSlide((current) =>
-      (current + direction + transformationsList.length) % transformationsList.length
-    );
-  }, [transformationsList.length]);
-
-  // Handle slide countdown and auto-advance
-  // Handle slide countdown and auto-advance with admin control
-  useEffect(() => {
-    // Clear any existing timer
-    if (slideTimerRef.current) {
-      clearInterval(slideTimerRef.current);
-      slideTimerRef.current = null;
-    }
-
-    // Respect admin's autoSwitch setting
-    if (!slideshowSettings.autoSwitch) {
-      return;
-    }
-
-    if (!isPlaying || transformationsList.length < 2 || !activeItem) {
-      return;
-    }
-
-    const duration = calculateSlideDuration();
-
-    if (duration === 'end') {
-      // For video awaiting end, set safety timer
-      setTotalSlideDuration(30);
-      setTimeLeft(30);
-      slideTimerRef.current = window.setTimeout(() => {
-        changeSlide(1);
-      }, 75000);
-      return () => clearTimeout(slideTimerRef.current);
-    }
-
-    const durationSeconds = Number(duration) || 8;
-    setTotalSlideDuration(durationSeconds);
-    setTimeLeft(durationSeconds);
-
-    slideTimerRef.current = window.setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          changeSlide(1);
-          return durationSeconds;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (slideTimerRef.current) {
-        clearInterval(slideTimerRef.current);
-        slideTimerRef.current = null;
-      }
-    };
-  }, [activeSlide, isPlaying, transformationsList.length, calculateSlideDuration, changeSlide, activeItem, slideshowSettings.autoSwitch]);
-
-  // Real Play/Pause toggle
-  const togglePlayPause = useCallback(() => {
-    setIsPlaying((prev) => !prev);
+    const list = transformationsListRef.current;
+    if (!list || list.length === 0) return;
+    setActiveSlide((current) => (current + direction + list.length) % list.length);
   }, []);
+
+  // Inactivity Auto-Hide for floating controls (4 seconds)
+  const wakeControls = useCallback(() => {
+    setControlsVisible(true);
+    setCursorVisible(true);
+    if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
+    if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
+
+    controlsTimerRef.current = setTimeout(() => {
+      setIsPlaying((currPlaying) => {
+        if (currPlaying) {
+          setControlsVisible(false);
+        }
+        return currPlaying;
+      });
+    }, AUTOHIDE_DELAY_MS);
+
+    cursorTimerRef.current = setTimeout(() => {
+      setCursorVisible(false);
+    }, 2500);
+  }, []);
+
+  // Previous slide action
+  const handlePrevious = useCallback((e) => {
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
+    changeSlide(-1);
+    setFocusedButton(0);
+    wakeControls();
+  }, [changeSlide, wakeControls]);
+
+  // Next slide action
+  const handleNext = useCallback((e) => {
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
+    changeSlide(1);
+    setFocusedButton(2);
+    wakeControls();
+  }, [changeSlide, wakeControls]);
+
+  // Toggle Play / Pause action
+  const handleTogglePlayPause = useCallback((e) => {
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
+    setIsPlaying((prev) => {
+      const nextState = !prev;
+      if (!nextState) {
+        setControlsVisible(true);
+      }
+      return nextState;
+    });
+    setFocusedButton(1);
+    wakeControls();
+  }, [wakeControls]);
 
   // Synchronize actual video playback with isPlaying state
   useEffect(() => {
@@ -218,7 +348,7 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
     }
   }, [isPlaying, isVideo, activeItem]);
 
-  // Ensure video playback starts smoothly on active slide change
+  // Video reset on slide transition
   useEffect(() => {
     if (videoRef.current && isVideo) {
       videoRef.current.currentTime = 0;
@@ -246,7 +376,39 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
     }
   }, [activeSlide, isVideo]);
 
-  // Handle video ended event
+  // Video progress time tracking
+  const handleVideoTimeUpdate = (e) => {
+    const vid = e.target;
+    if (vid && vid.duration) {
+      setProgressPercent((vid.currentTime / vid.duration) * 100);
+    }
+  };
+
+  // Video loading error handling (graceful fallback to next item)
+  const handleVideoError = () => {
+    console.warn('Video failed to load or play smoothly, advancing to next slide');
+    if (isPlaying && transformationsList.length > 1) {
+      changeSlide(1);
+    }
+  };
+
+  // Track progress line for non-video slides (e.g. before/after images)
+  useEffect(() => {
+    setProgressPercent(0);
+    if (isVideo) return;
+    const duration = calculateSlideDuration();
+    const totalMs = (Number(duration) || 8) * 1000;
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      if (!isPlaying) return;
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(100, (elapsed / totalMs) * 100);
+      setProgressPercent(pct);
+    }, 100);
+    return () => clearInterval(interval);
+  }, [activeSlide, isVideo, isPlaying, calculateSlideDuration]);
+
+  // Handle video end
   const handleVideoEnded = () => {
     const duration = calculateSlideDuration();
     if (duration === 'end' && isPlaying) {
@@ -254,111 +416,100 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
     }
   };
 
-  // Toggle fullscreen
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      showcaseRef.current?.requestFullscreen?.().catch((err) => {
-        console.warn('Fullscreen request failed:', err);
-      });
-      // "also i want to remove right side text if click on full screen"
-      if (slideshowSettings.hideTextInFullscreen !== false) {
-        setHideDetails(true);
-      }
-    } else {
-      document.exitFullscreen?.().catch(() => {});
-    }
-  };
-
-  // TV Inactivity cursor auto-hide
+  // Auto-advance slideshow timer (honors admin autoSwitch setting)
   useEffect(() => {
-    if (!isTvMode) return;
-    const handleMouseMove = () => {
-      setCursorVisible(true);
-      if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
-      cursorTimerRef.current = setTimeout(() => {
-        setCursorVisible(false);
-      }, 2500);
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    cursorTimerRef.current = setTimeout(() => {
-      setCursorVisible(false);
-    }, 2500);
+    if (slideTimerRef.current) {
+      clearInterval(slideTimerRef.current);
+      slideTimerRef.current = null;
+    }
+
+    if (!slideshowSettings.autoSwitch || !isPlaying || transformationsList.length < 2 || !activeItem) {
+      return;
+    }
+
+    const duration = calculateSlideDuration();
+
+    if (duration === 'end') {
+      slideTimerRef.current = window.setTimeout(() => {
+        changeSlide(1);
+      }, 75000);
+      return () => clearTimeout(slideTimerRef.current);
+    }
+
+    const durationMs = (Number(duration) || 8) * 1000;
+
+    slideTimerRef.current = window.setInterval(() => {
+      changeSlide(1);
+    }, durationMs);
+
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
+      if (slideTimerRef.current) {
+        clearInterval(slideTimerRef.current);
+        slideTimerRef.current = null;
+      }
     };
-  }, [isTvMode]);
+  }, [activeSlide, isPlaying, transformationsList.length, calculateSlideDuration, changeSlide, activeItem, slideshowSettings.autoSwitch]);
 
-  // Helper functions to show and hide control panel
-  const showControlPanel = useCallback(() => {
-    if (!isTvMode) return;
-    setTvPanelVisible(true);
-    setFocusedButton(1); // Middle button receives initial focus
-    try {
-      window.AndroidBridge?.setPanelVisibility(true);
-    } catch (e) {}
-  }, [isTvMode]);
+  // TV Remote Navigation (D-Pad & Media Keys)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      wakeControls();
 
-  const hideControlPanel = useCallback(() => {
-    if (!isTvMode) return;
-    setTvPanelVisible(false);
-    try {
-      window.AndroidBridge?.setPanelVisibility(false);
-    } catch (e) {}
-  }, [isTvMode]);
-
-  // TV Remote navigation actions: LEFT, RIGHT, OK, BACK
-  const handleTvAction = useCallback((action) => {
-    if (!isTvMode) return;
-
-    if (action === 'ok') {
-      if (!tvPanelVisible) {
-        // When panel is hidden: pressing OK shows all three buttons and focuses middle button
-        // Do not pause the video when showing the panel!
-        showControlPanel();
-      } else {
-        // When panel is visible: pressing OK activates the focused button
+      // 1. LEFT: Previous
+      if (e.key === 'ArrowLeft' || e.key === 'MediaTrackPrevious' || e.key === 'MediaRewind' || e.key === 'ChannelDown') {
+        e.preventDefault();
+        setFocusedButton(0);
+        handlePrevious();
+      }
+      // 2. RIGHT: Next
+      else if (e.key === 'ArrowRight' || e.key === 'MediaTrackNext' || e.key === 'MediaFastForward' || e.key === 'ChannelUp') {
+        e.preventDefault();
+        setFocusedButton(2);
+        handleNext();
+      }
+      // 3. OK / ENTER / SPACE / MEDIA PLAY PAUSE
+      else if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space' || e.key === 'MediaPlayPause' || e.key === 'Select') {
+        e.preventDefault();
         if (focusedButton === 0) {
-          // Previous button: wrap from first to last, keep panel visible
-          changeSlide(-1);
-        } else if (focusedButton === 1) {
-          // Play/Pause button: toggle playback, keep panel visible
-          togglePlayPause();
+          handlePrevious();
         } else if (focusedButton === 2) {
-          // Next button: wrap from last to first, keep panel visible
-          changeSlide(1);
+          handleNext();
+        } else {
+          handleTogglePlayPause();
         }
       }
-    } else if (action === 'left') {
-      if (tvPanelVisible) {
-        // Move focus to previous button (clamped to 0)
-        setFocusedButton((prev) => Math.max(0, prev - 1));
+      // 4. DEDICATED MEDIA PLAY
+      else if (e.key === 'MediaPlay') {
+        e.preventDefault();
+        setIsPlaying(true);
       }
-    } else if (action === 'right') {
-      if (tvPanelVisible) {
-        // Move focus to next button (clamped to 2)
-        setFocusedButton((prev) => Math.min(2, prev + 1));
+      // 5. DEDICATED MEDIA PAUSE
+      else if (e.key === 'MediaPause') {
+        e.preventDefault();
+        setIsPlaying(false);
+        setControlsVisible(true);
       }
-    } else if (action === 'back' || action === 'escape') {
-      if (tvPanelVisible) {
-        hideControlPanel();
+      // 6. UP / DOWN: Wake up controls and focus Play/Pause
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedButton(1);
+        setControlsVisible(true);
       }
-    } else if (action === 'down') {
-      if (tvPanelVisible) {
-        hideControlPanel();
+      // 7. BACK / ESCAPE
+      else if (e.key === 'Escape' || e.key === 'Back' || e.key === 'BrowserBack') {
+        if (window.history.length > 1) {
+          window.history.back();
+        }
       }
-    } else if (action === 'up') {
-      if (!tvPanelVisible) {
-        showControlPanel();
-      }
-    } else if (action === 'play_pause') {
-      togglePlayPause();
-    }
-  }, [isTvMode, tvPanelVisible, focusedButton, showControlPanel, hideControlPanel, changeSlide, togglePlayPause]);
+    };
 
-  // Synchronize DOM focus to the active button when panel is visible
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [controlsVisible, focusedButton, handlePrevious, handleNext, handleTogglePlayPause, wakeControls]);
+
+  // Sync DOM focus to active button for native Android TV webview D-pad
   useEffect(() => {
-    if (!isTvMode || !tvPanelVisible) return;
+    if (!controlsVisible) return;
     if (focusedButton === 0) {
       prevBtnRef.current?.focus();
     } else if (focusedButton === 1) {
@@ -366,536 +517,317 @@ const TransformationsPage = ({ isTvMode: isTvModeProp = false }) => {
     } else if (focusedButton === 2) {
       nextBtnRef.current?.focus();
     }
-  }, [isTvMode, tvPanelVisible, focusedButton]);
+  }, [controlsVisible, focusedButton]);
 
-  // Expose global TV controls to Android WebView layer
+  // Android WebView Bridge Support
   useEffect(() => {
-    if (!isTvMode) return;
     window.onTvRemoteKey = (action) => {
-      handleTvAction(action);
+      wakeControls();
+      if (action === 'left' || action === 'prev') {
+        setFocusedButton(0);
+        handlePrevious();
+      } else if (action === 'right' || action === 'next') {
+        setFocusedButton(2);
+        handleNext();
+      } else if (action === 'ok' || action === 'play_pause' || action === 'center') {
+        handleTogglePlayPause();
+      } else if (action === 'up' || action === 'down') {
+        setFocusedButton(1);
+        setControlsVisible(true);
+      }
     };
-    window.hideTvControlPanel = hideControlPanel;
-    window.showTvControlPanel = showControlPanel;
     return () => {
       delete window.onTvRemoteKey;
-      delete window.hideTvControlPanel;
-      delete window.showTvControlPanel;
     };
-  }, [isTvMode, handleTvAction, hideControlPanel, showControlPanel]);
+  }, [handlePrevious, handleNext, handleTogglePlayPause, wakeControls]);
 
-  // TV Remote & Keyboard navigation event listener
+  // Mouse activity listener to show controls and auto-hide
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (isTvMode) {
-        // Prevent default browser scrolling on arrow keys and space
-        if (e.key === 'ArrowLeft') {
-          handleTvAction('left');
-          e.preventDefault();
-        } else if (e.key === 'ArrowRight') {
-          handleTvAction('right');
-          e.preventDefault();
-        } else if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') {
-          handleTvAction('ok');
-          e.preventDefault();
-        } else if (e.key === 'Escape' || e.key === 'Back' || e.key === 'BrowserBack') {
-          if (tvPanelVisible) {
-            handleTvAction('back');
-            e.preventDefault();
-          }
-        } else if (e.key === 'ArrowUp') {
-          handleTvAction('up');
-          e.preventDefault();
-        } else if (e.key === 'ArrowDown') {
-          if (tvPanelVisible) {
-            handleTvAction('down');
-            e.preventDefault();
-          }
-        }
-        return;
-      }
-
-      // Non-TV keyboard shortcuts (unchanged)
-      if (e.key === 'ArrowLeft' || e.key === 'MediaTrackPrevious') {
-        changeSlide(-1);
-      } else if (e.key === 'ArrowRight' || e.key === 'MediaTrackNext') {
-        changeSlide(1);
-      } else if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space' || e.key === 'MediaPlayPause') {
-        setIsPlaying((prev) => !prev);
-      } else if (e.key === 'm' || e.key === 'M') {
-        setIsMuted((prev) => !prev);
-      } else if (e.key === 't' || e.key === 'T' || e.key === 'ArrowDown') {
-        setHideDetails((prev) => !prev);
-      } else if (e.key === 'f' || e.key === 'F') {
-        toggleFullscreen();
-      }
+    const handleMouseMove = () => {
+      wakeControls();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [changeSlide, isTvMode, handleTvAction, tvPanelVisible]);
-
-  const progressPercent = totalSlideDuration > 0
-    ? Math.max(0, Math.min(100, ((totalSlideDuration - timeLeft) / totalSlideDuration) * 100))
-    : 0;
+    window.addEventListener('mousemove', handleMouseMove);
+    wakeControls();
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
+      if (cursorTimerRef.current) clearTimeout(cursorTimerRef.current);
+    };
+  }, [wakeControls]);
 
   return (
-    <div
-      className={isTvMode ? `tv-kiosk-wrapper ${!cursorVisible ? 'tv-cursor-hidden' : ''}` : 'transformations-page section-padding'}
-      style={isTvMode ? undefined : { paddingTop: '1.5rem', paddingBottom: '3rem' }}
-    >
-      <div className={isTvMode ? 'tv-kiosk-inner' : 'container'}>
+    <div className={`tv-apk-root ${!cursorVisible ? 'tv-cursor-hidden' : ''}`}>
+      {/* Hidden preloader for next video to eliminate transition lag/flicker */}
+      {nextItem?.video && (
+        <video
+          src={nextItem.video}
+          preload="auto"
+          muted
+          playsInline
+          style={{ display: 'none' }}
+          aria-hidden="true"
+        />
+      )}
 
-        {/* ── TOP ACTION BAR (Hidden on TV) ── */}
-        {!isTvMode && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '12px',
-            marginBottom: '1.5rem'
-          }}>
-            <div>
-              <h1 className="serif" style={{ fontSize: '1.8rem', margin: 0, color: '#1E1E1E' }}>
-                Transformation Screen
-              </h1>
-              <p style={{ margin: '3px 0 0', color: '#777', fontSize: '0.88rem' }}>
-                Dipali Wakale Salon & Clinic Showcase • Optimized for 55″ Displays
-              </p>
-            </div>
-          </div>
-        )}
+      {loading ? (
+        <div className="tv-loading-signage">
+          <div className="tv-loading-emblem">✂</div>
+          <div className="tv-loading-brand">DIPALI WAKALE</div>
+          <div className="tv-loading-sub">HAIR &amp; SKIN CARE CLINIC</div>
+          <div className="tv-loading-spinner" />
+          <p className="tv-loading-text">Loading Transformations...</p>
+        </div>
+      ) : activeItem ? (
+        <div className={`tv-apk-layout ${isFullScreen ? 'tv-layout-fullscreen' : ''}`}>
 
-        {/* ── 55-INCH TV AUTOMATIC SHOWCASE SCREEN ── */}
-        {loading ? (
-          <p style={{ textAlign: 'center', padding: '5rem', color: '#888' }}>Loading transformation screen...</p>
-        ) : activeItem ? (
-          <Reveal variant="scale" delay={50}>
-            <div
-              className={`tv-showcase ${hideDetails ? 'tv-hide-text' : ''} ${isFullscreen || isTvMode ? 'tv-55in-mode' : ''}`}
-              ref={showcaseRef}
-              style={{ marginBottom: isTvMode ? 0 : '1rem' }}
-            >
-              {/* Top Countdown Progress Line */}
-              {isPlaying && !isTvMode && (
-                <div className="tv-progress-line">
-                  <div className="tv-progress-fill" style={{ width: `${progressPercent}%` }} />
-                </div>
-              )}
-
-              {/* Ambient TV Glow in Background */}
-              <div className="tv-showcase-glow" />
-
-              {/* Top Corner TV Bar */}
-              {!isTvMode && (
-                <div className="tv-top-bar">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    {/* Auto-Switch Countdown Indicator */}
-                    <span className="tv-timer-pill" title="Auto-advance countdown">
-                      <Clock size={14} color="#F5A58D" />
-                      {userSpeedOption === 'end' ? 'Full Video' : `${timeLeft}s`}
-                    </span>
-                  </div>
-
-                  {/* Top Right Quick Controls */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {/* Switch Speed Selector for salon staff */}
-                    <select
-                      className="tv-speed-dropdown"
-                      value={userSpeedOption}
-                      onChange={(e) => setUserSpeedOption(e.target.value)}
-                      aria-label="Set slide switch time"
-                      title="Change automatic switch timing"
-                    >
-                      <option value="auto">Time: Auto (Admin Timing)</option>
-                      <option value="5">5s (Quick Switch)</option>
-                      <option value="8">8s (Standard Photo)</option>
-                      <option value="12">12s (Medium Reel)</option>
-                      <option value="15">15s (Standard Reel)</option>
-                      <option value="20">20s (Extended Reel)</option>
-                      <option value="30">30s (Slow Switch)</option>
-                      <option value="end">Full Video End</option>
-                    </select>
-
-                    {/* Toggle Side Text Button */}
-                    <button
-                      type="button"
-                      onClick={() => setHideDetails((prev) => !prev)}
-                      className="tv-quick-btn"
-                      style={{
-                        background: 'rgba(20, 14, 12, 0.75)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        color: '#fff',
-                        padding: '6px 12px',
-                        borderRadius: '20px',
-                        fontSize: '0.76rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                      }}
-                      title={hideDetails ? 'Show client text' : 'Remove right side text for clean 55" TV screen'}
-                    >
-                      {hideDetails ? <Eye size={14} /> : <EyeOff size={14} />}
-                      {hideDetails ? 'Show Text' : 'Hide Text'}
-                    </button>
-
-                    {/* Fullscreen Button */}
-                    <button
-                      type="button"
-                      onClick={toggleFullscreen}
-                      style={{
-                        background: 'rgba(200, 138, 117, 0.85)',
-                        border: 'none',
-                        color: '#fff',
-                        width: '34px',
-                        height: '34px',
-                        borderRadius: '50%',
-                        cursor: 'pointer',
-                        display: 'grid',
-                        placeItems: 'center'
-                      }}
-                      title={isFullscreen ? 'Exit Fullscreen' : 'Enter 55″ Fullscreen'}
-                    >
-                      {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* ── SLIDE CONTENT ── */}
-              <div className="tv-slide" key={activeItem.id}>
-
-                {/* Left/Main Media Visual (Expands to 100% when right text is hidden) */}
-                <div className={`tv-visual ${isVideo ? 'tv-video-visual' : ''}`}>
-                  {/* Floating Social Media Handle Watermark */}
-                  {!isTvMode && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '16px',
-                      left: '16px',
-                      zIndex: 14,
-                      background: 'rgba(15, 10, 8, 0.72)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      borderRadius: '30px',
-                      padding: '4px 12px 4px 6px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      color: '#FFF',
-                      fontSize: '0.75rem',
-                      fontWeight: '700',
-                      pointerEvents: 'none'
-                    }}>
-                      <span style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Instagram size={11} color="#FFF" />
-                      </span>
-                      <span>{activeItem.handle || '@wakale_dipali_'}</span>
-                    </div>
-                  )}
-
-                  {/* Ambient Backdrop for Vertical Reels on 55" screen */}
-                  {activeItem.video && (
-                    <video
-                      ref={ambientVideoRef}
-                      className="tv-ambient-backdrop"
-                      src={activeItem.video}
-                      muted
-                      autoPlay
-                      loop
-                      playsInline
-                      aria-hidden="true"
-                    />
-                  )}
-
-                  {activeItem.beforeVideo && activeItem.afterVideo ? (
-                    <VideoComparison before={activeItem.beforeVideo} after={activeItem.afterVideo} clientName={activeItem.clientName} />
-                  ) : activeItem.video ? (
-                    <video
-                      ref={videoRef}
-                      className="tv-transformation-video"
-                      src={activeItem.video}
-                      poster={activeItem.poster || activeItem.after || activeItem.image}
-                      controls={!isTvMode}
-                      autoPlay
-                      muted={isMuted}
-                      loop={calculateSlideDuration() !== 'end'}
-                      playsInline
-                      onPlay={() => setIsPlaying(true)}
-                      onPause={() => setIsPlaying(false)}
-                      onEnded={handleVideoEnded}
-                    >
-                      Your browser does not support video playback.
-                    </video>
-                  ) : activeItem.image ? (
-                    <>
-                      <img className="tv-ambient-backdrop" src={activeItem.image} alt="" aria-hidden="true" />
-                      <img className="tv-single-image" src={activeItem.image} alt={activeItem.clientName} />
-                    </>
-                  ) : activeItem.before && activeItem.after ? (
-                    <>
-                      <img className="tv-after-image" src={activeItem.after} alt={`After - ${activeItem.clientName}`} />
-                      <div className="tv-before-layer">
-                        <img src={activeItem.before} alt={`Before - ${activeItem.clientName}`} />
-                      </div>
-                      <div className="tv-reveal-line"><span>✦</span></div>
-                      <span className="tv-label tv-label-before">BEFORE</span>
-                      <span className="tv-label tv-label-after">AFTER ✨</span>
-                    </>
-                  ) : null}
-
-                  {/* Floating minimalist badge when right-side text is hidden (for 55" TV) */}
-                  {hideDetails && !isTvMode && (
-                    <div className="tv-floating-tag">
-                      <span className="tag-badge">{activeItem.category}</span>
-                      <span className="tag-title">{activeItem.clientName}</span>
-                      <span className="tag-desc">💆 {activeItem.treatment}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Right Side Text (Hidden if user clicks Fullscreen or Hide Text) */}
-                {!hideDetails && (
-                  <div className="tv-story">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                      <span className="tv-category">{activeItem.category}</span>
-                      <a
-                        href="https://www.instagram.com/wakale_dipali_/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          fontSize: '0.78rem',
-                          fontWeight: '700',
-                          color: '#E1306C',
-                          textDecoration: 'none',
-                          background: 'rgba(225, 48, 108, 0.12)',
-                          padding: '4px 12px',
-                          borderRadius: '20px',
-                          border: '1px solid rgba(225, 48, 108, 0.25)'
-                        }}
-                      >
-                        <Instagram size={13} /> {activeItem.handle || '@wakale_dipali_'}
-                      </a>
-                    </div>
-
-                    <p className="tv-kicker">Dipali Wakale • Hair Doctor & Salon</p>
-                    <h2>{activeItem.clientName}</h2>
-                    <h3>{activeItem.treatment}</h3>
-
-                    {/* Social Media Engagement Stats */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      margin: '0.4rem 0 1rem',
-                      fontSize: '0.82rem',
-                      color: '#d2c8c4',
-                      flexWrap: 'wrap'
-                    }}>
-                      {activeItem.likes && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#ff7b92', fontWeight: '700' }}>
-                          <Heart size={14} fill="#ff7b92" /> {activeItem.likes} Likes
-                        </span>
-                      )}
-                      {activeItem.comments && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <MessageCircle size={14} /> {activeItem.comments} Comments
-                        </span>
-                      )}
-                      {activeItem.period && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Clock size={14} /> {activeItem.period}
-                        </span>
-                      )}
-                      {activeItem.village && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <MapPin size={14} /> {activeItem.village}
-                        </span>
-                      )}
-                    </div>
-
-                    {activeItem.rating > 0 && <div className="tv-stars"><StarRating count={activeItem.rating} /></div>}
-                    {activeItem.testimonial && <blockquote>"{activeItem.testimonial}"</blockquote>}
-
-                    {/* Social Media Hashtags */}
-                    {activeItem.hashtags && (
-                      <div style={{
-                        marginTop: '1rem',
-                        fontSize: '0.8rem',
-                        color: '#F5A58D',
-                        fontWeight: '500',
-                        lineHeight: 1.4
-                      }}>
-                        {activeItem.hashtags}
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginTop: '1.2rem', flexWrap: 'wrap' }}>
-                      <p className="tv-signature" style={{ margin: 0 }}>Transformation by Dipali Wakale</p>
-                      <a
-                        href="https://www.instagram.com/wakale_dipali_/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          fontSize: '0.8rem',
-                          fontWeight: '700',
-                          color: '#FFF',
-                          background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
-                          padding: '6px 14px',
-                          borderRadius: '20px',
-                          textDecoration: 'none',
-                          boxShadow: '0 2px 10px rgba(225,48,108,0.3)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <Instagram size={13} /> View on Instagram <ExternalLink size={11} />
-                      </a>
-                    </div>
-                  </div>
-                )}
+          {/* ══════════════════════════════════════════════════════
+               LEFT PANEL (20%) — Salon Branding & Scannable Website QR
+               Hidden when in Fullscreen Mode (Horizontal Video or Before & After)
+             ══════════════════════════════════════════════════════ */}
+          {!isFullScreen && (
+            <div className="tv-apk-panel tv-apk-left-panel">
+              {/* Luxury Digital Clinic Live Clock Header */}
+              <div className="tv-apk-clock-header">
+                <div className="tv-apk-clock-time">{formattedTime}</div>
+                <div className="tv-apk-clock-date">{formattedDate}</div>
               </div>
 
-              {/* ── BOTTOM CONTROLS BAR ── */}
-              {!isTvMode && (
-                <div className="tv-controls">
-                  <button type="button" onClick={() => changeSlide(-1)} aria-label="Previous transformation" title="Previous Slide">
-                    <ChevronLeft />
-                  </button>
+              {/* Salon Branding Lockup */}
+              <div className="tv-apk-branding-section">
+                <div className="tv-apk-scissors-icon">✂</div>
+                <h2 className="tv-apk-brand-title">
+                  DIPALI<br />WAKALE
+                </h2>
+                <div className="tv-apk-divider" />
+                <p className="tv-apk-brand-clinic">
+                  HAIR &amp; SKIN CARE<br />CLINIC
+                </p>
+                <div className="tv-apk-divider-subtle" />
+                <p className="tv-apk-brand-tagline">&ldquo;Your Hair, Our Art&rdquo;</p>
+                <div className="tv-apk-stars">✦ &nbsp;✦ &nbsp;✦</div>
+              </div>
 
-                  <div className="tv-dots">
-                    {transformationsList.map((item, index) => (
-                      <button
-                        type="button"
-                        key={item.id}
-                        className={index === activeSlide ? 'active' : ''}
-                        onClick={() => setActiveSlide(index)}
-                        aria-label={`Show transformation ${index + 1}`}
-                        title={`${item.clientName} (${index + 1}/${transformationsList.length})`}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Play / Pause Auto-Switch */}
-                  <button
-                    type="button"
-                    onClick={() => setIsPlaying((playing) => !playing)}
-                    aria-label={isPlaying ? 'Pause slideshow' : 'Play slideshow'}
-                    title={isPlaying ? 'Pause Auto-Switch' : 'Start Auto-Switch'}
-                  >
-                    {isPlaying ? <Pause /> : <Play />}
-                  </button>
-
-                  {/* Audio Mute/Unmute for video reels */}
-                  {isVideo && (
-                    <button
-                      type="button"
-                      onClick={() => setIsMuted((m) => !m)}
-                      aria-label={isMuted ? 'Unmute video audio' : 'Mute video audio'}
-                      title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-                    >
-                      {isMuted ? <VolumeX /> : <Volume2 />}
-                    </button>
-                  )}
-
-                  <button type="button" onClick={() => changeSlide(1)} aria-label="Next transformation" title="Next Slide">
-                    <ChevronRight />
-                  </button>
-
-                  <button type="button" onClick={toggleFullscreen} aria-label="Toggle 55″ Fullscreen" title="Toggle 55″ Fullscreen">
-                    {isFullscreen ? <Minimize2 /> : <Maximize2 />}
-                  </button>
+              {/* Real Scannable Website QR Code Card */}
+              <div className="tv-apk-qr-section">
+                <div className="tv-apk-qr-kicker">SCAN TO EXPLORE</div>
+                <div className="tv-apk-qr-heading">OUR SERVICES</div>
+                <div className="tv-apk-qr-box">
+                  <img
+                    src="/brand/website-qr.svg"
+                    alt="Scan for Dipali Wakale Website"
+                    className="tv-apk-qr-img"
+                  />
                 </div>
-              )}
-
-              {/* ── ANDROID TV TOGGLE CONTROL PANEL ── */}
-              {isTvMode && (
-                <div
-                  className={`tv-toggle-control-panel ${tvPanelVisible ? 'tv-panel-visible' : ''}`}
-                  role="toolbar"
-                  aria-label="Android TV Playback Controls"
-                >
-                  {/* Previous Button */}
-                  <button
-                    type="button"
-                    ref={prevBtnRef}
-                    className={`tv-panel-btn ${focusedButton === 0 ? 'tv-panel-btn-focused' : ''}`}
-                    onClick={() => {
-                      changeSlide(-1);
-                      setFocusedButton(0);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
-                    }}
-                    tabIndex={tvPanelVisible ? 0 : -1}
-                    aria-label="Previous transformation video"
-                  >
-                    <SkipBack size={38} strokeWidth={2.4} />
-                    <span className="tv-panel-btn-label">Previous</span>
-                  </button>
-
-                  {/* Play / Pause Toggle Button */}
-                  <button
-                    type="button"
-                    ref={playBtnRef}
-                    className={`tv-panel-btn tv-panel-btn-main ${focusedButton === 1 ? 'tv-panel-btn-focused' : ''}`}
-                    onClick={() => {
-                      togglePlayPause();
-                      setFocusedButton(1);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
-                    }}
-                    tabIndex={tvPanelVisible ? 0 : -1}
-                    aria-label={isPlaying ? 'Pause video' : 'Play video'}
-                  >
-                    {isPlaying ? (
-                      <Pause size={44} strokeWidth={2.4} />
-                    ) : (
-                      <Play size={44} strokeWidth={2.4} style={{ marginLeft: '4px' }} />
-                    )}
-                    <span className="tv-panel-btn-label">{isPlaying ? 'Pause' : 'Play'}</span>
-                  </button>
-
-                  {/* Next Button */}
-                  <button
-                    type="button"
-                    ref={nextBtnRef}
-                    className={`tv-panel-btn ${focusedButton === 2 ? 'tv-panel-btn-focused' : ''}`}
-                    onClick={() => {
-                      changeSlide(1);
-                      setFocusedButton(2);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') e.preventDefault();
-                    }}
-                    tabIndex={tvPanelVisible ? 0 : -1}
-                    aria-label="Next transformation video"
-                  >
-                    <SkipForward size={38} strokeWidth={2.4} />
-                    <span className="tv-panel-btn-label">Next</span>
-                  </button>
-                </div>
-              )}
+                <div className="tv-apk-qr-link">www.dipaliwakale.in</div>
+                <div className="tv-apk-scan-sub">Book Appointment &bull; Gallery</div>
+              </div>
             </div>
-          </Reveal>
-        ) : <p style={{ textAlign: 'center' }}>No transformations available.</p>}
+          )}
 
-      </div>
+          {/* ══════════════════════════════════════════════════════
+               CENTER PANEL (60% or 100% in Fullscreen / Horizontal Video Mode)
+               Transformation Media + Floating Overlay Controls
+             ══════════════════════════════════════════════════════ */}
+          <div className={`tv-apk-center-panel ${isFullScreen ? 'tv-fullscreen-mode' : ''}`}>
+            {/* Compact Service Title Overlay at Top */}
+            {treatmentTitle && (
+              <div className="tv-apk-treatment-overlay tv-apk-fade-in" key={`badge-${activeSlide}`}>
+                <span className="tv-apk-overlay-sparkle">✨</span>
+                <div className="tv-apk-overlay-content">
+                  <div className="tv-apk-overlay-title">{treatmentTitle}</div>
+                  <div className="tv-apk-overlay-sub">
+                    <span>By Dipali Wakale</span>
+                    {treatmentSubtitle && <span> &bull; {treatmentSubtitle}</span>}
+                    {activeItem?.period && <span> &bull; {activeItem.period}</span>}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Ambient Blurred Backdrop for vertical reels */}
+            {activeItem.video ? (
+              <video
+                ref={ambientVideoRef}
+                className="tv-apk-ambient-backdrop"
+                src={activeItem.video}
+                muted
+                autoPlay
+                loop
+                playsInline
+                aria-hidden="true"
+              />
+            ) : activeItem.image ? (
+              <img className="tv-apk-ambient-backdrop" src={activeItem.image} alt="" aria-hidden="true" />
+            ) : null}
+
+            {/* Foreground Main Media */}
+            {activeItem.beforeVideo && activeItem.afterVideo ? (
+              <VideoComparison
+                before={activeItem.beforeVideo}
+                after={activeItem.afterVideo}
+                clientName={activeItem.clientName}
+              />
+            ) : activeItem.video ? (
+              <video
+                ref={videoRef}
+                key={activeItem.video}
+                className="tv-apk-main-video"
+                src={activeItem.video}
+                poster={activeItem.poster || activeItem.after || activeItem.image}
+                controls={false}
+                autoPlay
+                muted
+                loop={calculateSlideDuration() !== 'end'}
+                playsInline
+                onLoadedMetadata={handleVideoLoadedMetadata}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onTimeUpdate={handleVideoTimeUpdate}
+                onEnded={handleVideoEnded}
+                onError={handleVideoError}
+              >
+                Your browser does not support video playback.
+              </video>
+            ) : activeItem.before && activeItem.after ? (
+              /* Mode B: Full-Screen 50% Before | 50% After Comparison (Side panels hidden) */
+              <div className="tv-apk-before-after-container">
+                <div className="tv-apk-ba-side">
+                  <img src={activeItem.before} alt="Before" className="tv-apk-ba-img" />
+                  <span className="tv-apk-ba-label tv-apk-ba-before">BEFORE</span>
+                </div>
+                <div className="tv-apk-ba-divider" />
+                <div className="tv-apk-ba-side">
+                  <img src={activeItem.after} alt="After" className="tv-apk-ba-img" />
+                  <span className="tv-apk-ba-label tv-apk-ba-after">AFTER</span>
+                </div>
+              </div>
+            ) : activeItem.image ? (
+              <img className="tv-apk-main-image" src={activeItem.image} alt={activeItem.clientName || 'Transformation'} />
+            ) : null}
+
+            {/* ── WHISPER-THIN CHAMPAGNE GOLD TIMELINE (Progress Bar) ── */}
+            <div className="tv-apk-progress-track">
+              <div
+                className="tv-apk-progress-bar"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+
+            {/* ── SMALL FLOATING CONTROLS (Exactly 3 Buttons: Previous, Play/Pause, Next) ── */}
+            <div
+              className={`tv-apk-floating-controls ${controlsVisible ? 'visible' : 'hidden'}`}
+              role="toolbar"
+              aria-label="Remote Playback Controls"
+            >
+              {/* 1. Previous — 40px circle */}
+              <button
+                type="button"
+                ref={prevBtnRef}
+                className={`tv-apk-btn tv-apk-btn-circle ${focusedButton === 0 ? 'focused' : ''}`}
+                onClick={handlePrevious}
+                onMouseEnter={() => setFocusedButton(0)}
+                tabIndex={controlsVisible ? 0 : -1}
+                aria-label="Previous Transformation"
+                title="Previous (Remote Left)"
+              >
+                <SkipBack size={17} strokeWidth={2.4} />
+              </button>
+
+              {/* 2. Play/Pause — 46px circle (default focus) */}
+              <button
+                type="button"
+                ref={playBtnRef}
+                className={`tv-apk-btn tv-apk-btn-play ${focusedButton === 1 ? 'focused' : ''}`}
+                onClick={handleTogglePlayPause}
+                onMouseEnter={() => setFocusedButton(1)}
+                tabIndex={controlsVisible ? 0 : -1}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
+                title={isPlaying ? 'Pause (Remote OK)' : 'Play (Remote OK)'}
+              >
+                {isPlaying ? (
+                  <Pause size={20} strokeWidth={2.4} />
+                ) : (
+                  <Play size={20} strokeWidth={2.4} style={{ marginLeft: '2px' }} />
+                )}
+              </button>
+
+              {/* 3. Next — 40px circle */}
+              <button
+                type="button"
+                ref={nextBtnRef}
+                className={`tv-apk-btn tv-apk-btn-circle ${focusedButton === 2 ? 'focused' : ''}`}
+                onClick={handleNext}
+                onMouseEnter={() => setFocusedButton(2)}
+                tabIndex={controlsVisible ? 0 : -1}
+                aria-label="Next Transformation"
+                title="Next (Remote Right)"
+              >
+                <SkipForward size={17} strokeWidth={2.4} />
+              </button>
+            </div>
+          </div>
+
+          {/* ══════════════════════════════════════════════════════
+               RIGHT PANEL (20%) — Instagram QR & Salon Contact Info
+               Hidden when in Fullscreen Mode (Horizontal Video or Before & After)
+             ══════════════════════════════════════════════════════ */}
+          {!isFullScreen && (
+            <div className="tv-apk-panel tv-apk-right-panel">
+              {/* Instagram Header & Handle */}
+              <div className="tv-apk-insta-section">
+                <div className="tv-apk-insta-icon">📸</div>
+                <div className="tv-apk-qr-kicker">OFFICIAL INSTAGRAM</div>
+                <div className="tv-apk-insta-handle">@wakale_dipali_</div>
+                <div className="tv-apk-insta-sub">Dipali Wakale &bull; Hair Artist</div>
+              </div>
+
+              {/* Real Scannable Instagram QR Code Card */}
+              <div className="tv-apk-qr-section">
+                <div className="tv-apk-qr-box">
+                  <img
+                    src="/brand/instagram-qr.svg"
+                    alt="Scan for Dipali Wakale Instagram"
+                    className="tv-apk-qr-img"
+                  />
+                </div>
+                <div className="tv-apk-scan-sub" style={{ marginTop: '6px', color: '#F2C9B6', fontWeight: 600 }}>
+                  Scan to Follow Our Transformations
+                </div>
+              </div>
+
+              <div className="tv-apk-divider-subtle" />
+
+              {/* Salon Contact Details */}
+              <div className="tv-apk-contact-section">
+                <div className="tv-apk-contact-title">CONTACT &amp; CLINIC</div>
+                <div className="tv-apk-contact-row">
+                  <span className="tv-apk-contact-icon">📞</span>
+                  <span className="tv-apk-contact-text">+91 8805291910</span>
+                </div>
+                <div className="tv-apk-contact-row">
+                  <span className="tv-apk-contact-icon">📞</span>
+                  <span className="tv-apk-contact-text">+91 8237108495</span>
+                </div>
+                <div className="tv-apk-contact-row">
+                  <span className="tv-apk-contact-icon">📍</span>
+                  <span className="tv-apk-contact-text">Ghargaon, Sangamner &bull; Pune</span>
+                </div>
+                <div className="tv-apk-contact-badge">
+                  ✦ 4.9★ Rated on Google (500+ Reviews) ✦
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      ) : (
+        <div className="tv-apk-empty">
+          <div className="tv-apk-empty-icon">✂</div>
+          <h2>DIPALI WAKALE CLINIC</h2>
+          <p className="tv-apk-empty-sub">Connecting to Transformation Display...</p>
+          <p className="tv-apk-empty-hint">Publish transformations from the Admin Dashboard to showcase on this TV.</p>
+        </div>
+      )}
     </div>
   );
 };

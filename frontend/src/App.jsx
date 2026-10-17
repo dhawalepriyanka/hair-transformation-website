@@ -75,6 +75,7 @@ class ErrorBoundary extends React.Component {
 function App() {
   const isTv = typeof window !== 'undefined' && (
     window.location.pathname === '/tv' ||
+    window.location.pathname === '/transformations' ||
     window.location.pathname === '/index.html' ||
     window.location.search.includes('tv=1') ||
     window.location.hash.includes('tv') ||

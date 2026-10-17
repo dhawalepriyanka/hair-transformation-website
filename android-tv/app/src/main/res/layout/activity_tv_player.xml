@@ -15,7 +15,7 @@
     android:id="@+id/rootContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#151313"
+    android:background="#0A0305"
     android:keepScreenOn="true"
     android:orientation="horizontal"
     android:paddingStart="10dp"
