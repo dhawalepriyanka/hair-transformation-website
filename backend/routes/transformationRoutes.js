@@ -18,8 +18,12 @@ const {
   updateTransformation,
   deleteTransformation,
   migrateTransformations,
-  streamInstagramVideo
+  streamInstagramVideo,
+  reorderTransformations
 } = require('../controllers/transformationController');
+
+// Batch reorder transformations sequence
+router.post('/reorder', reorderTransformations);
 
 // Native Instagram video streaming endpoint with audio for automated TV playback
 router.get('/instagram-video', streamInstagramVideo);

@@ -603,6 +603,34 @@ const migrateTransformations = async (req, res, next) => {
   }
 };
 
+// @desc    Batch reorder transformations sequence
+// @route   POST /api/transformations/reorder
+// @access  Admin
+const reorderTransformations = async (req, res, next) => {
+  try {
+    const items = Array.isArray(req.body) ? req.body : req.body?.items;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Expected an array of transformations to reorder' });
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const id = String(item.id);
+      const order = item.displayOrder !== undefined ? Number(item.displayOrder) : (i + 1);
+      try {
+        await pool.query('UPDATE transformations SET display_order = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [order, id]);
+      } catch (_) {
+        const idx = inMemoryTransformations.findIndex(t => String(t.id) === id);
+        if (idx !== -1) inMemoryTransformations[idx].displayOrder = order;
+      }
+    }
+
+    return res.status(200).json({ success: true, message: 'Sequence updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getTransformations,
   uploadTransformationMedia,
@@ -611,5 +639,6 @@ module.exports = {
   updateTransformation,
   deleteTransformation,
   migrateTransformations,
-  streamInstagramVideo
+  streamInstagramVideo,
+  reorderTransformations
 };

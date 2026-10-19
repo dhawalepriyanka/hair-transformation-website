@@ -216,13 +216,22 @@ const TransformationsPage = () => {
         }
       }
 
-      // 3. Put custom admin uploads first, followed by all clinic published reels and transformations
+      // 3. Sort items strictly by sequence configured in Admin Dashboard (displayOrder)
       const sortedItems = [...uniqueItems].sort((a, b) => {
+        const orderA = (a.displayOrder !== undefined && a.displayOrder !== null && a.displayOrder !== '') 
+          ? Number(a.displayOrder) 
+          : 999999;
+        const orderB = (b.displayOrder !== undefined && b.displayOrder !== null && b.displayOrder !== '') 
+          ? Number(b.displayOrder) 
+          : 999999;
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
         const aIsCustom = !(Number(a.id) >= 9100001 && Number(a.id) <= 9100099);
         const bIsCustom = !(Number(b.id) >= 9100001 && Number(b.id) <= 9100099);
         if (aIsCustom && !bIsCustom) return -1;
         if (!aIsCustom && bIsCustom) return 1;
-        return (a.displayOrder || 0) - (b.displayOrder || 0);
+        return 0;
       });
 
       // 4. Inject Live Patient Waiting List Slide into the TV rotation (driven by Admin Settings)
@@ -276,7 +285,11 @@ const TransformationsPage = () => {
         }
       }
 
-      setTransformationsList(itemsWithQueue);
+      setTransformationsList((prev) => {
+        const prevJson = JSON.stringify(prev);
+        const newJson = JSON.stringify(itemsWithQueue);
+        return prevJson === newJson ? prev : itemsWithQueue;
+      });
 
       // Preserve active transformation if it still exists after reload/sync
       setActiveSlide((currSlide) => {
@@ -802,6 +815,7 @@ const TransformationsPage = () => {
   // Auto-advance slideshow timer (honors admin autoSwitch setting)
   useEffect(() => {
     if (slideTimerRef.current) {
+      clearTimeout(slideTimerRef.current);
       clearInterval(slideTimerRef.current);
       slideTimerRef.current = null;
     }
@@ -817,22 +831,27 @@ const TransformationsPage = () => {
       slideTimerRef.current = window.setTimeout(() => {
         changeSlide(1);
       }, 300000);
-      return () => clearTimeout(slideTimerRef.current);
+      return () => {
+        if (slideTimerRef.current) {
+          clearTimeout(slideTimerRef.current);
+          slideTimerRef.current = null;
+        }
+      };
     }
 
-    const durationMs = (Number(duration) || 7) * 1000;
+    const durationMs = Math.max(2, Number(duration) || 7) * 1000;
 
-    slideTimerRef.current = window.setInterval(() => {
+    slideTimerRef.current = window.setTimeout(() => {
       changeSlide(1);
     }, durationMs);
 
     return () => {
       if (slideTimerRef.current) {
-        clearInterval(slideTimerRef.current);
+        clearTimeout(slideTimerRef.current);
         slideTimerRef.current = null;
       }
     };
-  }, [activeSlide, isPlaying, transformationsList.length, calculateSlideDuration, changeSlide, activeItem, slideshowSettings.autoSwitch]);
+  }, [activeSlide, isPlaying, transformationsList.length, calculateSlideDuration, changeSlide, slideshowSettings.autoSwitch]);
 
   // TV Remote Navigation (D-Pad & Media Keys)
   useEffect(() => {

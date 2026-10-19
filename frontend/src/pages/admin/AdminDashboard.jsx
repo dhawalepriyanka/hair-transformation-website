@@ -11,6 +11,7 @@ import { compressImageFile, fileToOptimizedDataUri, compressDataUri } from '../.
 import {
   fetchProducts, deleteProduct, updateProduct,
   fetchTransformations, createTransformation, updateTransformation, deleteTransformation,
+  reorderTransformationsApi,
   fetchSlideshowSettings, saveSlideshowSettings, DEFAULT_SLIDESHOW_SETTINGS,
   uploadTransformationMediaFile, clearBulkyLocalStorage
 } from '../../services/api';
@@ -294,8 +295,9 @@ const AdminDashboard = () => {
       safeSaveLocalStorage('admin_transformations', updatedList);
       broadcastTransformationsChange('reorder', updatedList);
       // Persist to backend
+      reorderTransformationsApi(updatedList);
       for (const t of updatedList) {
-        updateTransformation(t.id, { displayOrder: t.displayOrder }).catch(() => {});
+        updateTransformation(t.id, t).catch(() => {});
       }
     } catch (err) {
       console.warn('Reorder save notice:', err.message);

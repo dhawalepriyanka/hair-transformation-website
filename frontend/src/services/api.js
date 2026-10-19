@@ -1062,7 +1062,16 @@ export const fetchTransformations = async () => {
       return !currentBackendIdSet.has(idStr) && !defaultIdSet.has(idStr) && !isDummyStock(item);
     });
 
-    const merged = [...unmergedLocal, ...backendItems];
+    const sortByDisplayOrder = (arr) => {
+      return [...arr].sort((a, b) => {
+        const orderA = (a.displayOrder !== undefined && a.displayOrder !== null && a.displayOrder !== '') ? Number(a.displayOrder) : 999999;
+        const orderB = (b.displayOrder !== undefined && b.displayOrder !== null && b.displayOrder !== '') ? Number(b.displayOrder) : 999999;
+        if (orderA !== orderB) return orderA - orderB;
+        return 0;
+      });
+    };
+
+    const merged = sortByDisplayOrder([...unmergedLocal, ...backendItems]);
 
     try {
       safeSaveLocalStorage('admin_transformations', merged);
@@ -1082,7 +1091,20 @@ export const fetchTransformations = async () => {
       saveToIndexedDb(list);
     } catch (e) {}
   }
-  return list;
+  return [...list].sort((a, b) => {
+    const orderA = (a.displayOrder !== undefined && a.displayOrder !== null && a.displayOrder !== '') ? Number(a.displayOrder) : 999999;
+    const orderB = (b.displayOrder !== undefined && b.displayOrder !== null && b.displayOrder !== '') ? Number(b.displayOrder) : 999999;
+    if (orderA !== orderB) return orderA - orderB;
+    return 0;
+  });
+};
+
+export const reorderTransformationsApi = async (items) => {
+  try {
+    await apiClient.post('/transformations/reorder', { items });
+  } catch (err) {
+    console.warn('Backend reorder notice:', err.message);
+  }
 };
 
 export const createTransformation = async (itemData) => {
@@ -1137,7 +1159,13 @@ export const createTransformation = async (itemData) => {
 };
 
 export const updateTransformation = async (id, itemData) => {
-  itemData = normalizeTransformation(itemData);
+  if (itemData.clientName && itemData.village && itemData.treatment) {
+    try {
+      itemData = normalizeTransformation(itemData);
+    } catch (_) {}
+  } else if (itemData.displayOrder !== undefined) {
+    itemData.displayOrder = Number(itemData.displayOrder);
+  }
   let backendSuccess = false;
   try {
     const response = await apiClient.put(`/transformations/${id}`, itemData);
