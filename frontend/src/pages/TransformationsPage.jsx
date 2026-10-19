@@ -106,6 +106,7 @@ const TransformationsPage = () => {
   const controlsTimerRef = useRef(null);
   const cursorTimerRef = useRef(null);
   const videoErrorTimerRef = useRef(null);
+  const videoEndedHandledRef = useRef(false);
   const transformationsListRef = useRef([]);
 
   // Keep refs synchronized with state for callback access
@@ -421,6 +422,19 @@ const TransformationsPage = () => {
     }
   }, [activeSlide, activeItem]);
 
+  const playVideoSafe = useCallback((videoEl, muted) => {
+    if (!videoEl) return;
+    videoEl.muted = muted;
+    const promise = videoEl.play();
+    if (promise !== undefined) {
+      promise.catch(() => {
+        // Fallback to muted if browser autoplay blocked audio
+        videoEl.muted = true;
+        videoEl.play().catch(() => {});
+      });
+    }
+  }, []);
+
   const handleVideoLoadedMetadata = (e) => {
     const v = e.target;
     if (v && v.videoWidth && v.videoHeight) {
@@ -429,6 +443,9 @@ const TransformationsPage = () => {
         videoOrientationCacheRef.current[activeItem.video] = isH;
       }
       setIsVideoHorizontal(isH);
+    }
+    if (isPlaying && v) {
+      playVideoSafe(v, isMuted);
     }
   };
 
@@ -473,17 +490,14 @@ const TransformationsPage = () => {
     if (isVideo) {
       const isEmbed = isEmbedForSlide(activeItem);
       if (!isEmbed) {
-        // Native HTML5 video (including native Instagram stream): plays to the end!
-        if (slideshowSettings.videoDurationMode === 'end' || !slideshowSettings.videoDurationMode) {
-          return 'end';
-        }
-      } else {
-        // External iframe embed (YouTube, Drive, or iframe fallback):
-        if (activeItem.duration && !isNaN(activeItem.duration) && activeItem.duration > 0) {
-          return parseInt(activeItem.duration, 10);
-        }
-        return parseInt(slideshowSettings.videoDuration, 10) || 15;
+        // Native HTML5 video (including native Instagram stream): ALWAYS plays to the end!
+        return 'end';
       }
+      // External iframe embed (YouTube, Drive, or iframe fallback):
+      if (activeItem.duration && !isNaN(activeItem.duration) && activeItem.duration > 0) {
+        return parseInt(activeItem.duration, 10);
+      }
+      return parseInt(slideshowSettings.videoDuration, 10) || 15;
     }
 
     // 3. Individual item custom duration if explicitly set
@@ -493,7 +507,7 @@ const TransformationsPage = () => {
 
     // 4. Photo & Before/After Image slides (defaults to 7s)
     return parseInt(slideshowSettings.imageDuration, 10) || 7;
-  }, [activeItem, isVideo, slideshowSettings]);
+  }, [activeItem, isVideo, slideshowSettings, isEmbedForSlide]);
 
   // Slide navigation with infinite wrap (always references latest transformations list)
   const changeSlide = useCallback((direction) => {
@@ -530,6 +544,7 @@ const TransformationsPage = () => {
     }
     setHasUserInteracted(true);
     setIsMuted(false);
+    setIsPlaying(true);
     if (videoRef.current) {
       videoRef.current.muted = false;
     }
@@ -545,6 +560,7 @@ const TransformationsPage = () => {
     }
     setHasUserInteracted(true);
     setIsMuted(false);
+    setIsPlaying(true);
     if (videoRef.current) {
       videoRef.current.muted = false;
     }
@@ -701,46 +717,45 @@ const TransformationsPage = () => {
     }
   }, [isPlaying, isVideo, activeItem, isEmbedForSlide]);
 
-  // Video reset on slide transition
+  // Video playback on slide transition
   useEffect(() => {
+    videoEndedHandledRef.current = false;
     if (videoErrorTimerRef.current) {
       clearTimeout(videoErrorTimerRef.current);
       videoErrorTimerRef.current = null;
     }
     if (videoRef.current && isVideo && !isEmbedForSlide(activeItem)) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.muted = isMuted;
       if (isPlaying) {
-        const playPromise = videoRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            // Browser blocked autoplay with sound → fall back to muted
-            setIsMuted(true);
-            if (videoRef.current) {
-              videoRef.current.muted = true;
-              videoRef.current.play().catch(() => {});
-            }
-          });
-        }
+        playVideoSafe(videoRef.current, isMuted);
       } else {
         videoRef.current.pause();
       }
     }
     if (ambientVideoRef.current && activeItem?.video && !isEmbedForSlide(activeItem)) {
-      ambientVideoRef.current.currentTime = 0;
       if (isPlaying) {
         ambientVideoRef.current.play().catch(() => {});
       } else {
         ambientVideoRef.current.pause();
       }
     }
-  }, [activeSlide, isVideo, isEmbedForSlide, isPlaying, activeItem, isMuted]);
+  }, [activeSlide, isVideo, isEmbedForSlide, isPlaying, activeItem, isMuted, playVideoSafe]);
+
+  // Handle video end: immediately advance to next slide/video as requested
+  const handleVideoEnded = useCallback(() => {
+    if (videoEndedHandledRef.current) return;
+    videoEndedHandledRef.current = true;
+    setIsPlaying(true);
+    changeSlide(1);
+  }, [changeSlide]);
 
   // Video progress time tracking
   const handleVideoTimeUpdate = (e) => {
     const vid = e.target;
     if (vid && vid.duration) {
       setProgressPercent((vid.currentTime / vid.duration) * 100);
+      if (vid.currentTime >= vid.duration - 0.25 && vid.duration > 1) {
+        handleVideoEnded();
+      }
     }
   };
 
@@ -759,14 +774,14 @@ const TransformationsPage = () => {
       videoRef.current.play().catch(() => {});
       return;
     }
-    // 2. Give user 4s to view slide info before advancing
+    // 2. Give user 3s to view slide info before advancing
     if (videoErrorTimerRef.current) clearTimeout(videoErrorTimerRef.current);
     videoErrorTimerRef.current = setTimeout(() => {
-      if (isPlaying && transformationsListRef.current.length > 1) {
+      if (transformationsListRef.current.length > 1) {
         changeSlide(1);
       }
-    }, 4000);
-  }, [activeItem?.video, activeItem?.image, changeSlide, isPlaying, instagramFallbackMap]);
+    }, 3000);
+  }, [activeItem?.video, activeItem?.image, changeSlide, instagramFallbackMap]);
 
   // Track progress line for non-video or embeddable platform slides
   useEffect(() => {
@@ -783,13 +798,6 @@ const TransformationsPage = () => {
     }, 100);
     return () => clearInterval(interval);
   }, [activeSlide, isVideo, isPlaying, calculateSlideDuration, activeItem]);
-
-  // Handle video end: immediately advance to next slide/video as requested
-  const handleVideoEnded = () => {
-    if (isPlaying) {
-      changeSlide(1);
-    }
-  };
 
   // Auto-advance slideshow timer (honors admin autoSwitch setting)
   useEffect(() => {
@@ -1034,11 +1042,12 @@ const TransformationsPage = () => {
             {!activeItem?.isQueueSlide && activeItem.video && !isEmbedForSlide(activeItem) ? (
               <video
                 ref={ambientVideoRef}
+                key={`ambient-video-${activeSlide}-${activeItem.id || activeItem.video}`}
                 className="tv-apk-ambient-backdrop"
                 src={isInstagramUrl(activeItem.video) ? getInstagramStreamUrl(activeItem.video) : resolveMediaUrl(activeItem.video)}
                 muted
                 autoPlay
-                loop
+                loop={false}
                 playsInline
                 aria-hidden="true"
               />
@@ -1174,7 +1183,7 @@ const TransformationsPage = () => {
             ) : activeItem.video ? (
               <video
                 ref={videoRef}
-                key={activeItem.video}
+                key={`main-video-${activeSlide}-${activeItem.id || activeItem.video}`}
                 className="tv-apk-main-video"
                 src={isInstagramUrl(activeItem.video) ? getInstagramStreamUrl(activeItem.video) : resolveMediaUrl(activeItem.video)}
                 poster={
@@ -1188,11 +1197,14 @@ const TransformationsPage = () => {
                 autoPlay
                 muted={isMuted}
                 preload="auto"
-                loop={calculateSlideDuration() !== 'end'}
+                loop={false}
                 playsInline
                 onLoadedMetadata={handleVideoLoadedMetadata}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
+                onCanPlay={(e) => {
+                  if (isPlaying && e.target) {
+                    playVideoSafe(e.target, isMuted);
+                  }
+                }}
                 onTimeUpdate={handleVideoTimeUpdate}
                 onEnded={handleVideoEnded}
                 onError={handleVideoError}

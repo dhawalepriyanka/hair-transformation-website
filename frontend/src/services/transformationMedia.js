@@ -90,13 +90,13 @@ export function getInstagramStreamUrl(url) {
   const match = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:p|reel|reels|tv|share)\/([A-Za-z0-9_-]+)/i.exec(url.trim());
   if (match && match[1]) {
     const code = match[1];
-    let base = '';
+    let base = 'https://www.dipaliwakale.in';
     if (typeof window !== 'undefined') {
       const host = window.location.hostname;
-      if (host === 'dipaliwakale.in' || host === 'www.dipaliwakale.in') {
-        base = 'https://www.dipaliwakale.in';
-      } else if (window.location.port === '5173') {
+      if (host === 'localhost' || host === '127.0.0.1') {
         base = 'http://localhost:5000';
+      } else if (host === 'dipaliwakale.in' || host === 'www.dipaliwakale.in') {
+        base = 'https://www.dipaliwakale.in';
       }
     }
     return `${base}/api/transformations/instagram-video?code=${code}`;
