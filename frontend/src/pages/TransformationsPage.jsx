@@ -82,6 +82,11 @@ const TransformationsPage = () => {
   const [progressPercent, setProgressPercent] = useState(0);
   const [patientQueue, setPatientQueue] = useState([]);
 
+  // Media Loading & Skeleton Loading State (Prevents black screen while video is loading or buffering)
+  const [isMediaLoading, setIsMediaLoading] = useState(true);
+  const [hasMediaError, setHasMediaError] = useState(false);
+  const [mediaLoadProgress, setMediaLoadProgress] = useState(25);
+
   // Hardware Monitor Fullscreen state
   const [isMonitorFullscreen, setIsMonitorFullscreen] = useState(() => isDocumentFullscreen());
   const hasUserExitedFullscreenRef = useRef(false);
@@ -701,23 +706,68 @@ const TransformationsPage = () => {
     }
   };
 
-  // Video loading error handling (graceful fallback - no 0ms disappearance)
-  const handleVideoError = (e) => {
-    console.warn('Video playback notice for slide:', activeItem?.video, e);
+  // Reset media loading and drive smooth loading bar progression on slide change
+  useEffect(() => {
+    if (activeItem?.isQueueSlide) {
+      setIsMediaLoading(false);
+      setHasMediaError(false);
+      setMediaLoadProgress(100);
+      return;
+    }
+
+    setIsMediaLoading(true);
+    setHasMediaError(false);
+    setMediaLoadProgress(20);
+
+    const interval = setInterval(() => {
+      setMediaLoadProgress((prev) => {
+        if (prev >= 92) return prev;
+        const step = Math.max(1, Math.floor((92 - prev) * 0.18));
+        return Math.min(92, prev + step);
+      });
+    }, 110);
+
+    return () => clearInterval(interval);
+  }, [activeSlide, activeItem?.id, activeItem?.isQueueSlide]);
+
+  const handleMediaReady = useCallback(() => {
+    setMediaLoadProgress(100);
+    setTimeout(() => {
+      setIsMediaLoading(false);
+      setHasMediaError(false);
+    }, 180);
+  }, []);
+
+  const handleMediaBuffering = useCallback(() => {
+    setIsMediaLoading(true);
+  }, []);
+
+  // Media loading error handling (graceful fallback - no 0ms disappearance, no black screen)
+  const handleMediaError = useCallback((e) => {
+    console.warn('Media playback notice for slide:', activeItem?.video || activeItem?.image, e);
+    setIsMediaLoading(false);
+    setHasMediaError(true);
+
     // 1. Try muted if browser blocked unmuted autoplay
     if (videoRef.current && !videoRef.current.muted) {
       videoRef.current.muted = true;
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play()
+        .then(() => {
+          setHasMediaError(false);
+          setIsMediaLoading(false);
+        })
+        .catch(() => {});
       return;
     }
-    // 2. Give user 4s to view slide info before advancing
+
+    // 2. Give user 4s to view slide fallback card before advancing
     if (videoErrorTimerRef.current) clearTimeout(videoErrorTimerRef.current);
     videoErrorTimerRef.current = setTimeout(() => {
       if (isPlaying && transformationsListRef.current.length > 1) {
         changeSlide(1);
       }
     }, 4000);
-  };
+  }, [activeItem?.video, activeItem?.image, changeSlide, isPlaying]);
 
   // Track progress line for non-video or embeddable platform slides
   useEffect(() => {
@@ -1018,7 +1068,7 @@ const TransformationsPage = () => {
                   justifyContent: 'center',
                   borderRadius: '16px',
                   overflow: 'hidden',
-                  background: '#0B0507'
+                  background: 'transparent'
                 }}
               >
                 <iframe
@@ -1028,8 +1078,12 @@ const TransformationsPage = () => {
                     height: '100%',
                     maxWidth: '480px',
                     border: 'none',
-                    borderRadius: '16px'
+                    borderRadius: '16px',
+                    opacity: isMediaLoading ? 0 : 1,
+                    transition: 'opacity 0.4s ease-in-out'
                   }}
+                  onLoad={handleMediaReady}
+                  onError={handleMediaError}
                   allow="autoplay; encrypted-media; picture-in-picture"
                   allowFullScreen
                   title={activeItem.clientName || 'Instagram Reel'}
@@ -1047,7 +1101,7 @@ const TransformationsPage = () => {
                   justifyContent: 'center',
                   borderRadius: '16px',
                   overflow: 'hidden',
-                  background: '#0B0507'
+                  background: 'transparent'
                 }}
               >
                 <iframe
@@ -1058,8 +1112,12 @@ const TransformationsPage = () => {
                     maxWidth: isVideoHorizontal ? '960px' : '480px',
                     aspectRatio: isVideoHorizontal ? '16/9' : '9/16',
                     border: 'none',
-                    borderRadius: '16px'
+                    borderRadius: '16px',
+                    opacity: isMediaLoading ? 0 : 1,
+                    transition: 'opacity 0.4s ease-in-out'
                   }}
+                  onLoad={handleMediaReady}
+                  onError={handleMediaError}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                   title={activeItem.clientName || 'YouTube Video'}
@@ -1077,7 +1135,7 @@ const TransformationsPage = () => {
                   justifyContent: 'center',
                   borderRadius: '16px',
                   overflow: 'hidden',
-                  background: '#0B0507'
+                  background: 'transparent'
                 }}
               >
                 <iframe
@@ -1087,8 +1145,12 @@ const TransformationsPage = () => {
                     height: '100%',
                     maxWidth: '850px',
                     border: 'none',
-                    borderRadius: '16px'
+                    borderRadius: '16px',
+                    opacity: isMediaLoading ? 0 : 1,
+                    transition: 'opacity 0.4s ease-in-out'
                   }}
+                  onLoad={handleMediaReady}
+                  onError={handleMediaError}
                   allow="autoplay"
                   allowFullScreen
                   title={activeItem.clientName || 'Google Drive Video'}
@@ -1106,7 +1168,7 @@ const TransformationsPage = () => {
                   justifyContent: 'center',
                   borderRadius: '16px',
                   overflow: 'hidden',
-                  background: '#0B0507'
+                  background: 'transparent'
                 }}
               >
                 <iframe
@@ -1115,8 +1177,12 @@ const TransformationsPage = () => {
                     width: '100%',
                     height: '100%',
                     border: 'none',
-                    borderRadius: '16px'
+                    borderRadius: '16px',
+                    opacity: isMediaLoading ? 0 : 1,
+                    transition: 'opacity 0.4s ease-in-out'
                   }}
+                  onLoad={handleMediaReady}
+                  onError={handleMediaError}
                   allow="autoplay; fullscreen; picture-in-picture"
                   allowFullScreen
                   title={activeItem.clientName || 'Vimeo Video'}
@@ -1127,18 +1193,33 @@ const TransformationsPage = () => {
                 ref={videoRef}
                 key={activeItem.video}
                 className="tv-apk-main-video"
+                style={{
+                  opacity: isMediaLoading ? 0 : 1,
+                  transition: 'opacity 0.4s ease-in-out'
+                }}
                 src={resolveMediaUrl(activeItem.video)}
-                poster={activeItem.poster || activeItem.after || activeItem.image}
+                poster={
+                  activeItem.poster || activeItem.after || activeItem.image ||
+                  (String(activeItem.id) === '9100001' ? '/instagram/hair-transformation-client.jpg' :
+                   String(activeItem.id) === '9100002' ? '/instagram/long-hair-styling.jpg' :
+                   String(activeItem.id) === '9100003' ? '/instagram/salon-client.jpg' :
+                   '/instagram/dipali-wakale-portrait.jpg')
+                }
                 controls={false}
                 autoPlay
                 loop={calculateSlideDuration() !== 'end'}
                 playsInline
+                onLoadStart={() => { setIsMediaLoading(true); setHasMediaError(false); }}
+                onWaiting={handleMediaBuffering}
+                onLoadedData={() => setMediaLoadProgress(85)}
+                onCanPlay={handleMediaReady}
+                onPlaying={handleMediaReady}
                 onLoadedMetadata={handleVideoLoadedMetadata}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
                 onTimeUpdate={handleVideoTimeUpdate}
                 onEnded={handleVideoEnded}
-                onError={handleVideoError}
+                onError={handleMediaError}
               >
                 Your browser does not support video playback.
               </video>
@@ -1146,18 +1227,118 @@ const TransformationsPage = () => {
               /* Mode B: Full-Screen 50% Before | 50% After Comparison (Side panels hidden) */
               <div className="tv-apk-before-after-container">
                 <div className="tv-apk-ba-side">
-                  <img src={activeItem.before} alt="Before" className="tv-apk-ba-img" />
+                  <img src={activeItem.before} alt="Before" className="tv-apk-ba-img" onLoad={handleMediaReady} onError={handleMediaError} />
                   <span className="tv-apk-ba-label tv-apk-ba-before">BEFORE</span>
                 </div>
                 <div className="tv-apk-ba-divider" />
                 <div className="tv-apk-ba-side">
-                  <img src={activeItem.after} alt="After" className="tv-apk-ba-img" />
+                  <img src={activeItem.after} alt="After" className="tv-apk-ba-img" onLoad={handleMediaReady} onError={handleMediaError} />
                   <span className="tv-apk-ba-label tv-apk-ba-after">AFTER</span>
                 </div>
               </div>
             ) : activeItem.image ? (
-              <img className="tv-apk-main-image" src={activeItem.image} alt={activeItem.clientName || 'Transformation'} />
+              <img
+                className="tv-apk-main-image"
+                style={{
+                  opacity: isMediaLoading ? 0 : 1,
+                  transition: 'opacity 0.4s ease-in-out'
+                }}
+                src={resolveMediaUrl(activeItem.image)}
+                alt={activeItem.clientName || 'Transformation'}
+                onLoad={handleMediaReady}
+                onError={handleMediaError}
+              />
             ) : null}
+
+            {/* ── LUXURY SKELETON LOADING & LOADING BAR (Displayed while media loads/buffers - NO BLACK SCREEN) ── */}
+            {isMediaLoading && !hasMediaError && !activeItem?.isQueueSlide && (
+              <div className="tv-apk-skeleton-overlay" aria-live="polite" aria-busy="true">
+                <div className="tv-apk-skeleton-ambient-glow" />
+                <div className={`tv-apk-skeleton-card ${isVideoHorizontal ? 'horizontal' : 'vertical'}`}>
+                  {/* Clinic Crest Badge */}
+                  <div className="tv-apk-skeleton-badge">
+                    <span className="tv-apk-skeleton-sparkle">✨</span>
+                    <span>DIPALI WAKALE CLINIC</span>
+                    <span className="tv-apk-skeleton-sparkle">✨</span>
+                  </div>
+
+                  {/* Pulsing Salon Emblem */}
+                  <div className="tv-apk-skeleton-emblem-wrap">
+                    <div className="tv-apk-skeleton-ring ring-outer" />
+                    <div className="tv-apk-skeleton-ring ring-inner" />
+                    <div className="tv-apk-skeleton-icon">✂</div>
+                  </div>
+
+                  {/* Treatment Info Shimmer */}
+                  <div className="tv-apk-skeleton-details">
+                    <div className="tv-apk-skeleton-title">{treatmentTitle || 'Hair Transformation Showcase'}</div>
+                    <div className="tv-apk-skeleton-sub">
+                      {treatmentSubtitle || 'Dipali Wakale • Hair & Skin Care Artist'}
+                    </div>
+                  </div>
+
+                  {/* Golden Shimmering Loading Bar */}
+                  <div className="tv-apk-skeleton-loader">
+                    <div className="tv-apk-skeleton-bar-track">
+                      <div
+                        className="tv-apk-skeleton-bar-fill"
+                        style={{ width: `${mediaLoadProgress}%` }}
+                      />
+                      <div
+                        className="tv-apk-skeleton-bar-shimmer"
+                        style={{ left: `${mediaLoadProgress}%` }}
+                      />
+                    </div>
+                    <div className="tv-apk-skeleton-loader-footer">
+                      <span className="tv-apk-skeleton-status">
+                        <span className="tv-apk-skeleton-pulse-dot" />
+                        Loading transformation media...
+                      </span>
+                      <span className="tv-apk-skeleton-percentage">
+                        {Math.round(mediaLoadProgress)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Wireframe Placeholder Lines */}
+                  <div className="tv-apk-skeleton-wireframe">
+                    <div className="tv-apk-skeleton-line short" />
+                    <div className="tv-apk-skeleton-line medium" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── LUXURY FALLBACK CARD (Displayed on media load error - NO BLACK SCREEN) ── */}
+            {hasMediaError && !activeItem?.isQueueSlide && (
+              <div className="tv-apk-fallback-overlay" aria-live="assertive">
+                <div className="tv-apk-fallback-card">
+                  <div className="tv-apk-fallback-emblem">✂</div>
+                  <div className="tv-apk-fallback-kicker">TRANSFORMATION SHOWCASE</div>
+                  <h3 className="tv-apk-fallback-title">{treatmentTitle}</h3>
+                  <p className="tv-apk-fallback-sub">{treatmentSubtitle || 'Dipali Wakale Hair & Skin Care Clinic'}</p>
+                  
+                  <div className="tv-apk-fallback-status">
+                    <span className="tv-apk-fallback-icon">⏳</span>
+                    <span>Connecting to stream &bull; Advancing to next transformation...</span>
+                  </div>
+
+                  <div className="tv-apk-fallback-countdown-track">
+                    <div className="tv-apk-fallback-countdown-fill" />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="tv-apk-fallback-skip-btn"
+                    onClick={() => changeSlide(1)}
+                    aria-label="Skip to Next Transformation"
+                  >
+                    <SkipForward size={16} />
+                    <span>Skip to Next Slide</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* ── WHISPER-THIN CHAMPAGNE GOLD TIMELINE (Progress Bar) ── */}
             <div className="tv-apk-progress-track">
