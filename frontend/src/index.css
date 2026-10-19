@@ -3716,6 +3716,12 @@ html { scroll-behavior: smooth; }
   50% { opacity: 0.4; transform: scale(0.85); }
 }
 
+.tv-queue-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .tv-queue-count-badge {
   display: inline-flex;
   align-items: center;
@@ -3727,6 +3733,20 @@ html { scroll-behavior: smooth; }
   color: #E4B49F;
   font-weight: 600;
   font-size: 0.84rem;
+}
+
+.tv-queue-duration-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(200, 138, 117, 0.18);
+  border: 1px solid rgba(200, 138, 117, 0.45);
+  padding: 7px 14px;
+  border-radius: 9999px;
+  color: #F5A58D;
+  font-weight: 700;
+  font-size: 0.84rem;
+  letter-spacing: 0.5px;
 }
 
 /* ── GRID ── */

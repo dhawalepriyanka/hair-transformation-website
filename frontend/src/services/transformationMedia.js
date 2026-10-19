@@ -80,6 +80,10 @@ export function normalizeTransformation(data) {
     const parsedDuration = parseInt(item.duration, 10);
     item.duration = !isNaN(parsedDuration) && parsedDuration > 0 ? parsedDuration : undefined;
   }
+  if (item.displayOrder !== undefined && item.displayOrder !== '' && item.displayOrder !== null) {
+    const parsedOrder = parseInt(item.displayOrder, 10);
+    item.displayOrder = !isNaN(parsedOrder) ? parsedOrder : undefined;
+  }
   if (item.beforeVideo || item.afterVideo) {
     if (!item.beforeVideo || !item.afterVideo) throw new Error('Add both Before and After videos.');
     item.beforeVideo = validateVideoSource(item.beforeVideo);

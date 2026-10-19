@@ -12,7 +12,7 @@ import {
 import {
   Plus, Edit, Trash2, Search, LogOut, Eye, EyeOff,
   Sparkles, RefreshCw, Package, Star, X, Check, Image, Upload, FolderOpen, Video,
-  Tv, Clock, Settings, Users
+  Tv, Clock, Settings, Users, ChevronUp, ChevronDown, ListOrdered
 } from 'lucide-react';
 
 const TRANSFORMATION_CATEGORIES = [
@@ -230,6 +230,7 @@ const AdminDashboard = () => {
       image: '',
       video: '', beforeVideo: '', afterVideo: '',
       duration: '',
+      displayOrder: transformations.length + 1,
       category: 'Hair Extensions'
     });
     setModalOpen(true);
@@ -259,9 +260,41 @@ const AdminDashboard = () => {
       beforeVideo: item.beforeVideo || '',
       afterVideo: item.afterVideo || '',
       duration: item.duration || '',
+      displayOrder: item.displayOrder !== undefined ? String(item.displayOrder) : '',
       category: item.category || 'Hair Extensions'
     });
     setModalOpen(true);
+  };
+
+  const handleMoveTransformation = async (item, direction) => {
+    const list = [...transformations];
+    const currentIndex = list.findIndex(t => String(t.id) === String(item.id));
+    if (currentIndex === -1) return;
+    const targetIndex = currentIndex + direction;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+
+    // Swap items
+    const [moved] = list.splice(currentIndex, 1);
+    list.splice(targetIndex, 0, moved);
+
+    // Assign sequential displayOrder
+    const updatedList = list.map((t, idx) => ({
+      ...t,
+      displayOrder: idx + 1
+    }));
+
+    setTransformations(updatedList);
+    try {
+      saveStoredTransformations(updatedList);
+      safeSaveLocalStorage('admin_transformations', updatedList);
+      broadcastTransformationsChange('reorder', updatedList);
+      // Persist to backend
+      for (const t of updatedList) {
+        updateTransformation(t.id, { displayOrder: t.displayOrder }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('Reorder save notice:', err.message);
+    }
   };
 
   const handleSaveTransformation = async (e) => {
@@ -295,6 +328,13 @@ const AdminDashboard = () => {
       mediaData.duration = !isNaN(dur) && dur > 0 ? dur : undefined;
     } else {
       mediaData.duration = undefined;
+    }
+
+    if (formData.displayOrder) {
+      const ord = parseInt(formData.displayOrder, 10);
+      mediaData.displayOrder = !isNaN(ord) ? ord : undefined;
+    } else {
+      mediaData.displayOrder = undefined;
     }
 
     try {
@@ -663,6 +703,7 @@ const AdminDashboard = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #EBE5E0', color: '#888', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
+                      <th style={{ padding: '0.75rem', width: '90px' }}>Slide #</th>
                       <th style={{ padding: '0.75rem' }}>Before & After</th>
                       <th style={{ padding: '0.75rem' }}>Client Name</th>
                       <th style={{ padding: '0.75rem' }}>Village / City</th>
@@ -674,8 +715,35 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTransformations.map((item) => (
+                    {filteredTransformations.map((item, index) => (
                       <tr key={item.id} style={{ borderBottom: '1px solid #F4EFEA' }}>
+                        <td style={{ padding: '0.75rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: '800', color: '#9A5F4D', background: '#F7EFEA', padding: '3px 8px', borderRadius: '8px', fontSize: '0.8rem', minWidth: '32px', textAlign: 'center' }}>
+                              #{index + 1}
+                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <button
+                                type="button"
+                                disabled={index === 0}
+                                onClick={() => handleMoveTransformation(item, -1)}
+                                title="Move slide up in sequence"
+                                style={{ background: 'none', border: 'none', cursor: index === 0 ? 'not-allowed' : 'pointer', opacity: index === 0 ? 0.25 : 1, padding: 0, color: '#C88A75', display: 'flex', alignItems: 'center' }}
+                              >
+                                <ChevronUp size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={index === filteredTransformations.length - 1}
+                                onClick={() => handleMoveTransformation(item, 1)}
+                                title="Move slide down in sequence"
+                                style={{ background: 'none', border: 'none', cursor: index === filteredTransformations.length - 1 ? 'not-allowed' : 'pointer', opacity: index === filteredTransformations.length - 1 ? 0.25 : 1, padding: 0, color: '#C88A75', display: 'flex', alignItems: 'center' }}
+                              >
+                                <ChevronDown size={15} />
+                              </button>
+                            </div>
+                          </div>
+                        </td>
                         <td style={{ padding: '0.75rem' }}>
                           <div style={{ display: 'flex', gap: '4px' }}>
                             {(item.video || item.beforeVideo) && !item.before && !item.after ? (
@@ -904,23 +972,43 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.35rem' }}>
-                    <Clock size={14} style={{ verticalAlign: 'middle', marginRight: '5px', color: '#C88A75' }} />
-                    Slide / Video Display Time on 55″ TV (seconds)
-                  </label>
-                  <input
-                    type="number"
-                    min="3"
-                    max="180"
-                    placeholder={`e.g. 15 (leave blank to use default ${slideshowSettings.videoDuration}s for videos / ${slideshowSettings.imageDuration}s for photos)`}
-                    value={formData.duration || ''}
-                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                    style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #CCC' }}
-                  />
-                  <span style={{ fontSize: '0.74rem', color: '#777', marginTop: '3px', display: 'block' }}>
-                    Control how long this video/slide stays visible on the salon screen before advancing. Leave blank to follow the global 55″ TV timing.
-                  </span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.35rem' }}>
+                      <Clock size={14} style={{ verticalAlign: 'middle', marginRight: '5px', color: '#C88A75' }} />
+                      Slide Display Time (sec)
+                    </label>
+                    <input
+                      type="number"
+                      min="3"
+                      max="180"
+                      placeholder={`Default (${slideshowSettings.videoDuration}s / ${slideshowSettings.imageDuration}s)`}
+                      value={formData.duration || ''}
+                      onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                      style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #CCC' }}
+                    />
+                    <span style={{ fontSize: '0.74rem', color: '#777', marginTop: '3px', display: 'block' }}>
+                      Custom seconds or leave blank for global TV timing.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.35rem' }}>
+                      <ListOrdered size={14} style={{ verticalAlign: 'middle', marginRight: '5px', color: '#C88A75' }} />
+                      Slide Sequence (Order #)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 1, 2, 3..."
+                      value={formData.displayOrder || ''}
+                      onChange={(e) => setFormData({ ...formData, displayOrder: e.target.value })}
+                      style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #CCC' }}
+                    />
+                    <span style={{ fontSize: '0.74rem', color: '#777', marginTop: '3px', display: 'block' }}>
+                      Position in TV rotation (lower numbers play first).
+                    </span>
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: '1rem' }}>
@@ -1513,21 +1601,52 @@ const AdminDashboard = () => {
                   </label>
 
                   {/* B. Queue Slide Duration */}
-                  <div style={{ marginBottom: '1rem', paddingLeft: '28px' }}>
-                    <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: '600', color: '#444', marginBottom: '0.4rem' }}>
-                      Slide Display Time on TV: <span style={{ color: '#C88A75', fontWeight: '800' }}>{slideshowSettings.queueSlideDuration || 15}s</span>
-                    </label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      {[10, 15, 20, 30].map((sec) => (
+                  <div style={{ marginBottom: '1.15rem', paddingLeft: '28px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <label style={{ fontSize: '0.84rem', fontWeight: '600', color: '#444' }}>
+                        Slide Display Time on TV:
+                      </label>
+                      <span style={{ color: '#C88A75', fontWeight: '800', fontSize: '0.9rem' }}>
+                        {slideshowSettings.queueSlideDuration || 15} seconds
+                      </span>
+                    </div>
+
+                    {/* Custom Seconds Input */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
+                      <input
+                        type="number"
+                        min="3"
+                        max="180"
+                        value={slideshowSettings.queueSlideDuration || 15}
+                        onChange={(e) => setSlideshowSettings({
+                          ...slideshowSettings,
+                          queueSlideDuration: Math.max(3, parseInt(e.target.value, 10) || 15)
+                        })}
+                        style={{
+                          width: '100px',
+                          padding: '0.45rem 0.65rem',
+                          borderRadius: '6px',
+                          border: '1.5px solid #C88A75',
+                          fontSize: '0.9rem',
+                          fontWeight: '700',
+                          color: '#1E1E1E'
+                        }}
+                      />
+                      <span style={{ fontSize: '0.82rem', color: '#666', fontWeight: '600' }}>seconds</span>
+                      <span style={{ fontSize: '0.75rem', color: '#888' }}>(type custom seconds or pick below)</span>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {[5, 10, 15, 20, 30, 45, 60].map((sec) => (
                         <button
                           key={sec}
                           type="button"
                           onClick={() => setSlideshowSettings({ ...slideshowSettings, queueSlideDuration: sec })}
                           style={{
-                            flex: 1,
-                            padding: '6px 0',
-                            borderRadius: '6px',
-                            fontSize: '0.8rem',
+                            padding: '4px 10px',
+                            borderRadius: '15px',
+                            fontSize: '0.78rem',
                             fontWeight: '600',
                             cursor: 'pointer',
                             border: `1px solid ${slideshowSettings.queueSlideDuration === sec ? '#C88A75' : '#DDD'}`,
@@ -1535,27 +1654,189 @@ const AdminDashboard = () => {
                             color: slideshowSettings.queueSlideDuration === sec ? '#9A5F4D' : '#666'
                           }}
                         >
-                          {sec}s
+                          {sec}s {sec === 15 ? '⭐' : ''}
                         </button>
                       ))}
                     </div>
+                    <span style={{ fontSize: '0.74rem', color: '#777', marginTop: '4px', display: 'block' }}>
+                      The patient waiting list stays on screen for this duration before switching to the next transformation reel.
+                    </span>
                   </div>
 
-                  {/* C. Slide Frequency */}
-                  <div style={{ marginBottom: '1rem', paddingLeft: '28px' }}>
-                    <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: '600', color: '#444', marginBottom: '0.4rem' }}>
-                      Rotation Frequency:
+                  {/* C. Slide Sequence & Placement */}
+                  <div style={{ marginBottom: '1.15rem', paddingLeft: '28px' }}>
+                    <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: '600', color: '#444', marginBottom: '0.5rem' }}>
+                      Slide Sequence & Position in TV Rotation:
                     </label>
-                    <select
-                      value={slideshowSettings.queueSlideFrequency || 2}
-                      onChange={(e) => setSlideshowSettings({ ...slideshowSettings, queueSlideFrequency: parseInt(e.target.value, 10) })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.84rem' }}
-                    >
-                      <option value={1}>Show after every 1 transformation video</option>
-                      <option value={2}>Show after every 2 transformation videos (Default)</option>
-                      <option value={3}>Show after every 3 transformation videos</option>
-                      <option value={5}>Show after every 5 transformation videos</option>
-                    </select>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', marginBottom: '0.6rem' }}>
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        background: (slideshowSettings.queueSlidePlacement || 'repeat') === 'repeat' ? '#FFF5F2' : '#FFF',
+                        border: `1.5px solid ${(slideshowSettings.queueSlidePlacement || 'repeat') === 'repeat' ? '#C88A75' : '#E5E5E5'}`,
+                        cursor: 'pointer',
+                        fontSize: '0.84rem'
+                      }}>
+                        <input
+                          type="radio"
+                          name="queueSlidePlacement"
+                          checked={(slideshowSettings.queueSlidePlacement || 'repeat') === 'repeat'}
+                          onChange={() => setSlideshowSettings({ ...slideshowSettings, queueSlidePlacement: 'repeat' })}
+                          style={{ accentColor: '#C88A75' }}
+                        />
+                        <div>
+                          <strong>🔄 Repeat Throughout Rotation (Recommended)</strong>
+                          <div style={{ fontSize: '0.76rem', color: '#666' }}>Show patient waiting list regularly between transformation reels</div>
+                        </div>
+                      </label>
+
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        background: slideshowSettings.queueSlidePlacement === 'first' ? '#FFF5F2' : '#FFF',
+                        border: `1.5px solid ${slideshowSettings.queueSlidePlacement === 'first' ? '#C88A75' : '#E5E5E5'}`,
+                        cursor: 'pointer',
+                        fontSize: '0.84rem'
+                      }}>
+                        <input
+                          type="radio"
+                          name="queueSlidePlacement"
+                          checked={slideshowSettings.queueSlidePlacement === 'first'}
+                          onChange={() => setSlideshowSettings({ ...slideshowSettings, queueSlidePlacement: 'first' })}
+                          style={{ accentColor: '#C88A75' }}
+                        />
+                        <div>
+                          <strong>🥇 First Slide (#1)</strong>
+                          <div style={{ fontSize: '0.76rem', color: '#666' }}>Always display waiting list as the very first screen when TV loads</div>
+                        </div>
+                      </label>
+
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        background: slideshowSettings.queueSlidePlacement === 'specific' ? '#FFF5F2' : '#FFF',
+                        border: `1.5px solid ${slideshowSettings.queueSlidePlacement === 'specific' ? '#C88A75' : '#E5E5E5'}`,
+                        cursor: 'pointer',
+                        fontSize: '0.84rem'
+                      }}>
+                        <input
+                          type="radio"
+                          name="queueSlidePlacement"
+                          checked={slideshowSettings.queueSlidePlacement === 'specific'}
+                          onChange={() => setSlideshowSettings({ ...slideshowSettings, queueSlidePlacement: 'specific' })}
+                          style={{ accentColor: '#C88A75' }}
+                        />
+                        <div>
+                          <strong>📍 Specific Slide Position</strong>
+                          <div style={{ fontSize: '0.76rem', color: '#666' }}>Play at an exact position number in rotation</div>
+                        </div>
+                      </label>
+
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        background: slideshowSettings.queueSlidePlacement === 'last' ? '#FFF5F2' : '#FFF',
+                        border: `1.5px solid ${slideshowSettings.queueSlidePlacement === 'last' ? '#C88A75' : '#E5E5E5'}`,
+                        cursor: 'pointer',
+                        fontSize: '0.84rem'
+                      }}>
+                        <input
+                          type="radio"
+                          name="queueSlidePlacement"
+                          checked={slideshowSettings.queueSlidePlacement === 'last'}
+                          onChange={() => setSlideshowSettings({ ...slideshowSettings, queueSlidePlacement: 'last' })}
+                          style={{ accentColor: '#C88A75' }}
+                        />
+                        <div>
+                          <strong>🏁 Final Slide</strong>
+                          <div style={{ fontSize: '0.76rem', color: '#666' }}>Show waiting list at the end of all transformation reels before looping</div>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Sub-setting: Repeat Frequency */}
+                    {(slideshowSettings.queueSlidePlacement || 'repeat') === 'repeat' && (
+                      <div style={{ background: '#FFF', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E5E5E5', marginBottom: '0.6rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#444', marginBottom: '0.3rem' }}>
+                          Repeat Interval:
+                        </label>
+                        <select
+                          value={slideshowSettings.queueSlideFrequency || 2}
+                          onChange={(e) => setSlideshowSettings({ ...slideshowSettings, queueSlideFrequency: parseInt(e.target.value, 10) })}
+                          style={{ width: '100%', padding: '0.45rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.84rem' }}
+                        >
+                          <option value={1}>Show after every 1 transformation video</option>
+                          <option value={2}>Show after every 2 transformation videos (Default)</option>
+                          <option value={3}>Show after every 3 transformation videos</option>
+                          <option value={4}>Show after every 4 transformation videos</option>
+                          <option value={5}>Show after every 5 transformation videos</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Sub-setting: Specific Slide Position */}
+                    {slideshowSettings.queueSlidePlacement === 'specific' && (
+                      <div style={{ background: '#FFF', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E5E5E5', marginBottom: '0.6rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#444', marginBottom: '0.3rem' }}>
+                          Insert at Slide Number:
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max={Math.max(10, transformations.length + 1)}
+                          value={slideshowSettings.queueSlideSpecificIndex || 1}
+                          onChange={(e) => setSlideshowSettings({
+                            ...slideshowSettings,
+                            queueSlideSpecificIndex: Math.max(1, parseInt(e.target.value, 10) || 1)
+                          })}
+                          style={{ width: '100px', padding: '0.45rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.84rem' }}
+                        />
+                        <span style={{ fontSize: '0.74rem', color: '#777', marginLeft: '8px' }}>
+                          (e.g. 1 = first slide, 2 = after slide #1, 3 = after slide #2)
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Live Sequence Preview Box */}
+                    <div style={{ background: '#2B2B2B', color: '#FFF', padding: '0.65rem 0.85rem', borderRadius: '8px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ color: '#D4A373', fontWeight: '700' }}>📺 TV Rotation Preview:</span>
+                      {slideshowSettings.queueSlidePlacement === 'first' && (
+                        <span><strong style={{ color: '#52B788' }}>[Waiting List {slideshowSettings.queueSlideDuration || 15}s]</strong> ➔ [Reel 1] ➔ [Reel 2] ➔ [Reel 3] ➔ ↻</span>
+                      )}
+                      {slideshowSettings.queueSlidePlacement === 'last' && (
+                        <span>[Reel 1] ➔ [Reel 2] ➔ [Reel 3] ➔ <strong style={{ color: '#52B788' }}>[Waiting List {slideshowSettings.queueSlideDuration || 15}s]</strong> ➔ ↻</span>
+                      )}
+                      {slideshowSettings.queueSlidePlacement === 'specific' && (
+                        <span>
+                          {(slideshowSettings.queueSlideSpecificIndex || 1) === 1
+                            ? <> <strong style={{ color: '#52B788' }}>[Waiting List (Slide #1)]</strong> ➔ [Reel 1] ➔ [Reel 2] ➔ ↻</>
+                            : <> [Reel 1] ➔ <strong style={{ color: '#52B788' }}>[Waiting List (Slide #{slideshowSettings.queueSlideSpecificIndex || 2})]</strong> ➔ [Reel 2] ➔ ↻</>
+                          }
+                        </span>
+                      )}
+                      {(slideshowSettings.queueSlidePlacement || 'repeat') === 'repeat' && (
+                        <span>
+                          [Reel 1]
+                          {(slideshowSettings.queueSlideFrequency || 2) === 1
+                            ? <> ➔ <strong style={{ color: '#52B788' }}>[Waiting List]</strong> ➔ [Reel 2] ➔ <strong style={{ color: '#52B788' }}>[Waiting List]</strong> ➔ ↻</>
+                            : <> ➔ [Reel 2] ➔ <strong style={{ color: '#52B788' }}>[Waiting List {slideshowSettings.queueSlideDuration || 15}s]</strong> ➔ [Reel 3] ➔ ↻</>
+                          }
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* D. Show Sample Appointments Toggle */}

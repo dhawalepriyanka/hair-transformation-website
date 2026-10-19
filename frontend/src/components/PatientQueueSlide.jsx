@@ -1,7 +1,7 @@
 import React from 'react';
 import { Users, Clock, Sparkles, CheckCircle2 } from 'lucide-react';
 
-export default function PatientQueueSlide({ queue = [] }) {
+export default function PatientQueueSlide({ queue = [], duration = 15 }) {
   const safeQueue = Array.isArray(queue) ? queue : [];
   
   // Patient currently in consultation (or first waiting patient if none in consultation)
@@ -39,6 +39,12 @@ export default function PatientQueueSlide({ queue = [] }) {
             <Users size={16} strokeWidth={2.4} />
             <span>{safeQueue.length} Active {safeQueue.length === 1 ? 'Patient' : 'Patients'}</span>
           </div>
+          {duration > 0 && (
+            <div className="tv-queue-duration-badge" title={`Slide display time: ${duration}s (configured in Admin)`}>
+              <Clock size={15} strokeWidth={2.4} />
+              <span>{duration}s</span>
+            </div>
+          )}
         </div>
       </div>
 

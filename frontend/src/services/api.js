@@ -825,7 +825,9 @@ export const DEFAULT_SLIDESHOW_SETTINGS = {
   // Live Patient Waiting List on TV settings:
   showPatientQueueSlide: true, // Enable / Disable Waiting List slide on TV
   queueSlideDuration: 15,    // How many seconds the queue slide stays on TV
-  queueSlideFrequency: 2,    // Show after every N transformation reels (default: 2)
+  queueSlidePlacement: 'repeat', // 'repeat' (after every N videos) | 'first' (slide #1) | 'last' (end of playlist) | 'specific' (specific slide number)
+  queueSlideFrequency: 2,    // Show after every N transformation reels in repeat mode (default: 2)
+  queueSlideSpecificIndex: 1, // Specific slide position (1-based) if placement is 'specific'
   queueAutoDemo: true,       // Show sample appointments when live queue is empty
 };
 

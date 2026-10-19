@@ -217,24 +217,52 @@ const TransformationsPage = () => {
 
       // 4. Inject Live Patient Waiting List Slide into the TV rotation (driven by Admin Settings)
       const shouldShowQueue = slideshowSettings.showPatientQueueSlide !== false;
-      const queueDuration = parseInt(slideshowSettings.queueSlideDuration, 10) || 15;
-      const queueFreq = parseInt(slideshowSettings.queueSlideFrequency, 10) || 2;
+      const queueDuration = Math.max(3, parseInt(slideshowSettings.queueSlideDuration, 10) || 15);
+      const queuePlacement = slideshowSettings.queueSlidePlacement || 'repeat';
+      const queueFreq = Math.max(1, parseInt(slideshowSettings.queueSlideFrequency, 10) || 2);
+      const queueSpecificIndex = Math.max(1, parseInt(slideshowSettings.queueSlideSpecificIndex, 10) || 1);
 
-      const itemsWithQueue = [...sortedItems];
+      const itemsWithQueue = [];
 
-      if (shouldShowQueue) {
-        const queueSlideItem = {
-          id: '__PATIENT_WAITING_LIST__',
+      if (!shouldShowQueue) {
+        itemsWithQueue.push(...sortedItems);
+      } else {
+        const createQueueSlide = (keySuffix = '') => ({
+          id: `__PATIENT_WAITING_LIST__${keySuffix}`,
           isQueueSlide: true,
           treatment: 'Live Patient Waiting List',
           clientName: 'Patient Queue & Status',
           duration: queueDuration
-        };
+        });
 
-        if (itemsWithQueue.length > queueFreq) {
-          itemsWithQueue.splice(queueFreq, 0, queueSlideItem);
+        if (sortedItems.length === 0) {
+          itemsWithQueue.push(createQueueSlide());
+        } else if (queuePlacement === 'first') {
+          // Slide #1: Waiting list first
+          itemsWithQueue.push(createQueueSlide());
+          itemsWithQueue.push(...sortedItems);
+        } else if (queuePlacement === 'last') {
+          // At the end of rotation
+          itemsWithQueue.push(...sortedItems);
+          itemsWithQueue.push(createQueueSlide());
+        } else if (queuePlacement === 'specific') {
+          // Specific slide position (1-based index)
+          const insertIdx = Math.min(Math.max(0, queueSpecificIndex - 1), sortedItems.length);
+          itemsWithQueue.push(...sortedItems);
+          itemsWithQueue.splice(insertIdx, 0, createQueueSlide());
         } else {
-          itemsWithQueue.push(queueSlideItem);
+          // 'repeat' mode: repeat after every N transformation reels throughout rotation
+          let queueCount = 0;
+          for (let i = 0; i < sortedItems.length; i++) {
+            itemsWithQueue.push(sortedItems[i]);
+            if ((i + 1) % queueFreq === 0 && i !== sortedItems.length - 1) {
+              queueCount++;
+              itemsWithQueue.push(createQueueSlide(`_${queueCount}`));
+            }
+          }
+          if (sortedItems.length <= queueFreq) {
+            itemsWithQueue.push(createQueueSlide());
+          }
         }
       }
 
@@ -941,7 +969,7 @@ const TransformationsPage = () => {
 
             {/* Foreground Main Media */}
             {activeItem?.isQueueSlide ? (
-              <PatientQueueSlide queue={patientQueue} />
+              <PatientQueueSlide queue={patientQueue} duration={calculateSlideDuration()} />
             ) : activeItem.beforeVideo && activeItem.afterVideo ? (
               <VideoComparison
                 before={activeItem.beforeVideo}
