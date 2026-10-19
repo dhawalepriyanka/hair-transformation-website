@@ -67,22 +67,26 @@ const uploadMedia = async ({ buffer, originalname = 'media', mimetype = 'image/j
     }
   }
 
-  // 2. Try Local uploads folder (persistent on servers / local development)
-  const uploadDir = getUploadDir(subfolder);
-  if (uploadDir) {
-    try {
-      const ext = path.extname(originalname) || (mimetype.startsWith('video/') ? '.mp4' : mimetype.includes('png') ? '.png' : '.jpg');
-      const safeName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
-      const filePath = path.join(uploadDir, safeName);
-      fs.writeFileSync(filePath, buffer);
-      console.log(`[Storage] Saved locally: /uploads/${subfolder}/${safeName}`);
-      return `/uploads/${subfolder}/${safeName}`;
-    } catch (fsErr) {
-      console.warn('[Storage] Local disk write failed (ephemeral filesystem):', fsErr.message);
+  // 2. Try Local uploads folder (persistent on dedicated servers / local development)
+  // Skip local disk writes if running in an ephemeral serverless environment (e.g. Vercel)
+  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  if (!isServerless) {
+    const uploadDir = getUploadDir(subfolder);
+    if (uploadDir) {
+      try {
+        const ext = path.extname(originalname) || (mimetype.startsWith('video/') ? '.mp4' : mimetype.includes('png') ? '.png' : '.jpg');
+        const safeName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
+        const filePath = path.join(uploadDir, safeName);
+        fs.writeFileSync(filePath, buffer);
+        console.log(`[Storage] Saved locally: /uploads/${subfolder}/${safeName}`);
+        return `/uploads/${subfolder}/${safeName}`;
+      } catch (fsErr) {
+        console.warn('[Storage] Local disk write failed (ephemeral filesystem):', fsErr.message);
+      }
     }
   }
 
-  // 3. Fallback: Base64 data URI (stored in PostgreSQL TEXT column, served via /api/transformations/media/:id/:field)
+  // 3. Fallback: Base64 data URI (stored in PostgreSQL TEXT column, served reliably via /api/transformations/media/:id/:field)
   const base64 = buffer.toString('base64');
   return `data:${mimetype};base64,${base64}`;
 };

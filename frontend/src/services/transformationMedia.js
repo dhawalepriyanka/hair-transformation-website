@@ -3,20 +3,122 @@ const MB = 1024 * 1024;
 export const MAX_VIDEO_SIZE_MB = 100;
 export const MAX_IMAGE_SIZE_MB = 15;
 
-export function isInstagramUrl(url) {
-  if (!url || typeof url !== 'string') return false;
-  return /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:p|reel|tv|share)\/[A-Za-z0-9_-]+/i.test(url.trim());
+/**
+ * Normalizes relative or direct media URLs:
+ * - Upgrades insecure http:// to https:// when on an HTTPS domain (prevents browser Mixed Content blocking)
+ * - Resolves relative /uploads/ paths in development or production
+ */
+export function resolveMediaUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || isEmbeddableVideoUrl(trimmed)) {
+    return trimmed;
+  }
+  // Upgrade http:// to https:// on secure pages
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && trimmed.startsWith('http://')) {
+    return trimmed.replace('http://', 'https://');
+  }
+  return trimmed;
 }
 
+/**
+ * Instagram Reel & Post Detection
+ */
+export function isInstagramUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:p|reel|reels|tv|share)\/([A-Za-z0-9_-]+)/i.test(url.trim());
+}
+
+/**
+ * Returns clean Instagram embed URL.
+ * NOTE: Instagram embed endpoint ONLY accepts /p/{code}/embed/ for all posts, reels, and videos.
+ */
 export function getInstagramEmbedUrl(url) {
   if (!url || typeof url !== 'string') return '';
-  const match = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(p|reel|tv|share)\/([A-Za-z0-9_-]+)/i.exec(url.trim());
-  if (match) {
-    const type = match[1].toLowerCase() === 'share' ? 'p' : match[1].toLowerCase();
-    const code = match[2];
-    return `https://www.instagram.com/${type}/${code}/embed/`;
+  const match = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:p|reel|reels|tv|share)\/([A-Za-z0-9_-]+)/i.exec(url.trim());
+  if (match && match[1]) {
+    const code = match[1];
+    return `https://www.instagram.com/p/${code}/embed/captioned/`;
   }
   return '';
+}
+
+/**
+ * YouTube & YouTube Shorts Detection
+ */
+export function isYouTubeUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/i.test(url.trim());
+}
+
+/**
+ * Generates privacy-friendly, responsive YouTube embed URL with autoplay, loop, and no ads
+ */
+export function getYouTubeEmbedUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const match = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/i.exec(url.trim());
+  if (match && match[1]) {
+    const videoId = match[1];
+    return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&modestbranding=1`;
+  }
+  return '';
+}
+
+/**
+ * Google Drive Video URL Detection
+ */
+export function isGoogleDriveUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return /drive\.google\.com\/(?:file\/d\/|open\?id=)([A-Za-z0-9_-]+)/i.test(url.trim());
+}
+
+export function getGoogleDriveEmbedUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const match = /drive\.google\.com\/(?:file\/d\/|open\?id=)([A-Za-z0-9_-]+)/i.exec(url.trim());
+  if (match && match[1]) {
+    return `https://drive.google.com/file/d/${match[1]}/preview`;
+  }
+  return '';
+}
+
+/**
+ * Vimeo Detection
+ */
+export function isVimeoUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(?:video\/)?([0-9]+)/i.test(url.trim());
+}
+
+export function getVimeoEmbedUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const match = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(?:video\/)?([0-9]+)/i.exec(url.trim());
+  if (match && match[1]) {
+    return `https://player.vimeo.com/video/${match[1]}?autoplay=1&loop=1&muted=0`;
+  }
+  return '';
+}
+
+/**
+ * General Embeddable Platform Video Check
+ */
+export function isEmbeddableVideoUrl(url) {
+  return isInstagramUrl(url) || isYouTubeUrl(url) || isGoogleDriveUrl(url) || isVimeoUrl(url);
+}
+
+export function getEmbedVideoUrl(url) {
+  if (isInstagramUrl(url)) return getInstagramEmbedUrl(url);
+  if (isYouTubeUrl(url)) return getYouTubeEmbedUrl(url);
+  if (isGoogleDriveUrl(url)) return getGoogleDriveEmbedUrl(url);
+  if (isVimeoUrl(url)) return getVimeoEmbedUrl(url);
+  return '';
+}
+
+export function getVideoPlatformType(url) {
+  if (isInstagramUrl(url)) return 'instagram';
+  if (isYouTubeUrl(url)) return 'youtube';
+  if (isGoogleDriveUrl(url)) return 'googledrive';
+  if (isVimeoUrl(url)) return 'vimeo';
+  return 'direct';
 }
 
 export function validateMediaFile(file, field, customMaxMb) {
@@ -35,7 +137,7 @@ export function validateVideoSource(source, customMaxMb) {
     throw new Error('Choose a video file or paste a direct video URL.');
   }
   source = source.trim();
-  if (isInstagramUrl(source)) {
+  if (isEmbeddableVideoUrl(source)) {
     return source;
   }
   if (source.startsWith('/')) {

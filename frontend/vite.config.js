@@ -19,9 +19,26 @@ export default defineConfig(({ mode }) => {
             changeOrigin: true,
             secure: true,
             headers: { Origin: devApiTarget }
+          },
+          '/uploads': {
+            target: devApiTarget,
+            changeOrigin: true,
+            secure: true,
+            headers: { Origin: devApiTarget }
           }
         }
-      } : {})
+      } : {
+        proxy: {
+          '/api': {
+            target: 'http://localhost:5000',
+            changeOrigin: true
+          },
+          '/uploads': {
+            target: 'http://localhost:5000',
+            changeOrigin: true
+          }
+        }
+      })
     }
   };
 });

@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, SkipBack, SkipForward, ArrowLeft } from 'lucide-react';
 import { fetchTransformations, fetchSlideshowSettings, fetchPublicPatientQueue } from '../services/api';
-import { isInstagramUrl, getInstagramEmbedUrl } from '../services/transformationMedia';
+import {
+  isInstagramUrl, getInstagramEmbedUrl,
+  isYouTubeUrl, getYouTubeEmbedUrl,
+  isGoogleDriveUrl, getGoogleDriveEmbedUrl,
+  isVimeoUrl, getVimeoEmbedUrl,
+  isEmbeddableVideoUrl, resolveMediaUrl
+} from '../services/transformationMedia';
 import VideoComparison from '../components/VideoComparison';
 import PatientQueueSlide from '../components/PatientQueueSlide';
 
@@ -97,6 +103,7 @@ const TransformationsPage = () => {
   const slideTimerRef = useRef(null);
   const controlsTimerRef = useRef(null);
   const cursorTimerRef = useRef(null);
+  const videoErrorTimerRef = useRef(null);
   const transformationsListRef = useRef([]);
 
   // Keep refs synchronized with state for callback access
@@ -364,10 +371,15 @@ const TransformationsPage = () => {
       if (src && videoOrientationCacheRef.current[src] === undefined) {
         if (src.includes('/instagram/reels/') || isInstagramUrl(src)) {
           videoOrientationCacheRef.current[src] = false;
+        } else if (isYouTubeUrl(src)) {
+          const isShort = src.includes('/shorts/');
+          videoOrientationCacheRef.current[src] = !isShort;
+        } else if (isGoogleDriveUrl(src) || isVimeoUrl(src)) {
+          videoOrientationCacheRef.current[src] = false;
         } else {
           const probe = document.createElement('video');
           probe.preload = 'metadata';
-          probe.src = src;
+          probe.src = resolveMediaUrl(src);
           probe.onloadedmetadata = () => {
             if (probe.videoWidth && probe.videoHeight) {
               const isH = probe.videoWidth > probe.videoHeight;
@@ -393,6 +405,10 @@ const TransformationsPage = () => {
       } else if (currentVideo.includes('/instagram/reels/') || isInstagramUrl(currentVideo)) {
         videoOrientationCacheRef.current[currentVideo] = false;
         setIsVideoHorizontal(false);
+      } else if (isYouTubeUrl(currentVideo)) {
+        const isShort = currentVideo.includes('/shorts/');
+        videoOrientationCacheRef.current[currentVideo] = !isShort;
+        setIsVideoHorizontal(!isShort);
       } else if (videoRef.current && videoRef.current.videoWidth && videoRef.current.videoHeight) {
         const isH = videoRef.current.videoWidth > videoRef.current.videoHeight;
         videoOrientationCacheRef.current[currentVideo] = isH;
@@ -627,14 +643,14 @@ const TransformationsPage = () => {
 
   // Synchronize actual video playback with isPlaying state
   useEffect(() => {
-    if (videoRef.current && isVideo && !isInstagramUrl(activeItem?.video)) {
+    if (videoRef.current && isVideo && !isEmbeddableVideoUrl(activeItem?.video)) {
       if (isPlaying) {
         videoRef.current.play().catch(() => {});
       } else {
         videoRef.current.pause();
       }
     }
-    if (ambientVideoRef.current && activeItem?.video && !isInstagramUrl(activeItem.video)) {
+    if (ambientVideoRef.current && activeItem?.video && !isEmbeddableVideoUrl(activeItem.video)) {
       if (isPlaying) {
         ambientVideoRef.current.play().catch(() => {});
       } else {
@@ -645,7 +661,11 @@ const TransformationsPage = () => {
 
   // Video reset on slide transition
   useEffect(() => {
-    if (videoRef.current && isVideo && !isInstagramUrl(activeItem?.video)) {
+    if (videoErrorTimerRef.current) {
+      clearTimeout(videoErrorTimerRef.current);
+      videoErrorTimerRef.current = null;
+    }
+    if (videoRef.current && isVideo && !isEmbeddableVideoUrl(activeItem?.video)) {
       videoRef.current.currentTime = 0;
       videoRef.current.muted = false; // Always try with audio on slide change
       if (isPlaying) {
@@ -663,7 +683,7 @@ const TransformationsPage = () => {
         videoRef.current.pause();
       }
     }
-    if (ambientVideoRef.current && activeItem?.video && !isInstagramUrl(activeItem.video)) {
+    if (ambientVideoRef.current && activeItem?.video && !isEmbeddableVideoUrl(activeItem.video)) {
       ambientVideoRef.current.currentTime = 0;
       if (isPlaying) {
         ambientVideoRef.current.play().catch(() => {});
@@ -681,18 +701,28 @@ const TransformationsPage = () => {
     }
   };
 
-  // Video loading error handling (graceful fallback to next item)
-  const handleVideoError = () => {
-    console.warn('Video failed to load or play smoothly, advancing to next slide');
-    if (isPlaying && transformationsList.length > 1) {
-      changeSlide(1);
+  // Video loading error handling (graceful fallback - no 0ms disappearance)
+  const handleVideoError = (e) => {
+    console.warn('Video playback notice for slide:', activeItem?.video, e);
+    // 1. Try muted if browser blocked unmuted autoplay
+    if (videoRef.current && !videoRef.current.muted) {
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(() => {});
+      return;
     }
+    // 2. Give user 4s to view slide info before advancing
+    if (videoErrorTimerRef.current) clearTimeout(videoErrorTimerRef.current);
+    videoErrorTimerRef.current = setTimeout(() => {
+      if (isPlaying && transformationsListRef.current.length > 1) {
+        changeSlide(1);
+      }
+    }, 4000);
   };
 
-  // Track progress line for non-video or Instagram reel slides
+  // Track progress line for non-video or embeddable platform slides
   useEffect(() => {
     setProgressPercent(0);
-    if (isVideo && !isInstagramUrl(activeItem?.video)) return;
+    if (isVideo && !isEmbeddableVideoUrl(activeItem?.video)) return;
     const duration = calculateSlideDuration();
     const totalMs = (Number(duration) || 8) * 1000;
     const startTime = Date.now();
@@ -865,9 +895,9 @@ const TransformationsPage = () => {
   return (
     <div className={`tv-apk-root ${!cursorVisible ? 'tv-cursor-hidden' : ''}`}>
       {/* Hidden preloader for next video to eliminate transition lag/flicker */}
-      {nextItem?.video && !isInstagramUrl(nextItem.video) && (
+      {nextItem?.video && !isEmbeddableVideoUrl(nextItem.video) && (
         <video
-          src={nextItem.video}
+          src={resolveMediaUrl(nextItem.video)}
           preload="auto"
           muted
           playsInline
@@ -952,11 +982,11 @@ const TransformationsPage = () => {
             )}
 
             {/* Ambient Blurred Backdrop for vertical reels */}
-            {!activeItem?.isQueueSlide && activeItem.video && !isInstagramUrl(activeItem.video) ? (
+            {!activeItem?.isQueueSlide && activeItem.video && !isEmbeddableVideoUrl(activeItem.video) ? (
               <video
                 ref={ambientVideoRef}
                 className="tv-apk-ambient-backdrop"
-                src={activeItem.video}
+                src={resolveMediaUrl(activeItem.video)}
                 muted
                 autoPlay
                 loop
@@ -964,7 +994,7 @@ const TransformationsPage = () => {
                 aria-hidden="true"
               />
             ) : !activeItem?.isQueueSlide && activeItem.image ? (
-              <img className="tv-apk-ambient-backdrop" src={activeItem.image} alt="" aria-hidden="true" />
+              <img className="tv-apk-ambient-backdrop" src={resolveMediaUrl(activeItem.image)} alt="" aria-hidden="true" />
             ) : null}
 
             {/* Foreground Main Media */}
@@ -972,8 +1002,8 @@ const TransformationsPage = () => {
               <PatientQueueSlide queue={patientQueue} duration={calculateSlideDuration()} />
             ) : activeItem.beforeVideo && activeItem.afterVideo ? (
               <VideoComparison
-                before={activeItem.beforeVideo}
-                after={activeItem.afterVideo}
+                before={resolveMediaUrl(activeItem.beforeVideo)}
+                after={resolveMediaUrl(activeItem.afterVideo)}
                 clientName={activeItem.clientName}
               />
             ) : isInstagramUrl(activeItem.video) ? (
@@ -1005,12 +1035,99 @@ const TransformationsPage = () => {
                   title={activeItem.clientName || 'Instagram Reel'}
                 />
               </div>
+            ) : isYouTubeUrl(activeItem.video) ? (
+              <div
+                key={activeItem.video}
+                className="tv-apk-main-video tv-apk-youtube-container"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  background: '#0B0507'
+                }}
+              >
+                <iframe
+                  src={getYouTubeEmbedUrl(activeItem.video)}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    maxWidth: isVideoHorizontal ? '960px' : '480px',
+                    aspectRatio: isVideoHorizontal ? '16/9' : '9/16',
+                    border: 'none',
+                    borderRadius: '16px'
+                  }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title={activeItem.clientName || 'YouTube Video'}
+                />
+              </div>
+            ) : isGoogleDriveUrl(activeItem.video) ? (
+              <div
+                key={activeItem.video}
+                className="tv-apk-main-video tv-apk-drive-container"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  background: '#0B0507'
+                }}
+              >
+                <iframe
+                  src={getGoogleDriveEmbedUrl(activeItem.video)}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    maxWidth: '850px',
+                    border: 'none',
+                    borderRadius: '16px'
+                  }}
+                  allow="autoplay"
+                  allowFullScreen
+                  title={activeItem.clientName || 'Google Drive Video'}
+                />
+              </div>
+            ) : isVimeoUrl(activeItem.video) ? (
+              <div
+                key={activeItem.video}
+                className="tv-apk-main-video tv-apk-vimeo-container"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  background: '#0B0507'
+                }}
+              >
+                <iframe
+                  src={getVimeoEmbedUrl(activeItem.video)}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    borderRadius: '16px'
+                  }}
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  title={activeItem.clientName || 'Vimeo Video'}
+                />
+              </div>
             ) : activeItem.video ? (
               <video
                 ref={videoRef}
                 key={activeItem.video}
                 className="tv-apk-main-video"
-                src={activeItem.video}
+                src={resolveMediaUrl(activeItem.video)}
                 poster={activeItem.poster || activeItem.after || activeItem.image}
                 controls={false}
                 autoPlay

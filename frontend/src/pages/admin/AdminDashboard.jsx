@@ -1,5 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { validateMediaFile, validateVideoSource, isInstagramUrl } from '../../services/transformationMedia.js';
+import {
+  validateMediaFile, validateVideoSource,
+  isInstagramUrl, isYouTubeUrl, isGoogleDriveUrl, isVimeoUrl,
+  isEmbeddableVideoUrl, getEmbedVideoUrl, getYouTubeEmbedUrl, getGoogleDriveEmbedUrl,
+  getVideoPlatformType, resolveMediaUrl
+} from '../../services/transformationMedia.js';
 import { setAdminSession, getStaffSession } from '../../services/adminSession';
 import { Link, useNavigate } from 'react-router-dom';
 import { compressImageFile, fileToOptimizedDataUri, compressDataUri } from '../../services/imageOptimizer.js';
@@ -339,7 +344,7 @@ const AdminDashboard = () => {
 
     try {
       if (mediaType === 'video') {
-        if (!isInstagramUrl(mediaData.video)) {
+        if (!isEmbeddableVideoUrl(mediaData.video)) {
           mediaData.video = validateVideoSource(mediaData.video);
           if (videoError) throw new Error(videoError);
         } else {
@@ -1272,12 +1277,27 @@ const AdminDashboard = () => {
                     </label>
                     <input id="video-file-upload" type="file" accept="video/mp4,video/webm,video/ogg" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'video')} />
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '0.4rem' }}>— or paste direct video / Instagram Reel URL —</div>
-                  <input type="url" aria-label="Direct video URL" placeholder="https://example.com/video.mp4 or Instagram Reel URL" disabled={readingMedia} value={formData.video.startsWith('data:') ? '' : formData.video} onChange={(e) => { setVideoError(''); setFormData({ ...formData, video: e.target.value }); }} style={{ width: '100%', padding: '0.55rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.82rem' }} />
-                  <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.4rem' }}>MP4, WebM, Ogg, or public Instagram Reel links (@wakale_dipali_).</p>
+                  <div style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center', marginBottom: '0.4rem' }}>— or paste video URL (Instagram, YouTube, Google Drive, or MP4) —</div>
+                  <input
+                    type="url"
+                    aria-label="Direct video URL"
+                    placeholder="https://instagram.com/reel/..., YouTube / Shorts, Drive, or direct MP4 URL"
+                    disabled={readingMedia}
+                    value={formData.video.startsWith('data:') ? '' : formData.video}
+                    onChange={(e) => {
+                      setVideoError('');
+                      setFormData({ ...formData, video: e.target.value });
+                    }}
+                    style={{ width: '100%', padding: '0.55rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.82rem' }}
+                  />
+                  <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.4rem' }}>
+                    Supports Instagram Reels (@wakale_dipali_), YouTube videos & Shorts, Google Drive, Vimeo, or direct MP4 / WebM links.
+                  </p>
                   {readingMedia && <p role="status">Processing media…</p>}
                   {formData.video.startsWith('data:') && <p role="status">Local video selected</p>}
-                  {videoError && !isInstagramUrl(formData.video) && <p role="alert" style={{ color: '#C62828' }}>{videoError}</p>}
+                  {videoError && !isEmbeddableVideoUrl(formData.video) && <p role="alert" style={{ color: '#C62828' }}>{videoError}</p>}
+
+                  {/* Connected Video Previews */}
                   {formData.video && isInstagramUrl(formData.video) ? (
                     <div style={{ marginTop: '0.75rem', padding: '0.85rem', background: '#FFF5F2', border: '1.5px solid #F2C8BD', borderRadius: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -1294,9 +1314,59 @@ const AdminDashboard = () => {
                         🔊 <strong>TV Auto-Voice Tip:</strong> Instagram embed links require a manual click to start voice due to Instagram's privacy rules. To make this reel <strong>automatically play voice on your TV</strong>, download the reel video and upload it above using <strong>"Choose Video from PC / Gallery"</strong>.
                       </p>
                     </div>
+                  ) : formData.video && isYouTubeUrl(formData.video) ? (
+                    <div style={{ marginTop: '0.75rem', padding: '0.85rem', background: '#FFF5F5', border: '1.5px solid #FFCDD2', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#FF0000', display: 'grid', placeItems: 'center', color: '#FFF', fontSize: '13px', fontWeight: 'bold' }}>▶</span>
+                          <div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#C62828' }}>YouTube / Shorts Connected</div>
+                            <a href={formData.video} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#666', textDecoration: 'underline' }}>{formData.video}</a>
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => { setVideoError(''); setFormData({ ...formData, video: '' }); }} style={{ background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>Remove Video</button>
+                      </div>
+                      <iframe
+                        src={getYouTubeEmbedUrl(formData.video)}
+                        style={{ width: '100%', height: '180px', borderRadius: '8px', border: 'none' }}
+                        title="YouTube Preview"
+                      />
+                    </div>
+                  ) : formData.video && isGoogleDriveUrl(formData.video) ? (
+                    <div style={{ marginTop: '0.75rem', padding: '0.85rem', background: '#F1F8E9', border: '1.5px solid #C8E6C9', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#34A853', display: 'grid', placeItems: 'center', color: '#FFF', fontSize: '13px', fontWeight: 'bold' }}>📁</span>
+                          <div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#2E7D32' }}>Google Drive Video Connected</div>
+                            <a href={formData.video} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#666', textDecoration: 'underline' }}>{formData.video}</a>
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => { setVideoError(''); setFormData({ ...formData, video: '' }); }} style={{ background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>Remove Video</button>
+                      </div>
+                      <iframe
+                        src={getGoogleDriveEmbedUrl(formData.video)}
+                        style={{ width: '100%', height: '180px', borderRadius: '8px', border: 'none' }}
+                        title="Drive Preview"
+                      />
+                    </div>
                   ) : formData.video ? (
                     <div style={{ marginTop: '0.75rem' }}>
-                      <video key={formData.video} src={formData.video} controls muted playsInline preload="metadata" onLoadedMetadata={() => setVideoError('')} onError={() => { if (!isInstagramUrl(formData.video)) setVideoError('This video could not be played. Choose a supported file or check the direct video URL.'); }} style={{ width: '100%', maxHeight: '220px', borderRadius: '8px', background: '#111' }} />
+                      <video
+                        key={formData.video}
+                        src={resolveMediaUrl(formData.video)}
+                        controls
+                        muted
+                        playsInline
+                        preload="metadata"
+                        onLoadedMetadata={() => setVideoError('')}
+                        onError={() => {
+                          if (!isEmbeddableVideoUrl(formData.video)) {
+                            setVideoError('This video could not be played. Check the URL or choose a file from PC.');
+                          }
+                        }}
+                        style={{ width: '100%', maxHeight: '220px', borderRadius: '8px', background: '#111' }}
+                      />
                       <button type="button" onClick={() => { mediaReader.current?.abort(); setVideoError(''); setFormData({ ...formData, video: '' }); }} style={{ marginTop: '0.5rem', background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>Remove Video</button>
                     </div>
                   ) : null}
@@ -1326,7 +1396,7 @@ const AdminDashboard = () => {
 
                   <button
                     type="submit"
-                    disabled={readingMedia || savingTransformation || (mediaType === 'video' && !!videoError && !isInstagramUrl(formData.video)) || (mediaType === 'videos' && !!(pairErrors.beforeVideo || pairErrors.afterVideo))}
+                    disabled={readingMedia || savingTransformation || (mediaType === 'video' && !!videoError && !isEmbeddableVideoUrl(formData.video)) || (mediaType === 'videos' && !!(pairErrors.beforeVideo || pairErrors.afterVideo))}
                     style={{ padding: '0.7rem 1.6rem', borderRadius: '25px', border: 'none', backgroundColor: '#C88A75', color: '#FFF', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <Check size={16} /> {readingMedia ? 'Processing Media…' : savingTransformation ? 'Saving to Database…' : editingItem ? 'Update Transformation' : 'Save Transformation'}

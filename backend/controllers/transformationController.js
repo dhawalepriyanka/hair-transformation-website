@@ -230,8 +230,30 @@ const getTransformationMedia = async (req, res, next) => {
       if (match) {
         const mime = match[1];
         const buffer = Buffer.from(match[2], 'base64');
+        const total = buffer.length;
+
+        // Support HTTP Range requests for seamless HTML5 video buffering on browsers and TV
+        const range = req.headers.range;
+        if (range && mime.startsWith('video/')) {
+          const parts = range.replace(/bytes=/, '').split('-');
+          const start = parseInt(parts[0], 10);
+          const end = parts[1] ? parseInt(parts[1], 10) : total - 1;
+          const chunksize = (end - start) + 1;
+          const chunk = buffer.subarray(start, end + 1);
+
+          res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${total}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunksize,
+            'Content-Type': mime,
+            'Cache-Control': 'public, max-age=31536000, immutable'
+          });
+          return res.end(chunk);
+        }
+
         res.setHeader('Content-Type', mime);
-        res.setHeader('Content-Length', buffer.length);
+        res.setHeader('Content-Length', total);
+        res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         return res.end(buffer);
       }
