@@ -229,7 +229,7 @@ const TransformationsPage = () => {
 
       // 4. Inject Live Patient Waiting List Slide into the TV rotation (driven by Admin Settings)
       const shouldShowQueue = slideshowSettings.showPatientQueueSlide !== false;
-      const queueDuration = Math.max(3, parseInt(slideshowSettings.queueSlideDuration, 10) || 15);
+      const queueDuration = Math.max(3, parseInt(slideshowSettings.queueSlideDuration, 10) || 7);
       const queuePlacement = slideshowSettings.queueSlidePlacement || 'repeat';
       const queueFreq = Math.max(1, parseInt(slideshowSettings.queueSlideFrequency, 10) || 2);
       const queueSpecificIndex = Math.max(1, parseInt(slideshowSettings.queueSlideSpecificIndex, 10) || 1);
@@ -454,29 +454,40 @@ const TransformationsPage = () => {
   const nextSlideIndex = transformationsList.length > 0 ? (activeSlide + 1) % transformationsList.length : 0;
   const nextItem = transformationsList[nextSlideIndex];
 
-  // Timing calculation driven 100% by Admin Settings
+  // Timing calculation: 7s for images, 7s for waiting list, video plays until end
   const calculateSlideDuration = useCallback(() => {
-    if (!activeItem) return 8;
+    if (!activeItem) return 7;
 
-    // Patient Waiting List slide display duration (driven by admin setting)
+    // 1. Patient Waiting List slide display duration (defaults to 7s)
     if (activeItem.isQueueSlide) {
-      return parseInt(slideshowSettings.queueSlideDuration, 10) || 15;
+      return parseInt(slideshowSettings.queueSlideDuration, 10) || 7;
     }
 
-    // Individual item custom duration (set by Admin in dashboard)
+    // 2. Video timing:
+    // If video is played, next video starts after the first video has ended
+    if (isVideo) {
+      const isEmbed = isEmbeddableVideoUrl(activeItem.video);
+      if (!isEmbed) {
+        // Native HTML5 video: plays to the end!
+        if (slideshowSettings.videoDurationMode === 'end' || !slideshowSettings.videoDurationMode) {
+          return 'end';
+        }
+      } else {
+        // External iframe embed (Instagram, YouTube, Drive):
+        if (activeItem.duration && !isNaN(activeItem.duration) && activeItem.duration > 0) {
+          return parseInt(activeItem.duration, 10);
+        }
+        return parseInt(slideshowSettings.videoDuration, 10) || 15;
+      }
+    }
+
+    // 3. Individual item custom duration if explicitly set
     if (activeItem.duration && !isNaN(activeItem.duration) && activeItem.duration > 0) {
       return parseInt(activeItem.duration, 10);
     }
 
-    // Global Admin Settings
-    if (isVideo) {
-      if (slideshowSettings.videoDurationMode === 'end') {
-        return 'end';
-      }
-      return parseInt(slideshowSettings.videoDuration, 10) || 15;
-    }
-
-    return parseInt(slideshowSettings.imageDuration, 10) || 8;
+    // 4. Photo & Before/After Image slides (defaults to 7s)
+    return parseInt(slideshowSettings.imageDuration, 10) || 7;
   }, [activeItem, isVideo, slideshowSettings]);
 
   // Slide navigation with infinite wrap (always references latest transformations list)
@@ -785,10 +796,9 @@ const TransformationsPage = () => {
     return () => clearInterval(interval);
   }, [activeSlide, isVideo, isPlaying, calculateSlideDuration, activeItem]);
 
-  // Handle video end
+  // Handle video end: immediately advance to next slide/video as requested
   const handleVideoEnded = () => {
-    const duration = calculateSlideDuration();
-    if (duration === 'end' && isPlaying) {
+    if (isPlaying) {
       changeSlide(1);
     }
   };
@@ -807,13 +817,14 @@ const TransformationsPage = () => {
     const duration = calculateSlideDuration();
 
     if (duration === 'end') {
+      // Video is playing to the end naturally. Safety watchdog of 5 min in case stream stalls
       slideTimerRef.current = window.setTimeout(() => {
         changeSlide(1);
-      }, 75000);
+      }, 300000);
       return () => clearTimeout(slideTimerRef.current);
     }
 
-    const durationMs = (Number(duration) || 8) * 1000;
+    const durationMs = (Number(duration) || 7) * 1000;
 
     slideTimerRef.current = window.setInterval(() => {
       changeSlide(1);

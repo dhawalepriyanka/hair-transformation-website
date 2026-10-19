@@ -1498,24 +1498,24 @@ const AdminDashboard = () => {
                       <input
                         type="radio"
                         name="videoDurationMode"
-                        value="fixed"
-                        checked={slideshowSettings.videoDurationMode !== 'end'}
-                        onChange={() => setSlideshowSettings({ ...slideshowSettings, videoDurationMode: 'fixed' })}
+                        value="end"
+                        checked={slideshowSettings.videoDurationMode === 'end'}
+                        onChange={() => setSlideshowSettings({ ...slideshowSettings, videoDurationMode: 'end' })}
                         style={{ accentColor: '#C88A75' }}
                       />
-                      <span>Auto-switch after fixed time limit (Recommended for continuous salon flow)</span>
+                      <span><strong>Auto-switch only after video finishes playing ⭐</strong> (Plays entire reel to the end before advancing)</span>
                     </label>
 
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="videoDurationMode"
-                        value="end"
-                        checked={slideshowSettings.videoDurationMode === 'end'}
-                        onChange={() => setSlideshowSettings({ ...slideshowSettings, videoDurationMode: 'end' })}
+                        value="fixed"
+                        checked={slideshowSettings.videoDurationMode !== 'end'}
+                        onChange={() => setSlideshowSettings({ ...slideshowSettings, videoDurationMode: 'fixed' })}
                         style={{ accentColor: '#C88A75' }}
                       />
-                      <span>Auto-switch only after video finishes playing</span>
+                      <span>Auto-switch after fixed time limit</span>
                     </label>
                   </div>
 
@@ -1578,7 +1578,7 @@ const AdminDashboard = () => {
                   </div>
 
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem', color: '#333' }}>
-                    Image Display Duration: <span style={{ color: '#C88A75', fontWeight: '800' }}>{slideshowSettings.imageDuration || 8} seconds</span>
+                    Image Display Duration: <span style={{ color: '#C88A75', fontWeight: '800' }}>{slideshowSettings.imageDuration || 7} seconds</span>
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '0.6rem' }}>
                     <input
@@ -1586,7 +1586,7 @@ const AdminDashboard = () => {
                       min="4"
                       max="30"
                       step="1"
-                      value={slideshowSettings.imageDuration || 8}
+                      value={slideshowSettings.imageDuration || 7}
                       onChange={(e) => setSlideshowSettings({ ...slideshowSettings, imageDuration: parseInt(e.target.value, 10) })}
                       style={{ flex: 1, accentColor: '#C88A75' }}
                     />
@@ -1594,8 +1594,8 @@ const AdminDashboard = () => {
                       type="number"
                       min="4"
                       max="60"
-                      value={slideshowSettings.imageDuration || 8}
-                      onChange={(e) => setSlideshowSettings({ ...slideshowSettings, imageDuration: parseInt(e.target.value, 10) || 8 })}
+                      value={slideshowSettings.imageDuration || 7}
+                      onChange={(e) => setSlideshowSettings({ ...slideshowSettings, imageDuration: parseInt(e.target.value, 10) || 7 })}
                       style={{ width: '70px', padding: '0.4rem', borderRadius: '6px', border: '1px solid #CCC', textAlign: 'center', fontWeight: '700' }}
                     />
                     <span style={{ fontSize: '0.82rem', color: '#666' }}>sec</span>
@@ -1618,7 +1618,7 @@ const AdminDashboard = () => {
                           cursor: 'pointer'
                         }}
                       >
-                        {sec}s {sec === 5 ? '⭐' : ''}
+                        {sec}s {sec === 7 ? '⭐' : ''}
                       </button>
                     ))}
                   </div>
@@ -1677,7 +1677,7 @@ const AdminDashboard = () => {
                         Slide Display Time on TV:
                       </label>
                       <span style={{ color: '#C88A75', fontWeight: '800', fontSize: '0.9rem' }}>
-                        {slideshowSettings.queueSlideDuration || 15} seconds
+                        {slideshowSettings.queueSlideDuration || 7} seconds
                       </span>
                     </div>
 
@@ -1687,10 +1687,10 @@ const AdminDashboard = () => {
                         type="number"
                         min="3"
                         max="180"
-                        value={slideshowSettings.queueSlideDuration || 15}
+                        value={slideshowSettings.queueSlideDuration || 7}
                         onChange={(e) => setSlideshowSettings({
                           ...slideshowSettings,
-                          queueSlideDuration: Math.max(3, parseInt(e.target.value, 10) || 15)
+                          queueSlideDuration: Math.max(3, parseInt(e.target.value, 10) || 7)
                         })}
                         style={{
                           width: '100px',
@@ -1708,7 +1708,7 @@ const AdminDashboard = () => {
 
                     {/* Quick Presets */}
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      {[5, 10, 15, 20, 30, 45, 60].map((sec) => (
+                      {[5, 7, 10, 15, 20, 30, 45, 60].map((sec) => (
                         <button
                           key={sec}
                           type="button"
@@ -1724,7 +1724,7 @@ const AdminDashboard = () => {
                             color: slideshowSettings.queueSlideDuration === sec ? '#9A5F4D' : '#666'
                           }}
                         >
-                          {sec}s {sec === 15 ? '⭐' : ''}
+                          {sec}s {sec === 7 ? '⭐' : ''}
                         </button>
                       ))}
                     </div>
@@ -1884,10 +1884,10 @@ const AdminDashboard = () => {
                     <div style={{ background: '#2B2B2B', color: '#FFF', padding: '0.65rem 0.85rem', borderRadius: '8px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                       <span style={{ color: '#D4A373', fontWeight: '700' }}>📺 TV Rotation Preview:</span>
                       {slideshowSettings.queueSlidePlacement === 'first' && (
-                        <span><strong style={{ color: '#52B788' }}>[Waiting List {slideshowSettings.queueSlideDuration || 15}s]</strong> ➔ [Reel 1] ➔ [Reel 2] ➔ [Reel 3] ➔ ↻</span>
+                        <span><strong style={{ color: '#52B788' }}>[Waiting List {slideshowSettings.queueSlideDuration || 7}s]</strong> ➔ [Reel 1] ➔ [Reel 2] ➔ [Reel 3] ➔ ↻</span>
                       )}
                       {slideshowSettings.queueSlidePlacement === 'last' && (
-                        <span>[Reel 1] ➔ [Reel 2] ➔ [Reel 3] ➔ <strong style={{ color: '#52B788' }}>[Waiting List {slideshowSettings.queueSlideDuration || 15}s]</strong> ➔ ↻</span>
+                        <span>[Reel 1] ➔ [Reel 2] ➔ [Reel 3] ➔ <strong style={{ color: '#52B788' }}>[Waiting List {slideshowSettings.queueSlideDuration || 7}s]</strong> ➔ ↻</span>
                       )}
                       {slideshowSettings.queueSlidePlacement === 'specific' && (
                         <span>
@@ -1902,7 +1902,7 @@ const AdminDashboard = () => {
                           [Reel 1]
                           {(slideshowSettings.queueSlideFrequency || 2) === 1
                             ? <> ➔ <strong style={{ color: '#52B788' }}>[Waiting List]</strong> ➔ [Reel 2] ➔ <strong style={{ color: '#52B788' }}>[Waiting List]</strong> ➔ ↻</>
-                            : <> ➔ [Reel 2] ➔ <strong style={{ color: '#52B788' }}>[Waiting List {slideshowSettings.queueSlideDuration || 15}s]</strong> ➔ [Reel 3] ➔ ↻</>
+                            : <> ➔ [Reel 2] ➔ <strong style={{ color: '#52B788' }}>[Waiting List {slideshowSettings.queueSlideDuration || 7}s]</strong> ➔ [Reel 3] ➔ ↻</>
                           }
                         </span>
                       )}

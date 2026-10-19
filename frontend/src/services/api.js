@@ -820,18 +820,19 @@ export const deleteProduct = async (id) => {
 /* ─────────────── SLIDESHOW & 55" TV SETTINGS ─────────────── */
 export const DEFAULT_SLIDESHOW_SETTINGS = {
   autoSwitch: true,
-  imageDuration: 5,          // seconds for images & sliders
-  videoDurationMode: 'fixed', // 'fixed' = switch after videoDuration secs | 'end' = switch after video ends
-  videoDuration: 15,         // seconds for videos in fixed mode
+  imageDuration: 7,          // 7 seconds for images & Before/After split sliders
+  videoDurationMode: 'end',  // 'end' = switch after video finishes playing
+  videoDuration: 15,         // fallback for iframe embeds
   hideTextInFullscreen: true, // remove right-side text when in fullscreen / 55" TV mode
   showTimerBadge: true,      // show on-screen countdown / progress
   // Live Patient Waiting List on TV settings:
   showPatientQueueSlide: true, // Enable / Disable Waiting List slide on TV
-  queueSlideDuration: 15,    // How many seconds the queue slide stays on TV
+  queueSlideDuration: 7,     // 7 seconds for Patient Waiting List slide on TV
   queueSlidePlacement: 'repeat', // 'repeat' (after every N videos) | 'first' (slide #1) | 'last' (end of playlist) | 'specific' (specific slide number)
   queueSlideFrequency: 2,    // Show after every N transformation reels in repeat mode (default: 2)
   queueSlideSpecificIndex: 1, // Specific slide position (1-based) if placement is 'specific'
   queueAutoDemo: true,       // Show sample appointments when live queue is empty
+  version: 2
 };
 
 export const fetchSlideshowSettings = () => {
@@ -839,6 +840,18 @@ export const fetchSlideshowSettings = () => {
     const saved = localStorage.getItem('admin_slideshow_settings');
     if (saved) {
       const parsed = JSON.parse(saved);
+      if (parsed.version !== 2) {
+        const upgraded = {
+          ...DEFAULT_SLIDESHOW_SETTINGS,
+          ...parsed,
+          imageDuration: (parsed.imageDuration === 8 || parsed.imageDuration === 5) ? 7 : (parsed.imageDuration || 7),
+          queueSlideDuration: (parsed.queueSlideDuration === 15 || parsed.queueSlideDuration === 10) ? 7 : (parsed.queueSlideDuration || 7),
+          videoDurationMode: parsed.videoDurationMode === 'fixed' ? 'end' : (parsed.videoDurationMode || 'end'),
+          version: 2
+        };
+        localStorage.setItem('admin_slideshow_settings', JSON.stringify(upgraded));
+        return upgraded;
+      }
       return { ...DEFAULT_SLIDESHOW_SETTINGS, ...parsed };
     }
   } catch (e) {
