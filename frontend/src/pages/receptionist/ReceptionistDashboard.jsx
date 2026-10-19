@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { CalendarDays, CalendarPlus, Clock3, Phone, Search, Stethoscope, Users } from 'lucide-react';
-import { createPatientVisit, fetchPatientVisits, updatePatientVisit } from '../../services/api';
+import { CalendarDays, CalendarPlus, Clock3, Phone, Search, Stethoscope, Trash2, Users } from 'lucide-react';
+import { createPatientVisit, deletePatientVisit, fetchPatientVisits, updatePatientVisit } from '../../services/api';
 import { useStaffSession } from '../../services/adminSession';
 import PatientRegistrationFields, { emptyPatientForm } from '../../components/PatientRegistrationFields';
 import Toast from '../../components/Toast';
@@ -14,6 +14,7 @@ export default function ReceptionistDashboard() {
   const patientFormRef = useRef(null);
   const [form, setForm] = useState(blank); const [visits, setVisits] = useState([]); const [query, setQuery] = useState('');
   const [message, setMessage] = useState(''); const [error, setError] = useState(''); const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const syncQueueToStorage = (list) => {
     if (!Array.isArray(list)) return;
     try {
@@ -83,6 +84,23 @@ export default function ReceptionistDashboard() {
     try { await updatePatientVisit(visit.id, { ...visit, status: 'In Consultation', sent_to_admin: true }); setMessage(`${visit.patient_name} was sent to the Admin dashboard.`); load(); }
     catch (err) { setError(err.response?.data?.message || err.message); }
   };
+  const handleDelete = async (visit) => {
+    if (!window.confirm(`Are you sure you want to delete the patient record for "${visit.patient_name}"?`)) {
+      return;
+    }
+    setDeletingId(visit.id);
+    setError('');
+    setMessage('');
+    try {
+      await deletePatientVisit(visit.id);
+      setMessage(`Patient record for "${visit.patient_name}" was deleted successfully.`);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to delete patient record.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
   return <section className="clinic-page receptionist-page"><div className="container">
     <Toast message={error || message} type={error ? 'error' : 'success'} onClose={() => { setError(''); setMessage(''); }} />
     <header className="clinic-heading"><CalendarPlus /><div><h1 className="serif">Receptionist Dashboard</h1><p>Register patient visits and manage today’s queue.</p></div></header>
@@ -101,7 +119,27 @@ export default function ReceptionistDashboard() {
             <div className="visit-card-top"><div className="patient-avatar">{initials}</div><div className="patient-summary"><strong>{v.patient_name}</strong><span><Phone size={14}/>{v.mobile}</span></div><span className={`visit-status status-${v.status.toLowerCase().replaceAll(' ', '-')}`}>{v.status}</span></div>
             <div className="visit-meta"><span><CalendarDays size={15}/>{visitDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span><span><Clock3 size={15}/>{visitDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span></div>
             <div className="visit-concern"><Stethoscope size={16}/><div><small>Main concern</small><p>{v.concern || 'Not provided'}</p></div></div>
-            <div className="visit-card-actions"><label className="visit-status-control">Visit status<select value={v.status} onChange={e => setStatus(v, e.target.value)}>{['Waiting','In Consultation','Completed','Cancelled'].map(s => <option key={s}>{s}</option>)}</select></label>{v.sent_to_admin ? <span className="sent-confirmation">✓ Sent to Admin</span> : <button type="button" className="send-admin-button" onClick={() => sendToAdmin(v)}>Send to Admin</button>}</div>
+            <div className="visit-card-actions">
+              <label className="visit-status-control">
+                Visit status
+                <select value={v.status} onChange={e => setStatus(v, e.target.value)}>
+                  {['Waiting','In Consultation','Completed','Cancelled'].map(s => <option key={s}>{s}</option>)}
+                </select>
+              </label>
+              <div className="visit-card-action-buttons">
+                {v.sent_to_admin ? <span className="sent-confirmation">✓ Sent to Admin</span> : <button type="button" className="send-admin-button" onClick={() => sendToAdmin(v)}>Send to Admin</button>}
+                <button
+                  type="button"
+                  className="delete-patient-button"
+                  onClick={() => handleDelete(v)}
+                  disabled={deletingId === v.id}
+                  title={`Delete patient visit for ${v.patient_name}`}
+                >
+                  <Trash2 size={13} />
+                  <span>{deletingId === v.id ? 'Deleting…' : 'Delete'}</span>
+                </button>
+              </div>
+            </div>
           </article>;
         }) : <div className="visits-empty"><Users size={34}/><strong>No patient visits found</strong><p>{query ? 'Try a different name, mobile number or date.' : 'Newly registered patients will appear here.'}</p></div>}</div>
       </div>

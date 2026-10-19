@@ -635,6 +635,7 @@ export const fetchPatientVisits = async () => patientRequest(() => apiClient.get
 export const fetchPatientVisit = async (id) => patientRequest(() => apiClient.get(`/patient-visits/${id}`));
 export const createPatientVisit = async (data) => patientRequest(() => apiClient.post('/patient-visits', data));
 export const updatePatientVisit = async (id, data) => patientRequest(() => apiClient.put(`/patient-visits/${id}`, data));
+export const deletePatientVisit = async (id) => patientRequest(() => apiClient.delete(`/patient-visits/${id}`));
 
 export const SAMPLE_QUEUE_PATIENTS = [
   {

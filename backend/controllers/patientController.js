@@ -359,4 +359,40 @@ const getPublicQueue = async (req, res) => {
   }
 };
 
-module.exports = { listVisits, getVisit, createVisit, updateVisit, normalizeVisit, getPublicQueue };
+/**
+ * Delete patient visit (cascades to consultations, recommendations, and consents)
+ */
+const deleteVisit = async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    const id = Number(req.params.id);
+    if (!id || Number.isNaN(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid patient visit ID.' });
+    }
+
+    await client.query('BEGIN');
+    const existing = await client.query('SELECT * FROM patient_visits WHERE id = $1 FOR UPDATE', [id]);
+    if (!existing.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Patient visit not found.' });
+    }
+
+    const visit = existing.rows[0];
+    if (req.user.role === 'receptionist' && visit.created_by_username && visit.created_by_username !== req.user.username) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ success: false, message: 'You are only permitted to delete patient visits registered by you.' });
+    }
+
+    await client.query('DELETE FROM patient_visits WHERE id = $1', [id]);
+    await client.query('COMMIT');
+
+    res.json({ success: true, message: 'Patient visit deleted successfully.' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    next(error);
+  } finally {
+    client.release();
+  }
+};
+
+module.exports = { listVisits, getVisit, createVisit, updateVisit, normalizeVisit, getPublicQueue, deleteVisit };
