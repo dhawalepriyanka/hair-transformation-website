@@ -14,8 +14,59 @@ export default function ReceptionistDashboard() {
   const patientFormRef = useRef(null);
   const [form, setForm] = useState(blank); const [visits, setVisits] = useState([]); const [query, setQuery] = useState('');
   const [message, setMessage] = useState(''); const [error, setError] = useState(''); const [saving, setSaving] = useState(false);
-  const load = () => fetchPatientVisits().then(setVisits).catch(e => setError(e.message));
+  const syncQueueToStorage = (list) => {
+    if (!Array.isArray(list)) return;
+    try {
+      localStorage.setItem('clinic_all_visits', JSON.stringify(list));
+      const activeQueue = list
+        .filter(v => {
+          const st = String(v.status || '').trim().toLowerCase();
+          return st === 'waiting' || st === 'in consultation';
+        })
+        .sort((a, b) => {
+          const aIn = String(a.status || '').trim().toLowerCase() === 'in consultation';
+          const bIn = String(b.status || '').trim().toLowerCase() === 'in consultation';
+          if (aIn && !bIn) return -1;
+          if (!aIn && bIn) return 1;
+          return new Date(a.visit_at) - new Date(b.visit_at);
+        })
+        .map((v, idx) => ({
+          id: v.id,
+          token_number: idx + 1,
+          patient_name: v.patient_name,
+          concern: v.concern || 'Hair & Skin Consultation',
+          status: v.status,
+          visit_at: v.visit_at
+        }));
+      localStorage.setItem('clinic_patient_queue', JSON.stringify(activeQueue));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('patient_queue_changed', { detail: activeQueue }));
+        if ('BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('dipali_queue_sync');
+          bc.postMessage({ type: 'queue_updated', queue: activeQueue });
+          bc.close();
+        }
+      }
+    } catch (_) {}
+  };
+
+  const load = () => fetchPatientVisits()
+    .then(data => {
+      const list = Array.isArray(data) ? data : [];
+      setVisits(list);
+      syncQueueToStorage(list);
+    })
+    .catch(e => setError(e.message));
+
   useEffect(() => { load(); }, []);
+
+  // Real-time synchronization of active patient queue with the TV display
+  useEffect(() => {
+    if (visits && visits.length > 0) {
+      syncQueueToStorage(visits);
+    }
+  }, [visits]);
+
   useEffect(() => {
     if (location.pathname === '/receptionist/add-patient') {
       patientFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });

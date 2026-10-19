@@ -3601,3 +3601,425 @@ html { scroll-behavior: smooth; }
 .tv-apk-root .video-comparison-controls {
   display: none !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   DIPALI WAKALE TV — PATIENT WAITING QUEUE SLIDE (16:9 Full Screen)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.tv-queue-slide {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 20%, #1c0812 0%, #0c0306 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 28px 44px 20px;
+  box-sizing: border-box;
+  color: #FFF;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  user-select: none;
+  overflow: hidden;
+}
+
+.tv-queue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1.5px solid rgba(228, 180, 159, 0.25);
+  padding-bottom: 16px;
+}
+
+.tv-queue-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.tv-queue-scissors {
+  font-size: 1.8rem;
+  color: #FFF2C9;
+  text-shadow: 0 0 12px rgba(242, 201, 182, 0.4);
+}
+
+.tv-queue-brand {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 3px;
+  margin: 0;
+  color: #FFF2C9;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+.tv-queue-sub {
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+  color: #E4B49F;
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.tv-queue-title-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(228, 180, 159, 0.12);
+  border: 1px solid rgba(228, 180, 159, 0.4);
+  padding: 7px 20px;
+  border-radius: 9999px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #FFF2C9;
+}
+
+.tv-queue-live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 10px #10B981;
+  animation: tvDotPulse 1.8s infinite;
+}
+
+@keyframes tvDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.tv-queue-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(24, 8, 14, 0.85);
+  border: 1px solid rgba(228, 180, 159, 0.35);
+  padding: 7px 16px;
+  border-radius: 9999px;
+  color: #E4B49F;
+  font-weight: 600;
+  font-size: 0.84rem;
+}
+
+/* ── GRID ── */
+.tv-queue-grid {
+  display: grid;
+  grid-template-columns: 42% 56%;
+  gap: 24px;
+  flex: 1;
+  align-items: stretch;
+  margin: 18px 0 14px;
+}
+
+/* ── HERO CARD (Now Serving) ── */
+.tv-queue-hero-card {
+  background: linear-gradient(160deg, #1C0A12 0%, #100408 100%);
+  border: 2px solid rgba(242, 201, 182, 0.45);
+  border-radius: 20px;
+  padding: 26px 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 242, 201, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.tv-queue-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.6);
+  color: #6EE7B7;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  width: fit-content;
+}
+
+.tv-queue-pulse-green {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 12px #10B981;
+  animation: tvDotPulse 1.5s infinite;
+}
+
+.tv-queue-token-display {
+  margin: 12px 0;
+}
+
+.tv-queue-token-label {
+  display: block;
+  font-size: 0.78rem;
+  letter-spacing: 3px;
+  color: #E4B49F;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.tv-queue-token-number {
+  font-size: 4.2rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #FFF2C9;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  text-shadow: 0 4px 20px rgba(242, 201, 182, 0.45);
+  letter-spacing: 2px;
+}
+
+.tv-queue-patient-info {
+  margin-bottom: 10px;
+}
+
+.tv-queue-patient-name {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #FFF;
+  line-height: 1.2;
+}
+
+.tv-queue-concern-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(228, 180, 159, 0.14);
+  color: #F2C9B6;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.tv-queue-specialist-box {
+  border-top: 1px solid rgba(228, 180, 159, 0.2);
+  padding-top: 12px;
+  margin-top: 8px;
+}
+
+.tv-queue-spec-title {
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
+  color: #E4B49F;
+  text-transform: uppercase;
+}
+
+.tv-queue-spec-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #FFF2C9;
+  margin: 2px 0;
+}
+
+.tv-queue-spec-role {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* ── RIGHT LIST CARD (Waiting Queue) ── */
+.tv-queue-list-card {
+  background: linear-gradient(160deg, #18080E 0%, #0F0408 100%);
+  border: 1.5px solid rgba(228, 180, 159, 0.32);
+  border-radius: 20px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65);
+}
+
+.tv-queue-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(228, 180, 159, 0.2);
+}
+
+.tv-queue-list-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #FFF2C9;
+}
+
+.tv-queue-waiting-counter {
+  font-size: 0.78rem;
+  background: rgba(228, 180, 159, 0.15);
+  color: #E4B49F;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.tv-queue-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.tv-queue-table-head {
+  display: grid;
+  grid-template-columns: 75px 1.4fr 1.4fr 95px;
+  gap: 10px;
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
+  color: #E4B49F;
+  font-weight: 700;
+  padding: 0 12px 4px;
+}
+
+.tv-queue-table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tv-queue-row {
+  display: grid;
+  grid-template-columns: 75px 1.4fr 1.4fr 95px;
+  gap: 10px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(228, 180, 159, 0.15);
+  border-radius: 12px;
+  padding: 9px 12px;
+}
+
+.tv-queue-row-token {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #FFF2C9;
+}
+
+.tv-queue-row-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #FFF;
+}
+
+.tv-queue-row-concern {
+  color: #E4B49F;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tv-queue-status-next {
+  display: inline-block;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  color: #FCD34D;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.tv-queue-status-waiting {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.tv-queue-empty-waiting {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  opacity: 0.85;
+}
+
+.tv-queue-empty-waiting h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #FFF2C9;
+}
+
+.tv-queue-empty-waiting p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #E4B49F;
+}
+
+/* ── CALM STATE (0 patients) ── */
+.tv-queue-calm-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+}
+
+.tv-queue-calm-emblem {
+  font-size: 3rem;
+  color: #FFF2C9;
+  margin-bottom: 8px;
+}
+
+.tv-queue-calm-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 2.5rem;
+  letter-spacing: 3px;
+  color: #FFF2C9;
+  margin: 0 0 6px;
+}
+
+.tv-queue-calm-sub {
+  font-size: 1.05rem;
+  color: #E4B49F;
+  margin: 0 0 16px;
+}
+
+.tv-queue-calm-badge {
+  display: inline-block;
+  background: rgba(228, 180, 159, 0.15);
+  border: 1px solid rgba(228, 180, 159, 0.4);
+  color: #FFF2C9;
+  padding: 6px 20px;
+  border-radius: 9999px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.tv-queue-calm-hint {
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* ── FOOTER TICKER ── */
+.tv-queue-footer {
+  border-top: 1px solid rgba(228, 180, 159, 0.2);
+  padding-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 0.82rem;
+  letter-spacing: 0.8px;
+  color: #E4B49F;
+  text-align: center;
+}
+
+.tv-queue-ticker-star {
+  color: #FFF2C9;
+}

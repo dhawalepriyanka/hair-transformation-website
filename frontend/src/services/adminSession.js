@@ -13,7 +13,7 @@ const readSession = storage => {
 };
 
 export const getStaffSession = () => {
-  return readSession(globalThis.sessionStorage);
+  return readSession(globalThis.sessionStorage) || readSession(globalThis.localStorage);
 };
 
 export const hasAdminSession = () => getStaffSession()?.user?.role === 'admin';
@@ -25,6 +25,7 @@ export function setAdminSession(tokenOrSession, user) {
   if (tokenOrSession) {
     const session = typeof tokenOrSession === 'object' ? tokenOrSession : { token: tokenOrSession, user: user || { role: 'admin' } };
     try { sessionStorage.setItem(KEY, JSON.stringify(session)); } catch { /* Login still fails closed if storage is unavailable. */ }
+    try { localStorage.setItem(KEY, JSON.stringify(session)); } catch { /* Enable cross-tab sharing on same origin */ }
   }
   try { sessionStorage.removeItem('adminToken'); } catch { /* Legacy cleanup only. */ }
   window.dispatchEvent(new Event('admin-session-change'));

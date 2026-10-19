@@ -322,4 +322,41 @@ const updateVisit = async (req, res, next) => {
   }
 };
 
-module.exports = { listVisits, getVisit, createVisit, updateVisit, normalizeVisit };
+/**
+ * Public TV Queue endpoint (Privacy-safe: no phone, no address, no private notes)
+ */
+const getPublicQueue = async (req, res) => {
+  try {
+    const query = `
+      SELECT
+        v.id,
+        p.full_name AS patient_name,
+        COALESCE(NULLIF(TRIM(v.concern), ''), 'Hair & Skin Consultation') AS concern,
+        v.status,
+        v.visit_at
+      FROM patient_visits v
+      JOIN patients p ON p.id = v.patient_id
+      WHERE LOWER(TRIM(v.status)) IN ('waiting', 'in consultation')
+      ORDER BY
+        CASE WHEN LOWER(TRIM(v.status)) = 'in consultation' THEN 0 ELSE 1 END,
+        v.visit_at ASC
+      LIMIT 20;
+    `;
+    const result = await pool.query(query);
+    const queue = result.rows.map((row, index) => ({
+      id: row.id,
+      token_number: index + 1,
+      patient_name: row.patient_name,
+      concern: row.concern,
+      status: row.status,
+      visit_at: row.visit_at
+    }));
+    return res.json({ success: true, data: queue });
+  } catch (error) {
+    // If DB is offline or table not present, return empty gracefully
+    console.warn('[Queue] Public queue query note:', error.message);
+    return res.json({ success: true, data: [] });
+  }
+};
+
+module.exports = { listVisits, getVisit, createVisit, updateVisit, normalizeVisit, getPublicQueue };

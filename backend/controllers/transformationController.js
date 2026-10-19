@@ -276,7 +276,25 @@ const createTransformation = async (req, res, next) => {
           $1, $2, $3, $4, $5, $6, $7,
           $8, $9, $10, $11, $12, $13,
           $14, $15, $16
-        ) RETURNING *
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          client_name = EXCLUDED.client_name,
+          village = EXCLUDED.village,
+          treatment = EXCLUDED.treatment,
+          period = EXCLUDED.period,
+          rating = EXCLUDED.rating,
+          testimonial = EXCLUDED.testimonial,
+          before_image = EXCLUDED.before_image,
+          after_image = EXCLUDED.after_image,
+          image = EXCLUDED.image,
+          video = EXCLUDED.video,
+          before_video = EXCLUDED.before_video,
+          after_video = EXCLUDED.after_video,
+          duration = EXCLUDED.duration,
+          category = EXCLUDED.category,
+          display_order = EXCLUDED.display_order,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING *
       `;
       const values = [
         id, clientName, village, treatment, period, rating, testimonial,

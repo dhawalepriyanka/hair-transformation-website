@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, SkipBack, SkipForward, ArrowLeft, Maximize } from 'lucide-react';
-import { fetchTransformations, fetchSlideshowSettings } from '../services/api';
+import { Play, Pause, SkipBack, SkipForward, ArrowLeft } from 'lucide-react';
+import { fetchTransformations, fetchSlideshowSettings, fetchPublicPatientQueue } from '../services/api';
+import { isInstagramUrl, getInstagramEmbedUrl } from '../services/transformationMedia';
 import VideoComparison from '../components/VideoComparison';
+import PatientQueueSlide from '../components/PatientQueueSlide';
 
 /* ═══════════════════════════════════════════════════════════════════
    DIPALI WAKALE TV — LUXURY SALON DIGITAL SIGNAGE SHOWCASE (16:9 1080p)
@@ -72,6 +74,7 @@ const TransformationsPage = () => {
   const [cursorVisible, setCursorVisible] = useState(true);
   const [focusedButton, setFocusedButton] = useState(1); // 0: Prev, 1: Play/Pause, 2: Next
   const [progressPercent, setProgressPercent] = useState(0);
+  const [patientQueue, setPatientQueue] = useState([]);
 
   // Hardware Monitor Fullscreen state
   const [isMonitorFullscreen, setIsMonitorFullscreen] = useState(() => isDocumentFullscreen());
@@ -111,6 +114,54 @@ const TransformationsPage = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // Sync Live Patient Waiting List from Receptionist Queue
+  const syncQueue = useCallback(async () => {
+    try {
+      const q = await fetchPublicPatientQueue();
+      if (Array.isArray(q)) {
+        setPatientQueue(q);
+      }
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    syncQueue();
+    const queueInterval = setInterval(syncQueue, 5000);
+
+    const handleQueueChange = (e) => {
+      if (e?.detail) setPatientQueue(e.detail);
+      else syncQueue();
+    };
+    window.addEventListener('patient_queue_changed', handleQueueChange);
+
+    const handleQueueStorage = (e) => {
+      if (!e.key || e.key === 'clinic_patient_queue' || e.key === 'clinic_all_visits') {
+        syncQueue();
+      }
+    };
+    window.addEventListener('storage', handleQueueStorage);
+
+    let queueBc = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        queueBc = new BroadcastChannel('dipali_queue_sync');
+        queueBc.onmessage = (msg) => {
+          if (msg.data?.queue) setPatientQueue(msg.data.queue);
+          else syncQueue();
+        };
+      } catch (_) {}
+    }
+
+    return () => {
+      clearInterval(queueInterval);
+      window.removeEventListener('patient_queue_changed', handleQueueChange);
+      window.removeEventListener('storage', handleQueueStorage);
+      if (queueBc) {
+        try { queueBc.close(); } catch (_) {}
+      }
+    };
+  }, [syncQueue]);
+
   const formattedTime = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   const formattedDate = currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
 
@@ -120,12 +171,19 @@ const TransformationsPage = () => {
       const data = await fetchTransformations();
       const rawList = Array.isArray(data) ? data : [];
 
-      // 1. Filter out obsolete/legacy demo placeholders (flower photos and generic test IDs)
+      // 1. Filter out obsolete/legacy demo placeholders (only dummy Unsplash stock photos, never real clinic content)
       const legacyDemoIds = new Set(['1', '2', '3', '4', '5', '6', '9000001', '9000002']);
 
       const published = rawList.filter((item) => {
         if (!item) return false;
-        if (legacyDemoIds.has(String(item.id))) return false;
+        const str = JSON.stringify(item);
+        const isDummyStock = legacyDemoIds.has(String(item.id)) && (
+          str.includes('images.unsplash.com') ||
+          item.clientName === 'Old stock entry' ||
+          item.clientName === 'Video Demo' ||
+          item.clientName === 'Before & After Video Demo'
+        );
+        if (isDummyStock) return false;
         if (item.is_published === false || item.status === 'draft' || item.published === false) {
           return false;
         }
@@ -157,17 +215,40 @@ const TransformationsPage = () => {
         return (a.displayOrder || 0) - (b.displayOrder || 0);
       });
 
-      setTransformationsList(sortedItems);
+      // 4. Inject Live Patient Waiting List Slide into the TV rotation (driven by Admin Settings)
+      const shouldShowQueue = slideshowSettings.showPatientQueueSlide !== false;
+      const queueDuration = parseInt(slideshowSettings.queueSlideDuration, 10) || 15;
+      const queueFreq = parseInt(slideshowSettings.queueSlideFrequency, 10) || 2;
+
+      const itemsWithQueue = [...sortedItems];
+
+      if (shouldShowQueue) {
+        const queueSlideItem = {
+          id: '__PATIENT_WAITING_LIST__',
+          isQueueSlide: true,
+          treatment: 'Live Patient Waiting List',
+          clientName: 'Patient Queue & Status',
+          duration: queueDuration
+        };
+
+        if (itemsWithQueue.length > queueFreq) {
+          itemsWithQueue.splice(queueFreq, 0, queueSlideItem);
+        } else {
+          itemsWithQueue.push(queueSlideItem);
+        }
+      }
+
+      setTransformationsList(itemsWithQueue);
 
       // Preserve active transformation if it still exists after reload/sync
       setActiveSlide((currSlide) => {
-        if (sortedItems.length === 0) return 0;
+        if (itemsWithQueue.length === 0) return 0;
         const currentPlayingItem = transformationsListRef.current[currSlide];
         if (currentPlayingItem) {
-          const matchingIdx = sortedItems.findIndex((i) => String(i.id) === String(currentPlayingItem.id));
+          const matchingIdx = itemsWithQueue.findIndex((i) => String(i.id) === String(currentPlayingItem.id));
           if (matchingIdx !== -1) return matchingIdx;
         }
-        return currSlide >= sortedItems.length ? 0 : currSlide;
+        return currSlide >= itemsWithQueue.length ? 0 : currSlide;
       });
     } catch (e) {
       console.warn('Failed to sync transformations:', e.message);
@@ -176,12 +257,37 @@ const TransformationsPage = () => {
     }
   }, []);
 
-  // Initial load, 30s auto-sync, and settings listener
+  // Initial load, real-time sync, and settings listener
   useEffect(() => {
     syncTransformations();
 
-    // 30s background sync with database/admin dashboard
-    const syncInterval = setInterval(syncTransformations, 30000);
+    // 5s background sync with database/admin dashboard for TV APK and external devices
+    const syncInterval = setInterval(syncTransformations, 5000);
+
+    // Instant real-time update listeners across tabs and components
+    const handleImmediateSync = () => {
+      syncTransformations();
+    };
+
+    // 1. Same-tab CustomEvent
+    window.addEventListener('transformations_changed', handleImmediateSync);
+
+    // 2. Cross-tab BroadcastChannel for zero-latency sync
+    let bc = null;
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        bc = new BroadcastChannel('dipali_transformations_sync');
+        bc.onmessage = handleImmediateSync;
+      } catch (_) {}
+    }
+
+    // 3. Cross-tab localStorage event listener
+    const handleStorageChange = (e) => {
+      if (!e.key || e.key === 'admin_transformations' || e.key === 'admin_transformations_last_updated') {
+        syncTransformations();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
 
     // App Resume listeners: visibilitychange, window focus, online
     const handleResume = () => {
@@ -202,6 +308,11 @@ const TransformationsPage = () => {
 
     return () => {
       clearInterval(syncInterval);
+      window.removeEventListener('transformations_changed', handleImmediateSync);
+      if (bc) {
+        try { bc.close(); } catch (_) {}
+      }
+      window.removeEventListener('storage', handleStorageChange);
       document.removeEventListener('visibilitychange', handleResume);
       window.removeEventListener('focus', syncTransformations);
       window.removeEventListener('online', syncTransformations);
@@ -223,7 +334,7 @@ const TransformationsPage = () => {
     transformationsList.forEach((item) => {
       const src = item?.video;
       if (src && videoOrientationCacheRef.current[src] === undefined) {
-        if (src.includes('/instagram/reels/')) {
+        if (src.includes('/instagram/reels/') || isInstagramUrl(src)) {
           videoOrientationCacheRef.current[src] = false;
         } else {
           const probe = document.createElement('video');
@@ -251,7 +362,7 @@ const TransformationsPage = () => {
     if (currentVideo) {
       if (videoOrientationCacheRef.current[currentVideo] !== undefined) {
         setIsVideoHorizontal(videoOrientationCacheRef.current[currentVideo]);
-      } else if (currentVideo.includes('/instagram/reels/')) {
+      } else if (currentVideo.includes('/instagram/reels/') || isInstagramUrl(currentVideo)) {
         videoOrientationCacheRef.current[currentVideo] = false;
         setIsVideoHorizontal(false);
       } else if (videoRef.current && videoRef.current.videoWidth && videoRef.current.videoHeight) {
@@ -276,9 +387,11 @@ const TransformationsPage = () => {
   };
 
   // Full-screen mode:
-  // 1. Before & After comparison (Images or Videos)
-  // 2. Horizontal / Landscape video (acquires 100% full screen width, hiding side panels)
+  // 1. Live Patient Waiting List Slide (100% full screen luxury dashboard)
+  // 2. Before & After comparison (Images or Videos)
+  // 3. Horizontal / Landscape video (acquires 100% full screen width, hiding side panels)
   const isFullScreen = Boolean(
+    activeItem?.isQueueSlide ||
     isBeforeAfter ||
     (isVideo && isVideoHorizontal)
   );
@@ -295,6 +408,11 @@ const TransformationsPage = () => {
   // Timing calculation driven 100% by Admin Settings
   const calculateSlideDuration = useCallback(() => {
     if (!activeItem) return 8;
+
+    // Patient Waiting List slide display duration (driven by admin setting)
+    if (activeItem.isQueueSlide) {
+      return parseInt(slideshowSettings.queueSlideDuration, 10) || 15;
+    }
 
     // Individual item custom duration (set by Admin in dashboard)
     if (activeItem.duration && !isNaN(activeItem.duration) && activeItem.duration > 0) {
@@ -441,8 +559,8 @@ const TransformationsPage = () => {
     };
     window.addEventListener('popstate', handlePopState);
 
-    // 1. Attempt silent fullscreen immediately on mount (works when navigated from a click)
-    if (!hasUserExitedFullscreenRef.current && !isDocumentFullscreen()) {
+    // 1. Attempt silent fullscreen immediately on mount (works when navigated from a click or TV app)
+    if (!isDocumentFullscreen()) {
       requestFullscreenOnElement(document.documentElement)
         .then(() => {
           try {
@@ -452,23 +570,20 @@ const TransformationsPage = () => {
           } catch (_) {}
         })
         .catch(() => {
-          // Expected in Chrome/Edge if URL was entered directly without prior click
+          // Expected in Chrome/Edge if URL was entered directly into address bar without prior click
         });
     }
 
-    // 2. Fallback: on the very first user interaction anywhere on the page, enter monitor fullscreen
-    const handleFirstActivation = (e) => {
-      // Don't auto-fullscreen if user specifically clicked the Back button
-      if (e?.target?.closest && e.target.closest('.tv-apk-back-btn')) {
-        return;
-      }
-      if (!hasUserExitedFullscreenRef.current && !isDocumentFullscreen()) {
+    // 2. Seamlessly enter full screen on any user interaction anywhere on the screen
+    const handleAutoFullscreen = () => {
+      if (!isDocumentFullscreen()) {
         enterMonitorFullscreen();
       }
     };
 
-    window.addEventListener('pointerdown', handleFirstActivation, { once: true });
-    window.addEventListener('keydown', handleFirstActivation, { once: true });
+    window.addEventListener('pointerdown', handleAutoFullscreen);
+    window.addEventListener('click', handleAutoFullscreen);
+    window.addEventListener('keydown', handleAutoFullscreen);
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -476,21 +591,22 @@ const TransformationsPage = () => {
       document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
       document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
       window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('pointerdown', handleFirstActivation);
-      window.removeEventListener('keydown', handleFirstActivation);
+      window.removeEventListener('pointerdown', handleAutoFullscreen);
+      window.removeEventListener('click', handleAutoFullscreen);
+      window.removeEventListener('keydown', handleAutoFullscreen);
     };
   }, [enterMonitorFullscreen]);
 
   // Synchronize actual video playback with isPlaying state
   useEffect(() => {
-    if (videoRef.current && isVideo) {
+    if (videoRef.current && isVideo && !isInstagramUrl(activeItem?.video)) {
       if (isPlaying) {
         videoRef.current.play().catch(() => {});
       } else {
         videoRef.current.pause();
       }
     }
-    if (ambientVideoRef.current && activeItem?.video) {
+    if (ambientVideoRef.current && activeItem?.video && !isInstagramUrl(activeItem.video)) {
       if (isPlaying) {
         ambientVideoRef.current.play().catch(() => {});
       } else {
@@ -501,12 +617,14 @@ const TransformationsPage = () => {
 
   // Video reset on slide transition
   useEffect(() => {
-    if (videoRef.current && isVideo) {
+    if (videoRef.current && isVideo && !isInstagramUrl(activeItem?.video)) {
       videoRef.current.currentTime = 0;
+      videoRef.current.muted = false; // Always try with audio on slide change
       if (isPlaying) {
         const playPromise = videoRef.current.play();
         if (playPromise !== undefined) {
           playPromise.catch(() => {
+            // Browser blocked autoplay with sound → fall back to muted
             if (videoRef.current) {
               videoRef.current.muted = true;
               videoRef.current.play().catch(() => {});
@@ -517,7 +635,7 @@ const TransformationsPage = () => {
         videoRef.current.pause();
       }
     }
-    if (ambientVideoRef.current && activeItem?.video) {
+    if (ambientVideoRef.current && activeItem?.video && !isInstagramUrl(activeItem.video)) {
       ambientVideoRef.current.currentTime = 0;
       if (isPlaying) {
         ambientVideoRef.current.play().catch(() => {});
@@ -543,10 +661,10 @@ const TransformationsPage = () => {
     }
   };
 
-  // Track progress line for non-video slides (e.g. before/after images)
+  // Track progress line for non-video or Instagram reel slides
   useEffect(() => {
     setProgressPercent(0);
-    if (isVideo) return;
+    if (isVideo && !isInstagramUrl(activeItem?.video)) return;
     const duration = calculateSlideDuration();
     const totalMs = (Number(duration) || 8) * 1000;
     const startTime = Date.now();
@@ -557,7 +675,7 @@ const TransformationsPage = () => {
       setProgressPercent(pct);
     }, 100);
     return () => clearInterval(interval);
-  }, [activeSlide, isVideo, isPlaying, calculateSlideDuration]);
+  }, [activeSlide, isVideo, isPlaying, calculateSlideDuration, activeItem]);
 
   // Handle video end
   const handleVideoEnded = () => {
@@ -719,7 +837,7 @@ const TransformationsPage = () => {
   return (
     <div className={`tv-apk-root ${!cursorVisible ? 'tv-cursor-hidden' : ''}`}>
       {/* Hidden preloader for next video to eliminate transition lag/flicker */}
-      {nextItem?.video && (
+      {nextItem?.video && !isInstagramUrl(nextItem.video) && (
         <video
           src={nextItem.video}
           preload="auto"
@@ -790,57 +908,8 @@ const TransformationsPage = () => {
                Transformation Media + Floating Overlay Controls
              ══════════════════════════════════════════════════════ */}
           <div className={`tv-apk-center-panel ${isFullScreen ? 'tv-fullscreen-mode' : ''}`}>
-            {/* Top Bar Navigation: Back & Fullscreen buttons (fades smoothly with remote controls) */}
-            <div className={`tv-apk-top-bar ${controlsVisible ? 'visible' : 'hidden'}`}>
-              <button
-                type="button"
-                className="tv-apk-nav-btn tv-apk-back-btn"
-                onClick={handleBackAction}
-                title={isMonitorFullscreen ? "Exit Fullscreen (Back to Window)" : "Back to Website"}
-                aria-label="Back"
-              >
-                <ArrowLeft size={18} strokeWidth={2.4} />
-                <span className="tv-apk-nav-label">
-                  {isMonitorFullscreen ? 'Exit Fullscreen' : 'Back'}
-                </span>
-              </button>
-
-              {!isMonitorFullscreen && (
-                <button
-                  type="button"
-                  className="tv-apk-nav-btn tv-apk-fullscreen-btn"
-                  onClick={(e) => {
-                    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-                    enterMonitorFullscreen();
-                  }}
-                  title="Enter Fullscreen TV Mode (F)"
-                  aria-label="Full Screen"
-                >
-                  <Maximize size={16} strokeWidth={2.2} />
-                  <span className="tv-apk-nav-label">Full Screen</span>
-                </button>
-              )}
-            </div>
-
-            {/* Subtle One-Time Prompt for 1-Click Monitor Fullscreen */}
-            {!isMonitorFullscreen && !hasUserExitedFullscreenRef.current && !hasUserInteracted && (
-              <button
-                type="button"
-                className="tv-apk-fullscreen-prompt"
-                onClick={(e) => {
-                  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-                  enterMonitorFullscreen();
-                }}
-                aria-label="Click to Enter Fullscreen Mode"
-              >
-                <span className="tv-apk-prompt-sparkle">✨</span>
-                <span>Click anywhere to Enter Full Screen</span>
-                <Maximize size={15} strokeWidth={2.2} style={{ marginLeft: '4px' }} />
-              </button>
-            )}
-
-            {/* Compact Service Title Overlay at Top */}
-            {treatmentTitle && (
+            {/* Compact Service Title Overlay at Top (hidden on Patient Queue slide) */}
+            {treatmentTitle && !activeItem?.isQueueSlide && (
               <div className="tv-apk-treatment-overlay tv-apk-fade-in" key={`badge-${activeSlide}`}>
                 <span className="tv-apk-overlay-sparkle">✨</span>
                 <div className="tv-apk-overlay-content">
@@ -855,7 +924,7 @@ const TransformationsPage = () => {
             )}
 
             {/* Ambient Blurred Backdrop for vertical reels */}
-            {activeItem.video ? (
+            {!activeItem?.isQueueSlide && activeItem.video && !isInstagramUrl(activeItem.video) ? (
               <video
                 ref={ambientVideoRef}
                 className="tv-apk-ambient-backdrop"
@@ -866,17 +935,48 @@ const TransformationsPage = () => {
                 playsInline
                 aria-hidden="true"
               />
-            ) : activeItem.image ? (
+            ) : !activeItem?.isQueueSlide && activeItem.image ? (
               <img className="tv-apk-ambient-backdrop" src={activeItem.image} alt="" aria-hidden="true" />
             ) : null}
 
             {/* Foreground Main Media */}
-            {activeItem.beforeVideo && activeItem.afterVideo ? (
+            {activeItem?.isQueueSlide ? (
+              <PatientQueueSlide queue={patientQueue} />
+            ) : activeItem.beforeVideo && activeItem.afterVideo ? (
               <VideoComparison
                 before={activeItem.beforeVideo}
                 after={activeItem.afterVideo}
                 clientName={activeItem.clientName}
               />
+            ) : isInstagramUrl(activeItem.video) ? (
+              <div
+                key={activeItem.video}
+                className="tv-apk-main-video tv-apk-insta-container"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  background: '#0B0507'
+                }}
+              >
+                <iframe
+                  src={getInstagramEmbedUrl(activeItem.video)}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    maxWidth: '480px',
+                    border: 'none',
+                    borderRadius: '16px'
+                  }}
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  title={activeItem.clientName || 'Instagram Reel'}
+                />
+              </div>
             ) : activeItem.video ? (
               <video
                 ref={videoRef}
@@ -886,7 +986,6 @@ const TransformationsPage = () => {
                 poster={activeItem.poster || activeItem.after || activeItem.image}
                 controls={false}
                 autoPlay
-                muted
                 loop={calculateSlideDuration() !== 'end'}
                 playsInline
                 onLoadedMetadata={handleVideoLoadedMetadata}

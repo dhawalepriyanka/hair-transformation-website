@@ -12,7 +12,7 @@ import {
 import {
   Plus, Edit, Trash2, Search, LogOut, Eye, EyeOff,
   Sparkles, RefreshCw, Package, Star, X, Check, Image, Upload, FolderOpen, Video,
-  Tv, Clock, Settings
+  Tv, Clock, Settings, Users
 } from 'lucide-react';
 
 const TRANSFORMATION_CATEGORIES = [
@@ -1191,15 +1191,20 @@ const AdminDashboard = () => {
                   {formData.video.startsWith('data:') && <p role="status">Local video selected</p>}
                   {videoError && !isInstagramUrl(formData.video) && <p role="alert" style={{ color: '#C62828' }}>{videoError}</p>}
                   {formData.video && isInstagramUrl(formData.video) ? (
-                    <div style={{ marginTop: '0.75rem', padding: '0.85rem', background: '#FFF5F2', border: '1.5px solid #F2C8BD', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)', display: 'grid', placeItems: 'center', color: '#FFF', fontSize: '13px' }}>📸</span>
-                        <div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#9A5F4D' }}>Instagram Reel Connected</div>
-                          <a href={formData.video} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#666', textDecoration: 'underline' }}>{formData.video}</a>
+                    <div style={{ marginTop: '0.75rem', padding: '0.85rem', background: '#FFF5F2', border: '1.5px solid #F2C8BD', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)', display: 'grid', placeItems: 'center', color: '#FFF', fontSize: '13px' }}>📸</span>
+                          <div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#9A5F4D' }}>Instagram Reel Connected</div>
+                            <a href={formData.video} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#666', textDecoration: 'underline' }}>{formData.video}</a>
+                          </div>
                         </div>
+                        <button type="button" onClick={() => { setVideoError(''); setFormData({ ...formData, video: '' }); }} style={{ background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>Remove Video</button>
                       </div>
-                      <button type="button" onClick={() => { setVideoError(''); setFormData({ ...formData, video: '' }); }} style={{ background: '#FFEBEE', color: '#C62828', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>Remove Video</button>
+                      <p style={{ margin: '6px 0 0', fontSize: '0.76rem', color: '#A0522D', lineHeight: 1.4, background: 'rgba(255,255,255,0.7)', padding: '6px 10px', borderRadius: '6px' }}>
+                        🔊 <strong>TV Auto-Voice Tip:</strong> Instagram embed links require a manual click to start voice due to Instagram's privacy rules. To make this reel <strong>automatically play voice on your TV</strong>, download the reel video and upload it above using <strong>"Choose Video from PC / Gallery"</strong>.
+                      </p>
                     </div>
                   ) : formData.video ? (
                     <div style={{ marginTop: '0.75rem' }}>
@@ -1462,7 +1467,7 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* 4. Fullscreen Behavior (Remove Right Side Text) */}
-                <div style={{ background: '#FAF8F6', padding: '1rem 1.2rem', borderRadius: '12px', border: '1px solid #EBE5E0', marginBottom: '1.5rem' }}>
+                <div style={{ background: '#FAF8F6', padding: '1rem 1.2rem', borderRadius: '12px', border: '1px solid #EBE5E0', marginBottom: '1.25rem' }}>
                   <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.92rem', color: '#1E1E1E' }}>
                     <input
                       type="checkbox"
@@ -1471,11 +1476,99 @@ const AdminDashboard = () => {
                       style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: '#C88A75' }}
                     />
                     <div>
-                      <span>Remove right-side text on Fullscreen / 55″ TV Mode (Recommended)</span>
+                       <span>Remove right-side text on Fullscreen / 55″ TV Mode (Recommended)</span>
                       <p style={{ margin: '0.3rem 0 0', fontWeight: '400', color: '#666', fontSize: '0.8rem' }}>
                         When fullscreen is clicked, removes the right description text so videos and photos expand to 100% full width and height on 55-inch displays.
                       </p>
                     </div>
+                  </label>
+                </div>
+
+                {/* 5. Live Patient Waiting List on TV Settings */}
+                <div style={{ background: '#FAF8F6', padding: '1.2rem', borderRadius: '12px', border: '1.5px solid #F2C8BD', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Users size={18} color="#C88A75" />
+                      <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: '700', color: '#1E1E1E' }}>
+                        Patient Waiting List (Live TV Queue Slide)
+                      </h3>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', background: '#FFF5F2', color: '#9A5F4D', padding: '3px 8px', borderRadius: '6px', fontWeight: '700' }}>
+                      Live on /tv
+                    </span>
+                  </div>
+                  <p style={{ margin: '0 0 1rem', color: '#666', fontSize: '0.82rem', lineHeight: 1.4 }}>
+                    Control how the Patient Waiting List slide appears on the salon TV. Shows Token numbers, Patient names, Services, and Consultation status.
+                  </p>
+
+                  {/* A. Show/Hide Toggle */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', color: '#1E1E1E', marginBottom: '0.9rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={slideshowSettings.showPatientQueueSlide !== false}
+                      onChange={(e) => setSlideshowSettings({ ...slideshowSettings, showPatientQueueSlide: e.target.checked })}
+                      style={{ width: '18px', height: '18px', accentColor: '#C88A75' }}
+                    />
+                    Show Patient Waiting List Slide on TV
+                  </label>
+
+                  {/* B. Queue Slide Duration */}
+                  <div style={{ marginBottom: '1rem', paddingLeft: '28px' }}>
+                    <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: '600', color: '#444', marginBottom: '0.4rem' }}>
+                      Slide Display Time on TV: <span style={{ color: '#C88A75', fontWeight: '800' }}>{slideshowSettings.queueSlideDuration || 15}s</span>
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {[10, 15, 20, 30].map((sec) => (
+                        <button
+                          key={sec}
+                          type="button"
+                          onClick={() => setSlideshowSettings({ ...slideshowSettings, queueSlideDuration: sec })}
+                          style={{
+                            flex: 1,
+                            padding: '6px 0',
+                            borderRadius: '6px',
+                            fontSize: '0.8rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            border: `1px solid ${slideshowSettings.queueSlideDuration === sec ? '#C88A75' : '#DDD'}`,
+                            background: slideshowSettings.queueSlideDuration === sec ? '#F7EFEA' : '#FFF',
+                            color: slideshowSettings.queueSlideDuration === sec ? '#9A5F4D' : '#666'
+                          }}
+                        >
+                          {sec}s
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* C. Slide Frequency */}
+                  <div style={{ marginBottom: '1rem', paddingLeft: '28px' }}>
+                    <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: '600', color: '#444', marginBottom: '0.4rem' }}>
+                      Rotation Frequency:
+                    </label>
+                    <select
+                      value={slideshowSettings.queueSlideFrequency || 2}
+                      onChange={(e) => setSlideshowSettings({ ...slideshowSettings, queueSlideFrequency: parseInt(e.target.value, 10) })}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #CCC', fontSize: '0.84rem' }}
+                    >
+                      <option value={1}>Show after every 1 transformation video</option>
+                      <option value={2}>Show after every 2 transformation videos (Default)</option>
+                      <option value={3}>Show after every 3 transformation videos</option>
+                      <option value={5}>Show after every 5 transformation videos</option>
+                    </select>
+                  </div>
+
+                  {/* D. Show Sample Appointments Toggle */}
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '0.85rem', color: '#333', paddingLeft: '28px' }}>
+                    <input
+                      type="checkbox"
+                      checked={slideshowSettings.queueAutoDemo !== false}
+                      onChange={(e) => setSlideshowSettings({ ...slideshowSettings, queueAutoDemo: e.target.checked })}
+                      style={{ width: '16px', height: '16px', marginTop: '2px', accentColor: '#C88A75' }}
+                    />
+                    <span>
+                      <strong>Show Sample Clinic Appointments</strong> when no live patients are in the waiting queue
+                    </span>
                   </label>
                 </div>
 

@@ -1,6 +1,9 @@
 const router = require('express').Router();
 const { verifyToken, requireRole } = require('../middleware/authMiddleware');
-const { listVisits, getVisit, createVisit, updateVisit } = require('../controllers/patientController');
+const { listVisits, getVisit, createVisit, updateVisit, getPublicQueue } = require('../controllers/patientController');
+
+// Public route for TV Queue (No auth required, privacy-safe)
+router.get('/public-queue', getPublicQueue);
 
 router.use(verifyToken, requireRole('admin', 'receptionist'));
 router.get('/', listVisits);

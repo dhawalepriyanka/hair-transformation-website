@@ -29,8 +29,10 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   response => response,
   error => {
-    const isLoginRequest = String(error.config?.url || '').includes('/auth/login');
-    if (error.response?.status === 401 && !isLoginRequest && getStaffSession()) {
+    const url = String(error.config?.url || '');
+    const isLoginRequest = url.includes('/auth/login');
+    const isPublicQueueRequest = url.includes('/public-queue');
+    if (error.response?.status === 401 && !isLoginRequest && !isPublicQueueRequest && getStaffSession()) {
       setAdminSession(null);
       if (window.location.pathname !== '/admin/login') {
         window.location.replace('/admin/login?expired=1');
@@ -634,6 +636,138 @@ export const fetchPatientVisit = async (id) => patientRequest(() => apiClient.ge
 export const createPatientVisit = async (data) => patientRequest(() => apiClient.post('/patient-visits', data));
 export const updatePatientVisit = async (id, data) => patientRequest(() => apiClient.put(`/patient-visits/${id}`, data));
 
+export const SAMPLE_QUEUE_PATIENTS = [
+  {
+    id: 'demo_queue_1',
+    token_number: 1,
+    patient_name: 'Priya Sharma',
+    concern: 'Keratin Smoothening & Gloss Shine',
+    status: 'In Consultation',
+    visit_at: new Date(Date.now() - 25 * 60000).toISOString()
+  },
+  {
+    id: 'demo_queue_2',
+    token_number: 2,
+    patient_name: 'Snehal Patil',
+    concern: 'Seamless Hair Extensions Blend',
+    status: 'Waiting',
+    visit_at: new Date(Date.now() - 15 * 60000).toISOString()
+  },
+  {
+    id: 'demo_queue_3',
+    token_number: 3,
+    patient_name: 'Anjali Kulkarni',
+    concern: 'Hair Regrowth & Scalp Therapy',
+    status: 'Waiting',
+    visit_at: new Date(Date.now() - 8 * 60000).toISOString()
+  },
+  {
+    id: 'demo_queue_4',
+    token_number: 4,
+    patient_name: 'Pooja More',
+    concern: 'Salon Blowdry & Curls Styling',
+    status: 'Waiting',
+    visit_at: new Date(Date.now() - 3 * 60000).toISOString()
+  }
+];
+
+export const fetchPublicPatientQueue = async () => {
+  // 1. Primary: Public TV Queue API (no authentication required)
+  try {
+    const response = await apiClient.get('/patient-visits/public-queue');
+    if (response.data && response.data.success && Array.isArray(response.data.data)) {
+      if (response.data.data.length > 0) {
+        return response.data.data;
+      }
+    }
+  } catch (err) {
+    // Backend offline or route pending deployment
+  }
+
+  // 2. Direct Staff API query if staff session token exists in sessionStorage/localStorage
+  try {
+    const token = getStaffSession()?.token;
+    if (token) {
+      const visits = await fetchPatientVisits();
+      if (Array.isArray(visits) && visits.length > 0) {
+        const liveQueue = visits
+          .filter(v => {
+            const st = String(v.status || '').trim().toLowerCase();
+            return st === 'waiting' || st === 'in consultation';
+          })
+          .sort((a, b) => {
+            const aIn = String(a.status || '').trim().toLowerCase() === 'in consultation';
+            const bIn = String(b.status || '').trim().toLowerCase() === 'in consultation';
+            if (aIn && !bIn) return -1;
+            if (!aIn && bIn) return 1;
+            return new Date(a.visit_at) - new Date(b.visit_at);
+          })
+          .map((v, idx) => ({
+            id: v.id,
+            token_number: idx + 1,
+            patient_name: v.patient_name,
+            concern: v.concern || 'Hair & Skin Consultation',
+            status: v.status,
+            visit_at: v.visit_at
+          }));
+        if (liveQueue.length > 0) {
+          try {
+            localStorage.setItem('clinic_patient_queue', JSON.stringify(liveQueue));
+          } catch (_) {}
+          return liveQueue;
+        }
+      }
+    }
+  } catch (_) {}
+
+  // 3. Fallback: check local storage sync from Receptionist Dashboard
+  try {
+    const local = localStorage.getItem('clinic_patient_queue');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (_) {}
+
+  // 4. Fallback: check all cached visits in localStorage
+  try {
+    const allVisitsRaw = localStorage.getItem('clinic_all_visits');
+    if (allVisitsRaw) {
+      const allVisits = JSON.parse(allVisitsRaw);
+      if (Array.isArray(allVisits) && allVisits.length > 0) {
+        const live = allVisits
+          .filter(v => {
+            const st = String(v.status || '').trim().toLowerCase();
+            return st === 'waiting' || st === 'in consultation';
+          })
+          .map((v, idx) => ({
+            id: v.id,
+            token_number: idx + 1,
+            patient_name: v.patient_name,
+            concern: v.concern || 'Hair & Skin Consultation',
+            status: v.status,
+            visit_at: v.visit_at
+          }));
+        if (live.length > 0) return live;
+      }
+    }
+  } catch (_) {}
+
+  // 5. Fallback: If no live patients in queue, check slideshow settings to show sample clinic queue
+  try {
+    const settings = fetchSlideshowSettings();
+    if (settings.queueAutoDemo !== false) {
+      return SAMPLE_QUEUE_PATIENTS;
+    }
+  } catch (_) {
+    return SAMPLE_QUEUE_PATIENTS;
+  }
+
+  return [];
+};
+
 export const createProduct = async (productData) => {
   try {
     const response = await apiClient.post('/products', productData);
@@ -687,6 +821,11 @@ export const DEFAULT_SLIDESHOW_SETTINGS = {
   videoDuration: 15,         // seconds for videos in fixed mode
   hideTextInFullscreen: true, // remove right-side text when in fullscreen / 55" TV mode
   showTimerBadge: true,      // show on-screen countdown / progress
+  // Live Patient Waiting List on TV settings:
+  showPatientQueueSlide: true, // Enable / Disable Waiting List slide on TV
+  queueSlideDuration: 15,    // How many seconds the queue slide stays on TV
+  queueSlideFrequency: 2,    // Show after every N transformation reels (default: 2)
+  queueAutoDemo: true,       // Show sample appointments when live queue is empty
 };
 
 export const fetchSlideshowSettings = () => {
@@ -759,31 +898,48 @@ const getStoredTransformations = () => {
   return defaultTransformations;
 };
 
+export const broadcastTransformationsChange = (action, item) => {
+  try {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('transformations_changed', { detail: { action, item } }));
+      if ('BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('dipali_transformations_sync');
+        bc.postMessage({ action, item, timestamp: Date.now() });
+        bc.close();
+      }
+      try {
+        localStorage.setItem('admin_transformations_last_updated', String(Date.now()));
+      } catch (_) {}
+    }
+  } catch (e) {
+    console.warn('[Sync] Broadcast note:', e.message);
+  }
+};
+
 export const clearBulkyLocalStorage = () => {
   try {
     if (typeof localStorage === 'undefined') return;
     const raw = localStorage.getItem('admin_transformations');
-    if (raw && (raw.length > 250000 || raw.includes('data:image/'))) {
+    if (raw && raw.length > 500000) {
       const list = JSON.parse(raw);
       if (Array.isArray(list)) {
+        // Only strip bulky base64 images that exceed 200KB; NEVER wipe video fields
         const cleaned = list.map(item => {
           const c = { ...item };
-          ['before', 'after', 'image', 'video', 'beforeVideo', 'afterVideo'].forEach(f => {
-            if (typeof c[f] === 'string' && c[f].startsWith('data:')) c[f] = '';
+          ['before', 'after', 'image'].forEach(f => {
+            if (typeof c[f] === 'string' && c[f].startsWith('data:image/') && c[f].length > 200000) {
+              c[f] = '';
+            }
           });
           return c;
         });
         localStorage.setItem('admin_transformations', JSON.stringify(cleaned));
-        console.log('[Storage] Cleaned heavy base64 strings from localStorage');
       }
     }
   } catch (e) {
     try { localStorage.removeItem('admin_transformations'); } catch (_) {}
   }
 };
-
-// Automatically run on load
-clearBulkyLocalStorage();
 
 const saveStoredTransformations = (list) => {
   try {
@@ -822,6 +978,31 @@ export const fetchTransformations = async () => {
   const defaultIdSet = new Set(defaultTransformations.map(item => String(item.id)));
   const legacyIds = new Set(['1', '2', '3', '4', '5', '6', '9000001', '9000002']);
 
+  const isDummyStock = (item) => {
+    if (!item) return false;
+    const idStr = String(item.id);
+    if (!legacyIds.has(idStr)) return false;
+    const str = JSON.stringify(item);
+    return str.includes('images.unsplash.com') ||
+      item.clientName === 'Old stock entry' ||
+      item.clientName === 'Video Demo' ||
+      item.clientName === 'Before & After Video Demo' ||
+      (!item.video && !item.beforeVideo && !item.image && (!item.before || !item.after));
+  };
+
+  // Re-assign a fresh unique ID for any real user-customized item with a legacy ID
+  // so it is permanently preserved and migrates into the persistent database
+  localList = localList.map(item => {
+    const idStr = String(item?.id);
+    if (legacyIds.has(idStr) && !isDummyStock(item)) {
+      return {
+        ...item,
+        id: String(Date.now() + Math.floor(Math.random() * 10000))
+      };
+    }
+    return item;
+  });
+
   // If backend returned items:
   if (backendItems) {
     const backendIdSet = new Set(backendItems.map(item => String(item.id)));
@@ -829,7 +1010,7 @@ export const fetchTransformations = async () => {
     // Attempt to migrate any unsynced local custom items to the database
     const itemsToMigrate = localList.filter(item => {
       const idStr = String(item.id);
-      return !backendIdSet.has(idStr) && !defaultIdSet.has(idStr) && !legacyIds.has(idStr);
+      return !backendIdSet.has(idStr) && !defaultIdSet.has(idStr) && !isDummyStock(item);
     });
 
     if (itemsToMigrate.length > 0) {
@@ -848,7 +1029,7 @@ export const fetchTransformations = async () => {
     const currentBackendIdSet = new Set(backendItems.map(item => String(item.id)));
     const unmergedLocal = localList.filter(item => {
       const idStr = String(item.id);
-      return !currentBackendIdSet.has(idStr) && !defaultIdSet.has(idStr) && !legacyIds.has(idStr);
+      return !currentBackendIdSet.has(idStr) && !defaultIdSet.has(idStr) && !isDummyStock(item);
     });
 
     const merged = [...unmergedLocal, ...backendItems];
@@ -862,9 +1043,9 @@ export const fetchTransformations = async () => {
 
   // Fallback to local storage when backend is unreachable
   let list = localList.length > 0 ? localList : getStoredTransformations();
-  const hasLegacy = Array.isArray(list) && list.some(item => legacyIds.has(String(item.id)) || legacyIds.has(Number(item.id)));
+  const hasLegacy = Array.isArray(list) && list.some(item => isDummyStock(item));
   if (hasLegacy) {
-    const customItems = list.filter(item => !legacyIds.has(String(item.id)) && !legacyIds.has(Number(item.id)) && !(Number(item.id) >= 9100001 && Number(item.id) <= 9100099));
+    const customItems = list.filter(item => !isDummyStock(item) && !legacyIds.has(String(item.id)) && !(Number(item.id) >= 9100001 && Number(item.id) <= 9100099));
     list = [...defaultTransformations, ...customItems];
     try {
       saveStoredTransformations(list);
@@ -921,6 +1102,7 @@ export const createTransformation = async (itemData) => {
     if (typeof window === 'undefined' && !savedItem) throw storageErr;
     console.warn('Local storage cache update warning:', storageErr.message);
   }
+  broadcastTransformationsChange('create', newItem);
   return newItem;
 };
 
@@ -964,6 +1146,7 @@ export const updateTransformation = async (id, itemData) => {
     if (!backendSuccess) throw storageErr;
     console.warn('Local storage cache update warning:', storageErr.message);
   }
+  broadcastTransformationsChange('update', { id, ...itemData });
   return { success: true };
 };
 
@@ -997,5 +1180,6 @@ export const deleteTransformation = async (id) => {
     if (!backendSuccess) throw storageErr;
     console.warn('Local storage cache update warning:', storageErr.message);
   }
+  broadcastTransformationsChange('delete', { id });
   return { success: true };
 };

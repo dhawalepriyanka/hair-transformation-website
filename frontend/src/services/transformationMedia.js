@@ -8,6 +8,17 @@ export function isInstagramUrl(url) {
   return /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:p|reel|tv|share)\/[A-Za-z0-9_-]+/i.test(url.trim());
 }
 
+export function getInstagramEmbedUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const match = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(p|reel|tv|share)\/([A-Za-z0-9_-]+)/i.exec(url.trim());
+  if (match) {
+    const type = match[1].toLowerCase() === 'share' ? 'p' : match[1].toLowerCase();
+    const code = match[2];
+    return `https://www.instagram.com/${type}/${code}/embed/`;
+  }
+  return '';
+}
+
 export function validateMediaFile(file, field, customMaxMb) {
   const video = ['video', 'beforeVideo', 'afterVideo'].includes(field);
   if (video ? !VIDEO_TYPES.includes(file.type) : !file.type.startsWith('image/')) {
