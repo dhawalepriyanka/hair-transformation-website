@@ -6,7 +6,18 @@ import { saveToIndexedDb, getFromIndexedDb, safeSaveLocalStorage, safeGetLocalSt
 
 const runtimeEnv = import.meta.env || {};
 const configuredApiUrl = runtimeEnv.VITE_API_URL?.trim();
-const API_BASE_URL = configuredApiUrl || (runtimeEnv.DEV ? 'http://localhost:5000/api' : '/api');
+const getApiBaseUrl = () => {
+  if (configuredApiUrl) return configuredApiUrl;
+  if (runtimeEnv.DEV) return 'http://localhost:5000/api';
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'dipaliwakale.in' || host === 'www.dipaliwakale.in') {
+      return 'https://www.dipaliwakale.in/api';
+    }
+  }
+  return '/api';
+};
+const API_BASE_URL = getApiBaseUrl();
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

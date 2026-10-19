@@ -3,20 +3,58 @@ const MB = 1024 * 1024;
 export const MAX_VIDEO_SIZE_MB = 100;
 export const MAX_IMAGE_SIZE_MB = 15;
 
+const blobUrlCache = new Map();
+
 /**
  * Normalizes relative or direct media URLs:
+ * - Converts base64 video data URIs to high-performance Blob Object URLs for seamless native playback
+ * - Resolves relative /api/ and /uploads/ paths to canonical https://www.dipaliwakale.in on production
  * - Upgrades insecure http:// to https:// when on an HTTPS domain (prevents browser Mixed Content blocking)
- * - Resolves relative /uploads/ paths in development or production
  */
 export function resolveMediaUrl(url) {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
+
+  // If base64 video data URI, convert to high-performance Blob Object URL for smooth native decoding & seeking
+  if (trimmed.startsWith('data:video/')) {
+    if (blobUrlCache.has(trimmed)) {
+      return blobUrlCache.get(trimmed);
+    }
+    if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+      try {
+        const parts = trimmed.split(',');
+        const mime = parts[0].match(/:(.*?);/)?.[1] || 'video/mp4';
+        const binaryStr = atob(parts[1]);
+        const len = binaryStr.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: mime });
+        const objectUrl = URL.createObjectURL(blob);
+        blobUrlCache.set(trimmed, objectUrl);
+        return objectUrl;
+      } catch (_) {
+        return trimmed;
+      }
+    }
+    return trimmed;
+  }
+
   if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || isEmbeddableVideoUrl(trimmed)) {
     return trimmed;
   }
-  // Upgrade http:// to https:// on secure pages
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && trimmed.startsWith('http://')) {
-    return trimmed.replace('http://', 'https://');
+
+  // Canonical production domain for relative API & upload paths to avoid 308 redirect loops
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if ((host === 'dipaliwakale.in' || host === 'www.dipaliwakale.in') && trimmed.startsWith('/')) {
+      return `https://www.dipaliwakale.in${trimmed}`;
+    }
+    // Upgrade http:// to https:// on secure pages
+    if (window.location.protocol === 'https:' && trimmed.startsWith('http://')) {
+      return trimmed.replace('http://', 'https://');
+    }
   }
   return trimmed;
 }

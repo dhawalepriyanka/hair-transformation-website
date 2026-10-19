@@ -1144,10 +1144,12 @@ const TransformationsPage = () => {
                   (String(activeItem.id) === '9100001' ? '/instagram/hair-transformation-client.jpg' :
                    String(activeItem.id) === '9100002' ? '/instagram/long-hair-styling.jpg' :
                    String(activeItem.id) === '9100003' ? '/instagram/salon-client.jpg' :
-                   '/instagram/dipali-wakale-portrait.jpg')
+                   '')
                 }
                 controls={false}
                 autoPlay
+                muted
+                preload="auto"
                 loop={calculateSlideDuration() !== 'end'}
                 playsInline
                 onLoadedMetadata={handleVideoLoadedMetadata}
