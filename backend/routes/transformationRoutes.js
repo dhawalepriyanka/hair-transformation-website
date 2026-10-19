@@ -17,8 +17,12 @@ const {
   createTransformation,
   updateTransformation,
   deleteTransformation,
-  migrateTransformations
+  migrateTransformations,
+  streamInstagramVideo
 } = require('../controllers/transformationController');
+
+// Native Instagram video streaming endpoint with audio for automated TV playback
+router.get('/instagram-video', streamInstagramVideo);
 
 // Upload media endpoint (accepts 'file', 'media', or any multipart field, or JSON)
 router.post('/upload', upload.any(), uploadTransformationMedia);

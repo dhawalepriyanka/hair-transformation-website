@@ -269,6 +269,77 @@ const getTransformationMedia = async (req, res, next) => {
   }
 };
 
+const instagramUrlCache = new Map();
+
+const resolveInstagramVideoUrl = async (shortcode) => {
+  const cached = instagramUrlCache.get(shortcode);
+  if (cached && cached.expires > Date.now()) {
+    return cached.url;
+  }
+  const embedUrl = `https://www.instagram.com/p/${shortcode}/embed/captioned/`;
+  const res = await fetch(embedUrl);
+  if (!res.ok) return null;
+  const t = await res.text();
+  const i = t.indexOf('.mp4');
+  if (i === -1) return null;
+  const s = t.lastIndexOf('http', i);
+  let e = t.indexOf('\\"', s);
+  if (e === -1) e = t.indexOf('"', s);
+  const raw = t.substring(s, e);
+  const clean = raw.replace(/\\+\//g, '/').replace(/\\+u0026/g, '&');
+  if (!clean.startsWith('http')) return null;
+  instagramUrlCache.set(shortcode, { url: clean, expires: Date.now() + 6 * 3600 * 1000 });
+  return clean;
+};
+
+// @desc    Stream native MP4 from Instagram Reel with audio for automated TV playback
+// @route   GET /api/transformations/instagram-video
+// @access  Public
+const streamInstagramVideo = async (req, res, next) => {
+  try {
+    const rawUrl = req.query.url || req.query.code || '';
+    const match = rawUrl.match(/(?:p|reel|reels|tv|share)\/([A-Za-z0-9_-]+)/) || [null, rawUrl.trim()];
+    const code = match[1];
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Instagram reel code or URL is required' });
+    }
+
+    const directUrl = await resolveInstagramVideoUrl(code);
+    if (!directUrl) {
+      return res.status(404).json({ success: false, message: 'Instagram reel video stream not found' });
+    }
+
+    const range = req.headers.range;
+    const fetchHeaders = {
+      'Referer': 'https://www.instagram.com/',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    };
+    if (range) fetchHeaders['Range'] = range;
+
+    const fbRes = await fetch(directUrl, { headers: fetchHeaders });
+    const status = fbRes.status;
+
+    res.status(status);
+    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=21600');
+
+    const cl = fbRes.headers.get('content-length');
+    if (cl) res.setHeader('Content-Length', cl);
+    const cr = fbRes.headers.get('content-range');
+    if (cr) res.setHeader('Content-Range', cr);
+
+    const { Readable } = require('stream');
+    if (fbRes.body) {
+      Readable.fromWeb(fbRes.body).pipe(res);
+    } else {
+      res.end();
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Create a transformation
 // @route   POST /api/transformations
 // @access  Admin
@@ -539,5 +610,6 @@ module.exports = {
   createTransformation,
   updateTransformation,
   deleteTransformation,
-  migrateTransformations
+  migrateTransformations,
+  streamInstagramVideo
 };

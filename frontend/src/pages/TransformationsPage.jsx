@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, SkipBack, SkipForward, ArrowLeft } from 'lucide-react';
 import { fetchTransformations, fetchSlideshowSettings, fetchPublicPatientQueue } from '../services/api';
 import {
-  isInstagramUrl, getInstagramEmbedUrl,
+  isInstagramUrl, getInstagramEmbedUrl, getInstagramStreamUrl,
   isYouTubeUrl, getYouTubeEmbedUrl,
   isGoogleDriveUrl, getGoogleDriveEmbedUrl,
   isVimeoUrl, getVimeoEmbedUrl,
@@ -81,6 +81,8 @@ const TransformationsPage = () => {
   const [focusedButton, setFocusedButton] = useState(1); // 0: Prev, 1: Play/Pause, 2: Next
   const [progressPercent, setProgressPercent] = useState(0);
   const [patientQueue, setPatientQueue] = useState([]);
+  const [instagramFallbackMap, setInstagramFallbackMap] = useState({});
+  const [isMuted, setIsMuted] = useState(false);
 
   // Hardware Monitor Fullscreen state
   const [isMonitorFullscreen, setIsMonitorFullscreen] = useState(() => isDocumentFullscreen());
@@ -430,6 +432,14 @@ const TransformationsPage = () => {
     }
   };
 
+  // Determines if an item requires an external iframe embed or plays as a native video with audio
+  const isEmbedForSlide = useCallback((item) => {
+    if (!item?.video) return false;
+    if (isYouTubeUrl(item.video) || isGoogleDriveUrl(item.video) || isVimeoUrl(item.video)) return true;
+    if (isInstagramUrl(item.video) && Boolean(instagramFallbackMap[item.video])) return true;
+    return false;
+  }, [instagramFallbackMap]);
+
   // Full-screen mode:
   // 1. Live Patient Waiting List Slide (100% full screen luxury dashboard)
   // 2. Before & After comparison (Images or Videos)
@@ -461,14 +471,14 @@ const TransformationsPage = () => {
     // 2. Video timing:
     // If video is played, next video starts after the first video has ended
     if (isVideo) {
-      const isEmbed = isEmbeddableVideoUrl(activeItem.video);
+      const isEmbed = isEmbedForSlide(activeItem);
       if (!isEmbed) {
-        // Native HTML5 video: plays to the end!
+        // Native HTML5 video (including native Instagram stream): plays to the end!
         if (slideshowSettings.videoDurationMode === 'end' || !slideshowSettings.videoDurationMode) {
           return 'end';
         }
       } else {
-        // External iframe embed (Instagram, YouTube, Drive):
+        // External iframe embed (YouTube, Drive, or iframe fallback):
         if (activeItem.duration && !isNaN(activeItem.duration) && activeItem.duration > 0) {
           return parseInt(activeItem.duration, 10);
         }
@@ -518,6 +528,11 @@ const TransformationsPage = () => {
     if (e && typeof e.stopPropagation === 'function') {
       e.stopPropagation();
     }
+    setHasUserInteracted(true);
+    setIsMuted(false);
+    if (videoRef.current) {
+      videoRef.current.muted = false;
+    }
     changeSlide(-1);
     setFocusedButton(0);
     wakeControls();
@@ -528,6 +543,11 @@ const TransformationsPage = () => {
     if (e && typeof e.stopPropagation === 'function') {
       e.stopPropagation();
     }
+    setHasUserInteracted(true);
+    setIsMuted(false);
+    if (videoRef.current) {
+      videoRef.current.muted = false;
+    }
     changeSlide(1);
     setFocusedButton(2);
     wakeControls();
@@ -537,6 +557,11 @@ const TransformationsPage = () => {
   const handleTogglePlayPause = useCallback((e) => {
     if (e && typeof e.stopPropagation === 'function') {
       e.stopPropagation();
+    }
+    setHasUserInteracted(true);
+    setIsMuted(false);
+    if (videoRef.current) {
+      videoRef.current.muted = false;
     }
     setIsPlaying((prev) => {
       const nextState = !prev;
@@ -634,6 +659,12 @@ const TransformationsPage = () => {
       if (!isDocumentFullscreen()) {
         enterMonitorFullscreen();
       }
+      setHasUserInteracted(true);
+      setIsMuted(false);
+      if (videoRef.current) {
+        videoRef.current.muted = false;
+        videoRef.current.play().catch(() => {});
+      }
     };
 
     window.addEventListener('pointerdown', handleAutoFullscreen);
@@ -654,21 +685,21 @@ const TransformationsPage = () => {
 
   // Synchronize actual video playback with isPlaying state
   useEffect(() => {
-    if (videoRef.current && isVideo && !isEmbeddableVideoUrl(activeItem?.video)) {
+    if (videoRef.current && isVideo && !isEmbedForSlide(activeItem)) {
       if (isPlaying) {
         videoRef.current.play().catch(() => {});
       } else {
         videoRef.current.pause();
       }
     }
-    if (ambientVideoRef.current && activeItem?.video && !isEmbeddableVideoUrl(activeItem.video)) {
+    if (ambientVideoRef.current && activeItem?.video && !isEmbedForSlide(activeItem)) {
       if (isPlaying) {
         ambientVideoRef.current.play().catch(() => {});
       } else {
         ambientVideoRef.current.pause();
       }
     }
-  }, [isPlaying, isVideo, activeItem]);
+  }, [isPlaying, isVideo, activeItem, isEmbedForSlide]);
 
   // Video reset on slide transition
   useEffect(() => {
@@ -676,14 +707,15 @@ const TransformationsPage = () => {
       clearTimeout(videoErrorTimerRef.current);
       videoErrorTimerRef.current = null;
     }
-    if (videoRef.current && isVideo && !isEmbeddableVideoUrl(activeItem?.video)) {
+    if (videoRef.current && isVideo && !isEmbedForSlide(activeItem)) {
       videoRef.current.currentTime = 0;
-      videoRef.current.muted = false; // Always try with audio on slide change
+      videoRef.current.muted = isMuted;
       if (isPlaying) {
         const playPromise = videoRef.current.play();
         if (playPromise !== undefined) {
           playPromise.catch(() => {
             // Browser blocked autoplay with sound → fall back to muted
+            setIsMuted(true);
             if (videoRef.current) {
               videoRef.current.muted = true;
               videoRef.current.play().catch(() => {});
@@ -694,7 +726,7 @@ const TransformationsPage = () => {
         videoRef.current.pause();
       }
     }
-    if (ambientVideoRef.current && activeItem?.video && !isEmbeddableVideoUrl(activeItem.video)) {
+    if (ambientVideoRef.current && activeItem?.video && !isEmbedForSlide(activeItem)) {
       ambientVideoRef.current.currentTime = 0;
       if (isPlaying) {
         ambientVideoRef.current.play().catch(() => {});
@@ -702,7 +734,7 @@ const TransformationsPage = () => {
         ambientVideoRef.current.pause();
       }
     }
-  }, [activeSlide, isVideo]);
+  }, [activeSlide, isVideo, isEmbedForSlide, isPlaying, activeItem, isMuted]);
 
   // Video progress time tracking
   const handleVideoTimeUpdate = (e) => {
@@ -715,6 +747,12 @@ const TransformationsPage = () => {
   // Video loading error handling (graceful fallback - no 0ms disappearance)
   const handleVideoError = useCallback((e) => {
     console.warn('Video playback notice for slide:', activeItem?.video || activeItem?.image, e);
+    // If native Instagram streaming fails, immediately fall back to the Instagram iframe embed
+    if (activeItem?.video && isInstagramUrl(activeItem.video) && !instagramFallbackMap[activeItem.video]) {
+      console.warn('Instagram stream fallback triggered for:', activeItem.video);
+      setInstagramFallbackMap(prev => ({ ...prev, [activeItem.video]: true }));
+      return;
+    }
     // 1. Try muted if browser blocked unmuted autoplay
     if (videoRef.current && !videoRef.current.muted) {
       videoRef.current.muted = true;
@@ -728,12 +766,12 @@ const TransformationsPage = () => {
         changeSlide(1);
       }
     }, 4000);
-  }, [activeItem?.video, activeItem?.image, changeSlide, isPlaying]);
+  }, [activeItem?.video, activeItem?.image, changeSlide, isPlaying, instagramFallbackMap]);
 
   // Track progress line for non-video or embeddable platform slides
   useEffect(() => {
     setProgressPercent(0);
-    if (isVideo && !isEmbeddableVideoUrl(activeItem?.video)) return;
+    if (isVideo && !isEmbedForSlide(activeItem)) return;
     const duration = calculateSlideDuration();
     const totalMs = (Number(duration) || 8) * 1000;
     const startTime = Date.now();
@@ -993,11 +1031,11 @@ const TransformationsPage = () => {
             )}
 
             {/* Ambient Blurred Backdrop for vertical reels */}
-            {!activeItem?.isQueueSlide && activeItem.video && !isEmbeddableVideoUrl(activeItem.video) ? (
+            {!activeItem?.isQueueSlide && activeItem.video && !isEmbedForSlide(activeItem) ? (
               <video
                 ref={ambientVideoRef}
                 className="tv-apk-ambient-backdrop"
-                src={resolveMediaUrl(activeItem.video)}
+                src={isInstagramUrl(activeItem.video) ? getInstagramStreamUrl(activeItem.video) : resolveMediaUrl(activeItem.video)}
                 muted
                 autoPlay
                 loop
@@ -1017,7 +1055,7 @@ const TransformationsPage = () => {
                 after={resolveMediaUrl(activeItem.afterVideo)}
                 clientName={activeItem.clientName}
               />
-            ) : isInstagramUrl(activeItem.video) ? (
+            ) : isInstagramUrl(activeItem.video) && Boolean(instagramFallbackMap[activeItem.video]) ? (
               <div
                 key={activeItem.video}
                 className="tv-apk-main-video tv-apk-insta-container"
@@ -1138,7 +1176,7 @@ const TransformationsPage = () => {
                 ref={videoRef}
                 key={activeItem.video}
                 className="tv-apk-main-video"
-                src={resolveMediaUrl(activeItem.video)}
+                src={isInstagramUrl(activeItem.video) ? getInstagramStreamUrl(activeItem.video) : resolveMediaUrl(activeItem.video)}
                 poster={
                   activeItem.poster || activeItem.after || activeItem.image ||
                   (String(activeItem.id) === '9100001' ? '/instagram/hair-transformation-client.jpg' :
@@ -1148,7 +1186,7 @@ const TransformationsPage = () => {
                 }
                 controls={false}
                 autoPlay
-                muted
+                muted={isMuted}
                 preload="auto"
                 loop={calculateSlideDuration() !== 'end'}
                 playsInline

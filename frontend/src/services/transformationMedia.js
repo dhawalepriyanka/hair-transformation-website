@@ -82,6 +82,29 @@ export function getInstagramEmbedUrl(url) {
 }
 
 /**
+ * Returns native direct MP4 video stream URL for Instagram Reels
+ * Allows automatic playback with sound / voice on TV without manual click
+ */
+export function getInstagramStreamUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const match = /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:p|reel|reels|tv|share)\/([A-Za-z0-9_-]+)/i.exec(url.trim());
+  if (match && match[1]) {
+    const code = match[1];
+    let base = '';
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      if (host === 'dipaliwakale.in' || host === 'www.dipaliwakale.in') {
+        base = 'https://www.dipaliwakale.in';
+      } else if (window.location.port === '5173') {
+        base = 'http://localhost:5000';
+      }
+    }
+    return `${base}/api/transformations/instagram-video?code=${code}`;
+  }
+  return '';
+}
+
+/**
  * YouTube & YouTube Shorts Detection
  */
 export function isYouTubeUrl(url) {
