@@ -41,7 +41,7 @@ const Navbar = () => {
                 Home
               </Link>
             </li>}
-            {!staffSession && <li>
+            {staffSession && <li>
               <Link
                 to="/hair-styles"
                 className={`nav-link ${isActive('/hair-styles') || isActive('/products') ? 'active' : ''}`}

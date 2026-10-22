@@ -24,6 +24,11 @@ const RoleRoute = ({ role, children }) => {
   return session?.user?.role === role ? children : <Navigate to="/admin/login" replace />;
 };
 
+const StaffRoute = ({ children }) => {
+  const session = useStaffSession();
+  return session?.user?.role ? children : <Navigate to="/admin/login" replace />;
+};
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -109,8 +114,8 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/index.html" element={<TransformationsPage isTvMode={true} />} />
                 <Route path="/tv" element={<TransformationsPage isTvMode={true} />} />
-              <Route path="/hair-styles" element={<ProductsPage />} />
-              <Route path="/products" element={<ProductsPage />} />
+              <Route path="/hair-styles" element={<StaffRoute><ProductsPage /></StaffRoute>} />
+              <Route path="/products" element={<StaffRoute><ProductsPage /></StaffRoute>} />
               <Route path="/selected-styles" element={<Navigate to="/admin/patients" replace />} />
               <Route path="/selected-products" element={<Navigate to="/admin/patients" replace />} />
               <Route path="/transformations" element={<Navigate to="/tv" replace />} />
