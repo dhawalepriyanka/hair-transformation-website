@@ -1,28 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import ProductCard from '../components/ProductCard';
-import SkeletonLoader from '../components/SkeletonLoader';
 import BrandLogo from '../components/BrandLogo';
 import Reveal from '../components/Reveal';
-import { fetchProducts } from '../services/api';
 import {
   Stethoscope, ArrowRight, Instagram, Sparkles, MapPin,
   HeartHandshake, Phone, Youtube, MessageCircle, Navigation, Car, Clock
 } from 'lucide-react';
 
 const HomePage = () => {
-  const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadFeatured = async () => {
-      setLoading(true);
-      const data = await fetchProducts();
-      setFeaturedProducts(data.slice(0, 4));
-      setLoading(false);
-    };
-    loadFeatured();
-  }, []);
 
   const services = [
     { title: 'Hair Treatment Results', video: '/instagram/reels/hair-transformation.mp4' },
@@ -145,46 +130,6 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Featured Products Section */}
-      <section className="section-padding" style={{ backgroundColor: '#FFFFFF' }}>
-        <div className="container">
-          {/* Section Header rearranges cleanly into a column on mobile */}
-          <Reveal className="section-header">
-            <div>
-              <h2 className="serif section-title">
-                Featured Products
-              </h2>
-              <p style={{ color: '#666', fontSize: '0.95rem' }}>Trusted hair regrowth, skin care & wellness products by Dipali Wakale</p>
-            </div>
-            <Link
-              to="/hair-styles"
-              style={{
-                color: '#8B6410',
-                fontWeight: '600',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '0.95rem',
-                flexShrink: 0
-              }}
-            >
-              View All Products ({featuredProducts.length}+ Options) <ArrowRight size={16} />
-            </Link>
-          </Reveal>
-
-          {loading ? (
-            <SkeletonLoader count={4} />
-          ) : (
-            <div className="product-grid">
-              {featuredProducts.map((product, index) => (
-                <Reveal key={product.id} className="product-reveal" delay={(index % 4) * 70}>
-                  <ProductCard product={product} mode="view" />
-                </Reveal>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* About Dipali Wakale Section */}
       <section id="about" className="section-padding" style={{ backgroundColor: '#FAF8F6', borderTop: '1px solid #EBE5E0' }}>
