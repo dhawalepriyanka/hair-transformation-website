@@ -61,7 +61,7 @@ const HomePage = () => {
             <Reveal className="hero-visual" variant="scale" delay={140}>
               <div className="hero-image-wrapper">
                 <img
-                  src="/instagram/dipali-wakale-hair-doctor-hero.png"
+                  src="/instagram/dipali-wakale-hero-new.jpg"
                   alt="Dipali Wakale, hair doctor and skin care specialist"
                 />
                 <div className="hero-photo-label">
