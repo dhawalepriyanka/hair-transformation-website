@@ -176,7 +176,7 @@ const Footer = () => {
         </div>
 
         <div className="footer-bottom">
-          <p>© {new Date().getFullYear()} DplNuria – Divine Aura | Hair | Skin | Beauty. All Rights Reserved.</p>
+          <p>© {new Date().getFullYear()} Dipali Wakale – Hair & Skin Care. All Rights Reserved.</p>
         </div>
       </Reveal>
     </footer>

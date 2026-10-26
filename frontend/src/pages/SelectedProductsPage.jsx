@@ -153,8 +153,8 @@ const SelectedProductsPage = () => {
                     <div className="print-header-top">
                       <div className="legacy-print-brand">
                         <img src="/brand/dipali-wakale-logo.jpg" alt="" />
-                        <div><h1 className="print-brand-title">DplNuria</h1>
-                        <p className="print-brand-subtitle">Divine Aura — Hair | Skin | Beauty</p></div>
+                        <div><h1 className="print-brand-title">Dipali Wakale</h1>
+                        <p className="print-brand-subtitle">Hair &amp; Skin Care</p></div>
                         <p className="print-contact">
                           Tel: +91 8805291910 / 8237108495 | Instagram: @wakale_dipali_ | Ghargaon, Sangamner (Pune-Nashik Hwy)
                         </p>

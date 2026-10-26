@@ -5,12 +5,12 @@ const BrandLogo = ({ className = '', inverse = false, showText = true }) => (
     <img
       className="brand-emblem"
       src="/brand/dipali-wakale-logo.jpg"
-      alt="DplNuria Divine Aura - Hair Skin Beauty logo"
+      alt="Dipali Wakale Hair and Skin Care logo"
     />
     {showText && (
       <span className="brand-copy">
-        <strong>DplNuria</strong>
-        <small>Divine Aura</small>
+        <strong>Dipali Wakale</strong>
+        <small>Hair &amp; Skin Care</small>
       </span>
     )}
   </span>
