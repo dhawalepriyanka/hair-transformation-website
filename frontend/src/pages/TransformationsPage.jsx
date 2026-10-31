@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, SkipBack, SkipForward, ArrowLeft } from 'lucide-react';
-import { fetchTransformations, fetchSlideshowSettings, fetchPublicPatientQueue } from '../services/api';
+import { fetchTransformations, fetchSlideshowSettings, fetchPublicPatientQueue, checkTransformationsVersion } from '../services/api';
 import {
   isInstagramUrl, getInstagramEmbedUrl, getInstagramStreamUrl,
   isYouTubeUrl, getYouTubeEmbedUrl,
@@ -108,6 +108,7 @@ const TransformationsPage = () => {
   const videoErrorTimerRef = useRef(null);
   const videoEndedHandledRef = useRef(false);
   const transformationsListRef = useRef([]);
+  const lastVersionRef = useRef({ lastModified: null, count: null });
 
   // Keep refs synchronized with state for callback access
   useEffect(() => {
@@ -136,7 +137,8 @@ const TransformationsPage = () => {
 
   useEffect(() => {
     syncQueue();
-    const queueInterval = setInterval(syncQueue, 5000);
+    // 15s background sync for waiting queue
+    const queueInterval = setInterval(syncQueue, 15000);
 
     const handleQueueChange = (e) => {
       if (e?.detail) setPatientQueue(e.detail);
@@ -176,8 +178,28 @@ const TransformationsPage = () => {
   const formattedDate = currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
 
   // 1. Data Synchronization with Admin Dashboard (Periodical + App Resume)
-  const syncTransformations = useCallback(async () => {
+  const syncTransformations = useCallback(async (force = false) => {
     try {
+      // Bandwidth optimization: check if database changed before pulling full payload
+      if (!force) {
+        const versionInfo = await checkTransformationsVersion();
+        if (
+          versionInfo &&
+          versionInfo.lastModified &&
+          versionInfo.lastModified === lastVersionRef.current.lastModified &&
+          versionInfo.count === lastVersionRef.current.count
+        ) {
+          // No changes detected in database; skip downloading
+          return;
+        }
+        if (versionInfo && versionInfo.lastModified) {
+          lastVersionRef.current = {
+            lastModified: versionInfo.lastModified,
+            count: versionInfo.count
+          };
+        }
+      }
+
       const data = await fetchTransformations();
       const rawList = Array.isArray(data) ? data : [];
 
@@ -310,14 +332,15 @@ const TransformationsPage = () => {
 
   // Initial load, real-time sync, and settings listener
   useEffect(() => {
-    syncTransformations();
+    syncTransformations(true);
 
-    // 5s background sync with database/admin dashboard for TV APK and external devices
-    const syncInterval = setInterval(syncTransformations, 5000);
+    // 30s background sync with database/admin dashboard for TV APK and external devices
+    // Only downloads full dataset if checkTransformationsVersion() detects changes
+    const syncInterval = setInterval(() => syncTransformations(false), 30000);
 
     // Instant real-time update listeners across tabs and components
     const handleImmediateSync = () => {
-      syncTransformations();
+      syncTransformations(true);
     };
 
     // 1. Same-tab CustomEvent
@@ -335,7 +358,7 @@ const TransformationsPage = () => {
     // 3. Cross-tab localStorage event listener
     const handleStorageChange = (e) => {
       if (!e.key || e.key === 'admin_transformations' || e.key === 'admin_transformations_last_updated') {
-        syncTransformations();
+        syncTransformations(true);
       }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -343,12 +366,12 @@ const TransformationsPage = () => {
     // App Resume listeners: visibilitychange, window focus, online
     const handleResume = () => {
       if (document.visibilityState === 'visible') {
-        syncTransformations();
+        syncTransformations(true);
       }
     };
     document.addEventListener('visibilitychange', handleResume);
-    window.addEventListener('focus', syncTransformations);
-    window.addEventListener('online', syncTransformations);
+    window.addEventListener('focus', handleImmediateSync);
+    window.addEventListener('online', handleImmediateSync);
 
     const handleSettingsChanged = (e) => {
       if (e.detail) {

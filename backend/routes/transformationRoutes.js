@@ -12,6 +12,7 @@ const upload = multer({
 
 const {
   getTransformations,
+  checkTransformationsVersion,
   uploadTransformationMedia,
   getTransformationMedia,
   createTransformation,
@@ -21,6 +22,9 @@ const {
   streamInstagramVideo,
   reorderTransformations
 } = require('../controllers/transformationController');
+
+// Ultra-lightweight version check endpoint for TV and background polling
+router.get('/check', checkTransformationsVersion);
 
 // Batch reorder transformations sequence
 router.post('/reorder', reorderTransformations);

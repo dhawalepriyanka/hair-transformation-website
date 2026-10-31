@@ -116,8 +116,29 @@ const getTransformations = async (req, res, next) => {
   try {
     try {
       await seedInitialTransformationsIfEmpty();
+      // Optimization: Do NOT transfer raw Base64 data over Neon network.
+      // Replaces heavy data: URIs with endpoint streaming paths directly inside Postgres.
       const query = `
-        SELECT * FROM transformations 
+        SELECT 
+          id,
+          client_name,
+          village,
+          treatment,
+          period,
+          rating,
+          testimonial,
+          duration,
+          category,
+          display_order,
+          created_at,
+          updated_at,
+          CASE WHEN before_image LIKE 'data:%' THEN '/api/transformations/media/' || id || '/before' ELSE COALESCE(before_image, '') END AS before_image,
+          CASE WHEN after_image LIKE 'data:%' THEN '/api/transformations/media/' || id || '/after' ELSE COALESCE(after_image, '') END AS after_image,
+          CASE WHEN image LIKE 'data:%' THEN '/api/transformations/media/' || id || '/image' ELSE COALESCE(image, '') END AS image,
+          CASE WHEN video LIKE 'data:%' THEN '/api/transformations/media/' || id || '/video' ELSE COALESCE(video, '') END AS video,
+          CASE WHEN before_video LIKE 'data:%' THEN '/api/transformations/media/' || id || '/beforeVideo' ELSE COALESCE(before_video, '') END AS before_video,
+          CASE WHEN after_video LIKE 'data:%' THEN '/api/transformations/media/' || id || '/afterVideo' ELSE COALESCE(after_video, '') END AS after_video
+        FROM transformations 
         ORDER BY display_order ASC, created_at DESC
       `;
       const result = await pool.query(query);
@@ -137,6 +158,28 @@ const getTransformations = async (req, res, next) => {
     }
   } catch (error) {
     next(error);
+  }
+};
+
+// @desc    Ultra-lightweight version check (<50 bytes) for TV and background polling
+// @route   GET /api/transformations/check
+// @access  Public
+const checkTransformationsVersion = async (req, res, next) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        COALESCE(MAX(updated_at), '1970-01-01'::timestamp) AS last_modified,
+        COUNT(*) AS total
+      FROM transformations
+    `);
+    const row = result.rows[0] || {};
+    return res.status(200).json({
+      success: true,
+      lastModified: row.last_modified,
+      count: Number(row.total || 0)
+    });
+  } catch (err) {
+    return res.status(200).json({ success: true, lastModified: null, count: inMemoryTransformations.length });
   }
 };
 
@@ -633,6 +676,7 @@ const reorderTransformations = async (req, res, next) => {
 
 module.exports = {
   getTransformations,
+  checkTransformationsVersion,
   uploadTransformationMedia,
   getTransformationMedia,
   createTransformation,

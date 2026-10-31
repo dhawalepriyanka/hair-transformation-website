@@ -985,6 +985,18 @@ const saveStoredTransformations = (list) => {
   }
 };
 
+export const checkTransformationsVersion = async () => {
+  try {
+    const response = await apiClient.get('/transformations/check');
+    if (response.data && response.data.success) {
+      return response.data;
+    }
+  } catch (err) {
+    // Silently ignore network warning on version check
+  }
+  return null;
+};
+
 export const fetchTransformations = async () => {
   let backendItems = null;
   try {
